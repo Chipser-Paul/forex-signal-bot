@@ -372,6 +372,9 @@ def apply_symbol_profile(symbol: str) -> dict:
     global RISK_PER_TRADE, MIN_EXECUTION_RR, KILL_SWITCH_MIN_BARS_AFTER_ENTRY, KILL_SWITCH_ATR_BREAK_MULT
     RISK_PER_TRADE = float(profile.get("risk_per_trade", 0.01))
     MIN_EXECUTION_RR = float(profile.get("min_execution_rr", 1.2))
+    # Reward target used to place TP and validate setups. Kept as the single
+    # source of truth so the orchestrator-live path and the backtest agree.
+    ACTIVE_RISK_ENGINE.min_rr = float(profile.get("min_rr", ACTIVE_RISK_ENGINE.min_rr))
     KILL_SWITCH_MIN_BARS_AFTER_ENTRY = int(profile.get("kill_switch_min_bars", 4))
     KILL_SWITCH_ATR_BREAK_MULT = float(profile.get("kill_switch_atr_break_mult", 0.15))
     PAIR_LIMITS[symbol] = int(profile.get("pair_limit", PAIR_LIMITS.get(symbol, 1)))
@@ -925,10 +928,10 @@ def _execute_orchestrator_live_body(
         (direction == "buy" and (actual_tp <= actual_entry or actual_sl >= actual_entry))
         or (direction == "sell" and (actual_tp >= actual_entry or actual_sl <= actual_entry))
     )
-    if invalid_fill or actual_rr < ACTIVE_RISK_ENGINE.min_rr:
+    if invalid_fill or actual_rr < MIN_EXECUTION_RR:
         log(
             f" {symbol}: orchestrator execution guard closed trade "
-            f"(fill={actual_entry:.3f} rr={actual_rr:.3f} min_rr={ACTIVE_RISK_ENGINE.min_rr:.2f})",
+            f"(fill={actual_entry:.3f} rr={actual_rr:.3f} min_rr={MIN_EXECUTION_RR:.2f})",
             "yellow",
         )
         log_trade_event(
@@ -940,7 +943,7 @@ def _execute_orchestrator_live_body(
                 "sl": actual_sl,
                 "tp": actual_tp,
                 "rr": actual_rr,
-                "min_rr": ACTIVE_RISK_ENGINE.min_rr,
+                "min_rr": MIN_EXECUTION_RR,
                 "invalid_fill": invalid_fill,
             },
         )

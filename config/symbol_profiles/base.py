@@ -7,6 +7,11 @@ DEFAULT_PROFILE = {
     "support_bias_bars": 0,
     "pair_limit": 1,
     "risk_per_trade": 0.01,
+    # min_rr: reward target used to place TP / validate setups.
+    # min_execution_rr: floor the *filled* RR must clear or the trade is voided.
+    # These are intentionally different: place TP at the target, but only reject
+    # a fill when execution drift pushes RR below the (looser) execution floor.
+    "min_rr": 3.0,
     "min_execution_rr": 1.2,
     "kill_switch_min_bars": 4,
     "kill_switch_atr_break_mult": 0.15,
