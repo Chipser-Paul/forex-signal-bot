@@ -1,0 +1,10 @@
+MetaTrader5
+pandas
+numpy
+ta
+scikit-learn
+python-dotenv
+termcolor
+firebase-admin
+fastapi
+uvicorn
