@@ -10,10 +10,10 @@ __pycache__/
 bot.sqlite
 history.db
 open_trades.json
-logs/
-runtime/
+/logs/
+/runtime/
 *.log
-data/
+/data/
 .tmp.drivedownload/
 .tmp.driveupload/
 .claude/settings.local.json
