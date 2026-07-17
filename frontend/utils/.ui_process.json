@@ -1,0 +1,6 @@
+{
+  "pid": 9976,
+  "started_at": "2026-07-16T11:56:48",
+  "cmd": "C:\\Users\\chips\\forex-signal-bot\\dl_env\\Scripts\\python.exe -m streamlit run C:\\Users\\chips\\forex-signal-bot\\frontend\\app.py --server.port 8502",
+  "port": 8502
+}

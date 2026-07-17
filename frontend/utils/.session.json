@@ -1,0 +1,14 @@
+{
+  "login": "211152401",
+  "password": "JumpForce1@",
+  "server": "Exness-MT5Trial9",
+  "account": null,
+  "broker": null,
+  "capital": 1000.0,
+  "daily_target_pct": 2.0,
+  "lock_profit": 8.0,
+  "lock_pct": 0.8,
+  "saved_at": "2026-06-01T13:19:26.041465",
+  "refresh_interval": 3,
+  "btc_enabled": false
+}

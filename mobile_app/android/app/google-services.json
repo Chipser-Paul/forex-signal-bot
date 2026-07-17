@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "954001179455",
+    "project_id": "forex-signal-bot-1cd11",
+    "storage_bucket": "forex-signal-bot-1cd11.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:954001179455:android:954d13ac5a92ee8b7c098a",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSVgRQs_U7-O-ZLQDg6tnmQYN0rmKC66g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
