@@ -44,6 +44,7 @@ import strategies.smc_engine.ob_breaker_engine as ob_breaker_module
 import strategies.smc_engine.entry_model as entry_model_module
 import strategies.smc_engine.strategy_state as strategy_state_module
 import utils.log as log_module
+import main as main_module
 from main import _build_orchestrator_trade_levels
 
 TIMEFRAME_MAP = {
@@ -97,6 +98,48 @@ class Position:
     peak_price: float | None = None
     trail_activated: bool = False
     _partial_pct_closed: float = 0.0
+
+
+@dataclass
+class CostModel:
+    """First-order live trading-cost model applied to every round trip."""
+    spread_price: float = 0.0
+    slippage_price: float = 0.0
+    commission_per_lot: float = 0.0
+    contract_size: float = 100.0
+
+    def round_trip(self, lot: float) -> float:
+        # Spread is paid once (enter at ask, exit at bid); slippage on both fills.
+        price_cost = self.spread_price + 2.0 * self.slippage_price
+        return price_cost * lot * self.contract_size + self.commission_per_lot * lot
+
+
+def _update_trailing_sl_live(pos: Position, high: float, low: float, m5_atr: float, point: float, trail_cfg: dict) -> None:
+    """Mirror the live main.py ATR-3x trail: trail behind the running peak by
+    max(atr*mult, min_distance) and only ever move the stop to break-even or
+    better (never into a loss). Keeps the backtest exit engine matched to live."""
+    if m5_atr <= 0:
+        return
+    atr_mult = float(trail_cfg.get("atr_mult", 3.0))
+    min_pts = float(trail_cfg.get("min_distance_points", 100)) * point
+    trail_dist = max(m5_atr * atr_mult, min_pts)
+    if pos.direction == "buy":
+        pos.peak_price = high if pos.peak_price is None else max(pos.peak_price, high)
+        new_sl = pos.peak_price - trail_dist
+        if new_sl > pos.sl and new_sl >= pos.entry_price:
+            pos.sl = new_sl
+    else:
+        pos.peak_price = low if pos.peak_price is None else min(pos.peak_price, low)
+        new_sl = pos.peak_price + trail_dist
+        if new_sl < pos.sl and new_sl <= pos.entry_price:
+            pos.sl = new_sl
+
+
+def _apply_trailing(pos: Position, high: float, low: float, trail_mode: str, m5_atr: float, point: float, trail_cfg: dict) -> None:
+    if trail_mode == "live_atr_3x":
+        _update_trailing_sl_live(pos, high, low, m5_atr, point, trail_cfg)
+    else:
+        _update_trailing_sl(pos, high, low, trail_mode, m5_atr)
 
 
 def _get_trail_offset(pos: Position, trail_mode: str, m5_atr: float) -> float:
@@ -432,14 +475,34 @@ def _dxy_cache_key(dxy_frames: dict[str, pd.DataFrame], now_ts) -> tuple:
     return tuple(key)
 
 
-def _pnl(symbol: str, direction: str, lot: float, entry: float, exit_price: float) -> float:
+def _pnl(symbol: str, direction: str, lot: float, entry: float, exit_price: float, cost: CostModel | None = None) -> float:
     sign = 1 if direction == "buy" else -1
-    return float((exit_price - entry) * sign * lot * 100.0)
+    contract = cost.contract_size if cost else 100.0
+    gross = (exit_price - entry) * sign * lot * contract
+    fees = cost.round_trip(lot) if cost else 0.0
+    return float(gross - fees)
 
 
-def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, out_dir: Path, trail_mode: str = "1x") -> dict[str, Any]:
+def run_backtest(
+    symbol: str,
+    start: datetime,
+    end: datetime,
+    capital: float,
+    out_dir: Path,
+    trail_mode: str = "live_atr_3x",
+    *,
+    spread_points: float = 0.0,
+    slippage_points: float = 0.0,
+    commission_per_lot: float = 0.0,
+    min_rr: float | None = None,
+) -> dict[str, Any]:
     profile = _apply_symbol_profile(symbol)
     risk_engine = RiskEngine()
+    if min_rr is not None:
+        # Single source of truth: drive both the local RR validation and the
+        # TP placement inside main._build_orchestrator_trade_levels.
+        risk_engine.min_rr = float(min_rr)
+        main_module.ACTIVE_RISK_ENGINE.min_rr = float(min_rr)
     pair_limit = int(profile.get("pair_limit", 1))
     structure_tf = str(profile.get("structure_tf", "H1"))
     entry_tf = str(profile.get("entry_tf", "M5"))
@@ -472,6 +535,17 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
     symbol_info = mt5.symbol_info(symbol)
     if symbol_info is None:
         raise RuntimeError(f"MT5 symbol info unavailable for {symbol}")
+
+    point = float(getattr(symbol_info, "point", 0.01) or 0.01)
+    contract_size = float(getattr(symbol_info, "trade_contract_size", 100.0) or 100.0)
+    trail_cfg = profile.get("trailing", {})
+    cost = CostModel(
+        spread_price=spread_points * point,
+        slippage_price=slippage_points * point,
+        commission_per_lot=commission_per_lot,
+        contract_size=contract_size,
+    )
+    total_costs = 0.0
 
     test_rows = entry_df_all[(entry_df_all.index >= start) & (entry_df_all.index <= end)]
     total = len(test_rows)
@@ -520,10 +594,10 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
 
             m5_atr = float(candle.get("atr_14", 0.0)) if pd.notna(candle.get("atr_14", None)) else 0.0
 
-            # 1. Update trailing SL (modifies pos.sl before SL/TP check)
-            _update_trailing_sl(pos, high, low, trail_mode, m5_atr)
-
-            # 2. Check SL/TP with potentially updated trailing SL
+            # 1. Check SL/TP against the levels carried from the PREVIOUS bar.
+            #    Trailing is applied afterwards (step 3) so a stop moved using
+            #    this bar's extreme cannot also be "hit" on the same bar — that
+            #    look-ahead inflated backtest win rates vs live.
             if pos.direction == "buy":
                 sl_hit = low <= pos.sl
                 tp_hit = high >= pos.tp
@@ -539,14 +613,19 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
                 elif tp_hit:
                     exit_price, reason = pos.tp, "tp_hit"
 
-            # 3. Check kill-switch (structure failure) if still alive
+            # 2. Check kill-switch (structure failure) if still alive
             if exit_price is None:
                 if _check_kill_switch(pos, now_ts, m15_closed, profile):
                     exit_price, reason = close, "kill_switch"
+
+            # 3. Survivor: trail the stop for FUTURE bars, then carry forward
             if exit_price is None:
+                _apply_trailing(pos, high, low, trail_mode, m5_atr, point, trail_cfg)
                 survivors.append(pos)
                 continue
-            pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, float(exit_price))
+
+            pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, float(exit_price), cost)
+            total_costs += cost.round_trip(pos.lot)
             realized_pnl += pnl
             # Cascade circuit breaker: track trade result
             trade_dir = "bullish" if pos.direction == "buy" else "bearish"
@@ -836,7 +915,8 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
     final_ts = end.isoformat()
     for pos in open_positions:
         last_close = float(test_rows["close"].iloc[-1]) if not test_rows.empty else pos.entry_price
-        pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, last_close)
+        pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, last_close, cost)
+        total_costs += cost.round_trip(pos.lot)
         realized_pnl += pnl
         trades.append({
             "ticket": pos.ticket,
@@ -869,6 +949,9 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
     pnl_series = trades_df["pnl"].astype(float) if not trades_df.empty else pd.Series(dtype=float)
     wins = int((pnl_series > 0).sum())
     losses = int((pnl_series < 0).sum())
+    reasons = trades_df["reason"] if ("reason" in trades_df.columns) else pd.Series(dtype=str)
+    tp_hit_wins = int(((reasons == "tp_hit") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
+    trail_profit_exits = int(((reasons != "tp_hit") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
     gross_profit = float(pnl_series[pnl_series > 0].sum()) if not pnl_series.empty else 0.0
     gross_loss = float(pnl_series[pnl_series < 0].sum()) if not pnl_series.empty else 0.0
     equity_series = capital + pnl_series.cumsum() if not pnl_series.empty else pd.Series([capital])
@@ -885,6 +968,17 @@ def run_backtest(symbol: str, start: datetime, end: datetime, capital: float, ou
         "win_rate_pct": round((wins / len(trades_df)) * 100.0, 2) if len(trades_df) else 0.0,
         "gross_profit": round(gross_profit, 2),
         "gross_loss": round(gross_loss, 2),
+        "gross_costs": round(total_costs, 2),
+        "tp_hit_wins": tp_hit_wins,
+        "trail_or_other_profit_exits": trail_profit_exits,
+        "win_rate_tp_only_pct": round((tp_hit_wins / len(trades_df)) * 100.0, 2) if len(trades_df) else 0.0,
+        "min_rr_target": float(risk_engine.min_rr),
+        "cost_model": {
+            "spread_points": spread_points,
+            "slippage_points": slippage_points,
+            "commission_per_lot": commission_per_lot,
+            "contract_size": contract_size,
+        },
         "net_pnl": round(float(pnl_series.sum()) if not pnl_series.empty else 0.0, 2),
         "ending_balance": round(float(capital + (pnl_series.sum() if not pnl_series.empty else 0.0)), 2),
         "profit_factor": round(gross_profit / abs(gross_loss), 4) if gross_loss < 0 else "inf",
@@ -914,8 +1008,17 @@ def main() -> None:
     parser.add_argument("--end", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     parser.add_argument("--capital", type=float, default=1000.0)
     parser.add_argument("--out", default="backtests/shadow_mode")
-    parser.add_argument("--trail-mode", default="1x",
-                        choices=["1x", "1.5x", "2x", "2stage", "atr-3x"])
+    parser.add_argument("--trail-mode", default="live_atr_3x",
+                        choices=["live_atr_3x", "1x", "1.5x", "2x", "2stage", "atr-3x"],
+                        help="live_atr_3x mirrors the live bot's trailing (default).")
+    parser.add_argument("--min-rr", type=float, default=None,
+                        help="Override the reward-target RR; sweep to find the best target.")
+    parser.add_argument("--spread-points", type=float, default=0.0,
+                        help="Round-trip spread in broker points (e.g. XAU 20 = $0.20).")
+    parser.add_argument("--slippage-points", type=float, default=0.0,
+                        help="Per-side slippage in broker points.")
+    parser.add_argument("--commission-per-lot", type=float, default=0.0,
+                        help="Round-turn commission per lot in account currency.")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -925,7 +1028,18 @@ def main() -> None:
         _mute_logs()
     start = _parse_date(args.start)
     end = _parse_date(args.end) + timedelta(days=1) - timedelta(seconds=1)
-    run_backtest(args.symbol, start, end, float(args.capital), Path(args.out), trail_mode=args.trail_mode)
+    run_backtest(
+        args.symbol,
+        start,
+        end,
+        float(args.capital),
+        Path(args.out),
+        trail_mode=args.trail_mode,
+        spread_points=args.spread_points,
+        slippage_points=args.slippage_points,
+        commission_per_lot=args.commission_per_lot,
+        min_rr=args.min_rr,
+    )
 
 
 if __name__ == "__main__":
