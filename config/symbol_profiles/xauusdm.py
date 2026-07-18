@@ -7,6 +7,7 @@ PROFILE = {
     "support_bias_bars": 0,
     "pair_limit": 1,
     "risk_per_trade": 0.01,
+    "min_rr": 1.5,
     "min_execution_rr": 1.2,
     "kill_switch_min_bars": 4,
     "kill_switch_atr_break_mult": 0.15,

@@ -80,6 +80,14 @@ class StrategyOrchestrator:
         current_price = 0.0
 
         try:
+            # Load symbol profile and override min_rr if specified
+            profile = get_symbol_profile(symbol)
+            if profile and "min_rr" in profile:
+                original_min_rr = self.risk_engine.min_rr
+                self.risk_engine.min_rr = float(profile["min_rr"])
+                context["profile_min_rr"] = self.risk_engine.min_rr
+                context["original_min_rr"] = original_min_rr
+
             # Get current market price for metadata
             try:
                 sample_df = fetch_ohlcv(symbol, "M5", bars=1)
