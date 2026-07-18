@@ -687,7 +687,7 @@ def run_backtest(
             continue
         # Bad hour filter: 00, 02, 11, 13 UTC (combined 7% WR over 15 trades)
         hour_utc = now_ts.hour
-        if hour_utc in (0, 2, 11, 13):
+        if hour_utc in (0, 11):  # Match live orchestrator: block only hours 0 and 11
             action_counts["skip"] += 1
             no_trade_counts["bad_hour_filter_skipped"] += 1
             continue
@@ -820,15 +820,9 @@ def run_backtest(
             no_trade_counts["score_below_threshold"] += 1
             continue
 
-        # DIRECTION-BASED SCORE FILTER: buys (bullish) require 10+, sells stay at 8
-        trade_dir = htf_bias
-        score_val = int(score_result.get("score", 0) or 0)
-        min_for_direction = 10 if trade_dir == "bullish" else 8
-        if score_val < min_for_direction:
-            state.reject_setup(f"score_{score_val}_below_{min_for_direction}_for_{trade_dir}")
-            action_counts["skip"] += 1
-            no_trade_counts[f"score_below_{min_for_direction}_for_{trade_dir}"] += 1
-            continue
+        # DIRECTION-BASED SCORE FILTER REMOVED — Match live orchestrator (line 365-368)
+        # The old filter required bullish ≥10 vs bearish ≥8, creating an unjustified
+        # anti-buy bias. Live removed this filter, so backtest must match.
 
         entry = determine_entry(symbol, state, close, score_result=score_result, context={
             "ob_zone": ob_zone,
