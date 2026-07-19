@@ -836,12 +836,17 @@ def _execute_orchestrator_live_body(
     base_risk_pct = float(score.get("risk_pct") or cfg.get("risk_per_trade", 0.01))
     risk_pct = base_risk_pct * 0.75 if dxy_reduce_size else base_risk_pct
     
+    # Phase 2: Apply displacement tier position size adjustment
+    displacement_tier_adjustment = context.get("displacement_tier_adjustment") or {}
+    position_size_pct = float(displacement_tier_adjustment.get("position_size_pct", 1.0))
+    
     lot = ACTIVE_RISK_ENGINE.calculate_position_size(
         symbol=symbol,
         account_balance=max(1.0, CAPITAL + account_profit_today),
         stop_distance_price=abs(current_price - sl),
         risk_pct=risk_pct,
         enforce_min_volume=True,
+        position_size_pct=position_size_pct,  # Phase 2: Displacement tier adjustment
     )
     if lot is None:
         no_trade(
