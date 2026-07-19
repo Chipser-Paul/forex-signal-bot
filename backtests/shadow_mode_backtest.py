@@ -873,9 +873,8 @@ def run_backtest(
             action_counts["skip"] += 1
             no_trade_counts[f"level_build_failed:{level_reason}"] += 1
             continue
-        # Phase 2: Apply displacement tier position size adjustment
-        displacement_tier_adjustment = context.get("displacement_tier_adjustment") or {}
-        position_size_pct = float(displacement_tier_adjustment.get("position_size_pct", 1.0))
+        # Phase 2: Apply displacement tier position size adjustment (default to 1.0 for backtest)
+        position_size_pct = 1.0  # Backtest doesn't use orchestrator displacement tier system
         
         lot = risk_engine.calculate_position_size(
             symbol=symbol,
@@ -883,7 +882,7 @@ def run_backtest(
             stop_distance_price=abs(entry_price - sl),
             risk_pct=float(score_result.get("risk_pct") or profile.get("risk_per_trade", 0.01)),
             enforce_min_volume=True,
-            position_size_pct=position_size_pct,  # Phase 2: Displacement tier adjustment
+            position_size_pct=position_size_pct,
         )
         if lot is None:
             action_counts["skip"] += 1
