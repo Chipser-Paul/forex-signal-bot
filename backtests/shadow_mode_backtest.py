@@ -930,6 +930,7 @@ def run_backtest(
             "session_allowed": True,
             "dxy_confirms_bias": bool(dxy_context.get("confirms_bias")),
             "no_news_in_30min": bool(news_status.get("news_clear")),
+            "min_score_to_trade": 8,  # Explicitly set threshold
         })
         
         gate_results["gate_11_confluence_score"] = {

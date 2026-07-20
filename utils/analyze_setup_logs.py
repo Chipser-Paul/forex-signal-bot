@@ -137,7 +137,7 @@ def build_win_rate_by_score(logs: List[Dict[str, Any]], trade_map: Dict[str, Dic
     Returns:
         Dict mapping score to statistics (wins, losses, win_rate, expectancy).
     """
-    score_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "rejected": 0, "total": 0, "pnl": 0.0})
+    score_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "rejected": 0, "total_evaluations": 0, "pnl": 0.0})
     
     for entry in logs:
         score = entry.get("gate_results", {}).get("gate_11_confluence_score", {}).get("raw", {}).get("score", 0)
@@ -145,7 +145,7 @@ def build_win_rate_by_score(logs: List[Dict[str, Any]], trade_map: Dict[str, Dic
         outcome_detail = entry.get("outcome_detail")
         setup_id = entry.get("setup_id")
         
-        score_stats[score]["total"] += 1
+        score_stats[score]["total_evaluations"] += 1
         
         # Link to trade outcome if available
         if setup_id and setup_id in trade_map:
@@ -167,7 +167,7 @@ def build_win_rate_by_score(logs: List[Dict[str, Any]], trade_map: Dict[str, Dic
         
         results[score] = {
             "score": score,
-            "total_evaluations": stats["total"],
+            "total_evaluations": stats["total_evaluations"],
             "trades_taken": total_trades,
             "rejected": stats["rejected"],
             "wins": stats["wins"],
