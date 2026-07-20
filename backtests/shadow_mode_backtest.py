@@ -28,6 +28,7 @@ from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
 from bot.execution.risk_engine import RiskEngine
 from bot.utils.session_clock import get_session_context
+from utils.setup_logger import log_setup_evaluation, generate_setup_id
 from strategies.smc_engine.displacement_engine import detect_displacement
 from strategies.smc_engine.entry_model import determine_entry
 from strategies.smc_engine.liquidity_engine import detect_liquidity_sweep
@@ -702,6 +703,34 @@ def run_backtest(
             action_counts["halt"] += 1
             no_trade_counts["daily_drawdown_limit_hit"] += 1
             continue
+        
+        # Initialize setup logging for this iteration
+        setup_id = generate_setup_id()
+        gate_results = {}
+        market_conditions = {}
+        timing_info = {"evaluation_start": now_ts.to_pydatetime().isoformat()}
+        
+        # Gate 1: Session/killzone check
+        session_context = get_session_context(now_ts.to_pydatetime())
+        gate_results["gate_1_session"] = {
+            "pass": session_context.get("in_priority_session", True),
+            "raw": session_context
+        }
+        if not session_context.get("in_priority_session", True):
+            action_counts["skip"] += 1
+            no_trade_counts["bad_hour_filter_skipped"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="skip",
+                reason="bad_hour_filter_skipped",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="bad_hour_filter_skipped"
+            )
+            continue
 
         bias_key = tuple(_last_index_key(tf_frames.get(tf)) for tf in ("W1", "D1", "H4", "H1", "M15"))
         bias_snapshot = bias_cache.get(bias_key)
@@ -711,10 +740,27 @@ def run_backtest(
         state.update_bias(bias_snapshot)
         bias_resolution = resolve_trade_bias(bias_snapshot)
         htf_bias = str(bias_resolution.get("direction", "neutral"))
+        
+        gate_results["gate_6_htf_bias"] = {
+            "pass": htf_bias in ("bullish", "bearish"),
+            "raw": {"bias": htf_bias, "resolution": bias_resolution}
+        }
+        
         if htf_bias not in ("bullish", "bearish"):
             state.reject_setup("htf_bias_unconfirmed")
             action_counts["skip"] += 1
             no_trade_counts["htf_bias_unconfirmed"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="skip",
+                reason="htf_bias_unconfirmed",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="htf_bias_unconfirmed"
+            )
             continue
 
         # CASCADE CIRCUIT BREAKER: block direction after 2 same-direction losses
@@ -753,13 +799,31 @@ def run_backtest(
             sweep_window=int(profile.get("liquidity", {}).get("sweep_window", 3)),
         )
         liquidity_signal = liquidity_signal if isinstance(liquidity_signal, dict) else {}
+        
+        gate_results["gate_8_liquidity"] = {
+            "pass": bool(liquidity_signal),
+            "raw": liquidity_signal
+        }
+        
         if not liquidity_signal:
             state.reject_setup("liquidity_sweep_missing")
             action_counts["wait"] += 1
             no_trade_counts["liquidity_sweep_missing"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="wait",
+                reason="liquidity_sweep_missing",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="liquidity_sweep_missing"
+            )
             continue
         if liquidity_signal.get("side") in ("buy", "sell"):
             state.update_liquidity(side=liquidity_signal["side"], index=int(idx), liquidity_type=liquidity_signal.get("type"))
+            timing_info["sweep_detected"] = now_ts.to_pydatetime().isoformat()
 
         displacement = detect_displacement(
             entry_slice,
@@ -769,12 +833,30 @@ def run_backtest(
             lookback_candles=int(profile.get("displacement", {}).get("lookback_candles", 3)),
         )
         displacement = displacement if isinstance(displacement, dict) else {}
+        
+        gate_results["gate_9_displacement"] = {
+            "pass": bool(displacement.get("valid")),
+            "raw": displacement
+        }
+        
         if not bool(displacement.get("valid")):
             state.reject_setup("displacement_missing")
             action_counts["wait"] += 1
             no_trade_counts["displacement_missing"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="wait",
+                reason="displacement_missing",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="displacement_missing"
+            )
             continue
         state.update_displacement(displacement.get("fvg"))
+        timing_info["displacement_detected"] = now_ts.to_pydatetime().isoformat()
 
         internal_structure_key = _last_index_key(m15_slice)
         internal_structure = internal_structure_cache.get(internal_structure_key)
@@ -782,6 +864,39 @@ def run_backtest(
             analyzed_internal = analyze_market_structure(m15_slice, silent=True) if not m15_slice.empty else {}
             internal_structure = analyzed_internal if isinstance(analyzed_internal, dict) else {}
             internal_structure_cache[internal_structure_key] = internal_structure
+        
+        # Gate 10: Internal M15 BOS/CHoCH
+        internal_event = internal_structure.get("event") if internal_structure else None
+        internal_early_event = (internal_structure.get("early_event") or {}).get("event") if internal_structure else None
+        has_internal_confirmation = internal_event in ("BOS", "CHOCH") or internal_early_event in ("BOS", "CHOCH")
+        
+        gate_results["gate_10_internal_structure"] = {
+            "pass": has_internal_confirmation,
+            "raw": {
+                "event": internal_event,
+                "early_event": internal_early_event,
+                "internal_structure": internal_structure
+            }
+        }
+        
+        if not has_internal_confirmation:
+            state.reject_setup("internal_structure_missing")
+            action_counts["skip"] += 1
+            no_trade_counts["internal_structure_missing"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="skip",
+                reason="internal_structure_missing",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="internal_structure_missing"
+            )
+            continue
+        
+        timing_info["internal_structure_detected"] = now_ts.to_pydatetime().isoformat()
         fvgs = [fvg for fvg in get_unfilled_fvgs(entry_slice, timeframe=entry_tf, direction=htf_bias) if isinstance(fvg, dict)]
         ob_result = detect_ob_breaker(
             entry_slice,
@@ -814,10 +929,27 @@ def run_backtest(
             "dxy_confirms_bias": bool(dxy_context.get("confirms_bias")),
             "no_news_in_30min": bool(news_status.get("news_clear")),
         })
+        
+        gate_results["gate_11_confluence_score"] = {
+            "pass": score_result.get("passes_threshold", False),
+            "raw": score_result
+        }
+        
         if not score_result.get("passes_threshold", False):
             state.reject_setup("score_below_threshold")
             action_counts["skip"] += 1
             no_trade_counts["score_below_threshold"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="skip",
+                reason="score_below_threshold",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="score_below_threshold"
+            )
             continue
 
         # DIRECTION-BASED SCORE FILTER REMOVED — Match live orchestrator (line 365-368)
@@ -828,18 +960,58 @@ def run_backtest(
             "ob_zone": ob_zone,
             "fvg_zone": first_fvg,
             "after_london_open": session_context.get("active_session") == "london",
-            "asian_liquidity_swept": any(pool.get("type") in ("asian_high", "asian_low") for pool in liquidity_context.get("liquidity_pools", [])),
-            "sweep_rejected": bool(
-                internal_structure.get("event") in ("CHOCH", "BOS") or
-                internal_structure.get("early_event", {}).get("event") in ("CHOCH", "BOS")
+            "asian_liquidity_swept": any(
+                pool.get("type") in ("asian_high", "asian_low")
+                for pool in liquidity_context.get("liquidity_pools", [])
             ),
+            "sweep_rejected": bool(internal_structure.get("event") in ("CHOCH", "BOS")),
             "internal_structure_event": internal_structure.get("event"),
             "htf_zone_alignment": bool(ob_result.get("valid")),
         })
+        
+        gate_results["gate_12_13_rr_entry"] = {
+            "pass": bool(entry),
+            "raw": {"entry": entry, "current_price": close}
+        }
+        
         if not entry:
             action_counts["wait"] += 1
             no_trade_counts["entry_not_ready"] += 1
+            log_setup_evaluation(
+                setup_id=setup_id,
+                symbol=symbol,
+                action="wait",
+                reason="entry_not_ready",
+                gate_results=gate_results,
+                market_conditions=market_conditions,
+                timing_info=timing_info,
+                outcome="rejected",
+                outcome_detail="entry_not_ready"
+            )
             continue
+        timing_info["entry_ready"] = now_ts.to_pydatetime().isoformat()
+        
+        # Log successful candidate
+        log_setup_evaluation(
+            setup_id=setup_id,
+            symbol=symbol,
+            action="candidate_ready",
+            reason="setup_passed_all_gates",
+            gate_results=gate_results,
+            market_conditions=market_conditions,
+            timing_info=timing_info,
+            trade_metrics={
+                "direction": entry.get("direction"),
+                "entry_type": entry.get("entry_type"),
+                "entry_mode": entry.get("entry_mode"),
+                "score": score_result.get("score"),
+                "grade": score_result.get("grade"),
+            },
+            outcome="taken",
+            outcome_detail="candidate_ready"
+        )
+        
+        action_counts["wait"] += 1
 
         direction = str(entry.get("direction", "")).lower()
         if direction not in ("buy", "sell"):
