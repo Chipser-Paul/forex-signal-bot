@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 from utils.log import log
+import pandas as pd
 
 
 SETUP_LOG_DIR = Path("logs/setup_evaluations")
@@ -17,6 +18,18 @@ SETUP_LOG_DIR.mkdir(parents=True, exist_ok=True)
 def _get_log_file() -> Path:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return SETUP_LOG_DIR / f"setups_{today}.jsonl"
+
+
+def _serialize_value(value: Any) -> Any:
+    """Convert non-JSON-serializable types to JSON-compatible types."""
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    elif isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    else:
+        return value
 
 
 def log_setup_evaluation(
@@ -54,10 +67,10 @@ def log_setup_evaluation(
         "reason": reason,
         "outcome": outcome,
         "outcome_detail": outcome_detail,
-        "gate_results": gate_results,
-        "market_conditions": market_conditions,
-        "timing_info": timing_info,
-        "trade_metrics": trade_metrics,
+        "gate_results": _serialize_value(gate_results),
+        "market_conditions": _serialize_value(market_conditions),
+        "timing_info": _serialize_value(timing_info),
+        "trade_metrics": _serialize_value(trade_metrics) if trade_metrics else None,
     }
     
     # Write to JSONL file (append mode)
