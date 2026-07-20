@@ -26,6 +26,31 @@ def load_setup_logs(date_str: str | None = None) -> List[Dict[str, Any]]:
     """
     logs = []
     
+    def parse_line(line: str) -> List[Dict[str, Any]]:
+        """Parse a line that may contain multiple JSON objects."""
+        entries = []
+        line = line.strip()
+        if not line:
+            return entries
+        
+        # Try to parse as single JSON first
+        try:
+            entries.append(json.loads(line))
+            return entries
+        except json.JSONDecodeError:
+            pass
+        
+        # If that fails, try to split by whitespace and parse each
+        # This handles malformed JSONL where objects are concatenated
+        parts = line.split()
+        for part in parts:
+            try:
+                entries.append(json.loads(part))
+            except json.JSONDecodeError:
+                continue
+        
+        return entries
+    
     if date_str:
         log_file = SETUP_LOG_DIR / f"setups_{date_str}.jsonl"
         if not log_file.exists():
@@ -34,8 +59,7 @@ def load_setup_logs(date_str: str | None = None) -> List[Dict[str, Any]]:
         
         with open(log_file, "r", encoding="utf-8") as f:
             for line in f:
-                if line.strip():
-                    logs.append(json.loads(line))
+                logs.extend(parse_line(line))
     else:
         # Load all available log files
         if not SETUP_LOG_DIR.exists():
@@ -46,8 +70,7 @@ def load_setup_logs(date_str: str | None = None) -> List[Dict[str, Any]]:
             print(f"Loading {log_file.name}...")
             with open(log_file, "r", encoding="utf-8") as f:
                 for line in f:
-                    if line.strip():
-                        logs.append(json.loads(line))
+                    logs.extend(parse_line(line))
     
     print(f"Loaded {len(logs)} setup evaluations")
     return logs

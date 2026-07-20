@@ -77,6 +77,7 @@ def log_setup_evaluation(
     log_file = _get_log_file()
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
+        f.flush()  # Ensure immediate write
     
     # Log summary to console
     if action == "candidate_ready":
