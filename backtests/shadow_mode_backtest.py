@@ -705,7 +705,7 @@ def run_backtest(
             continue
         
         # Initialize setup logging for this iteration
-        setup_id = generate_setup_id()
+        setup_id = generate_setup_id(symbol)
         gate_results = {}
         market_conditions = {}
         timing_info = {"evaluation_start": now_ts.to_pydatetime().isoformat()}
