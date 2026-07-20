@@ -4,6 +4,7 @@ Analyzes logged setup evaluations to build win-rate-by-score tables and statisti
 """
 
 import json
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
@@ -12,6 +13,55 @@ import sys
 
 
 SETUP_LOG_DIR = Path("logs/setup_evaluations")
+
+
+def load_trade_results(trades_path: str | None = None) -> Dict[str, Dict[str, Any]]:
+    """
+    Load trade results from CSV file and map by setup_id.
+    
+    Args:
+        trades_path: Path to trades CSV file. If None, looks for default backtest output.
+    
+    Returns:
+        Dict mapping setup_id to trade outcome data.
+    """
+    if trades_path is None:
+        # Try to find the most recent trades file
+        backtest_dir = Path("backtests")
+        if not backtest_dir.exists():
+            print("Backtest directory not found")
+            return {}
+        
+        # Find most recent shadow_mode_trades.csv
+        trades_files = list(backtest_dir.rglob("shadow_mode_trades.csv"))
+        if not trades_files:
+            print("No trades CSV files found")
+            return {}
+        
+        trades_path = max(trades_files, key=lambda p: p.stat().st_mtime)
+        print(f"Loading trades from: {trades_path}")
+    
+    try:
+        df = pd.read_csv(trades_path)
+    except Exception as e:
+        print(f"Error loading trades CSV: {e}")
+        return {}
+    
+    # Map setup_id to trade outcome
+    trade_map = {}
+    for _, row in df.iterrows():
+        setup_id = row.get("setup_id")
+        if setup_id and pd.notna(setup_id):
+            trade_map[str(setup_id)] = {
+                "pnl": float(row.get("pnl", 0)),
+                "won": float(row.get("pnl", 0)) > 0,
+                "score": int(row.get("score", 0)) if pd.notna(row.get("score")) else None,
+                "grade": str(row.get("grade", "")) if pd.notna(row.get("grade")) else "",
+                "reason": str(row.get("reason", "")),
+            }
+    
+    print(f"Loaded {len(trade_map)} trade results")
+    return trade_map
 
 
 def load_setup_logs(date_str: str | None = None) -> List[Dict[str, Any]]:
@@ -76,27 +126,35 @@ def load_setup_logs(date_str: str | None = None) -> List[Dict[str, Any]]:
     return logs
 
 
-def build_win_rate_by_score(logs: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+def build_win_rate_by_score(logs: List[Dict[str, Any]], trade_map: Dict[str, Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
     """
-    Build win-rate-by-score table from logged setups.
+    Build win-rate-by-score table from logged setups, linking to trade outcomes.
+    
+    Args:
+        logs: List of setup log entries
+        trade_map: Dict mapping setup_id to trade outcome data
     
     Returns:
         Dict mapping score to statistics (wins, losses, win_rate, expectancy).
     """
-    score_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "rejected": 0, "total": 0})
+    score_stats = defaultdict(lambda: {"wins": 0, "losses": 0, "rejected": 0, "total": 0, "pnl": 0.0})
     
     for entry in logs:
         score = entry.get("gate_results", {}).get("gate_11_confluence_score", {}).get("raw", {}).get("score", 0)
         outcome = entry.get("outcome")
         outcome_detail = entry.get("outcome_detail")
+        setup_id = entry.get("setup_id")
         
         score_stats[score]["total"] += 1
         
-        if outcome == "taken":
-            if outcome_detail == "won":
+        # Link to trade outcome if available
+        if setup_id and setup_id in trade_map:
+            trade_data = trade_map[setup_id]
+            if trade_data.get("won"):
                 score_stats[score]["wins"] += 1
-            elif outcome_detail == "lost":
+            else:
                 score_stats[score]["losses"] += 1
+            score_stats[score]["pnl"] += trade_data.get("pnl", 0)
         elif outcome == "rejected":
             score_stats[score]["rejected"] += 1
     
@@ -105,6 +163,7 @@ def build_win_rate_by_score(logs: List[Dict[str, Any]]) -> Dict[int, Dict[str, A
     for score, stats in score_stats.items():
         total_trades = stats["wins"] + stats["losses"]
         win_rate = (stats["wins"] / total_trades * 100) if total_trades > 0 else 0.0
+        avg_pnl = (stats["pnl"] / total_trades) if total_trades > 0 else 0.0
         
         results[score] = {
             "score": score,
@@ -114,6 +173,8 @@ def build_win_rate_by_score(logs: List[Dict[str, Any]]) -> Dict[int, Dict[str, A
             "wins": stats["wins"],
             "losses": stats["losses"],
             "win_rate_pct": round(win_rate, 2),
+            "total_pnl": round(stats["pnl"], 2),
+            "avg_pnl_per_trade": round(avg_pnl, 2),
         }
     
     return dict(sorted(results.items()))
@@ -172,11 +233,11 @@ def build_gate_pass_rates(logs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any
 
 def print_win_rate_table(win_rate_data: Dict[int, Dict[str, Any]]):
     """Print win-rate-by-score table in a readable format."""
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 100)
     print("WIN-RATE BY SCORE TABLE")
-    print("=" * 80)
-    print(f"{'Score':<8} {'Total':<12} {'Trades':<10} {'Rejected':<10} {'Wins':<8} {'Losses':<8} {'Win Rate':<10}")
-    print("-" * 80)
+    print("=" * 100)
+    print(f"{'Score':<8} {'Total':<12} {'Trades':<10} {'Rejected':<10} {'Wins':<8} {'Losses':<8} {'Win Rate':<10} {'Total PnL':<12} {'Avg PnL':<12}")
+    print("-" * 100)
     
     for score, stats in win_rate_data.items():
         print(
@@ -186,10 +247,12 @@ def print_win_rate_table(win_rate_data: Dict[int, Dict[str, Any]]):
             f"{stats['rejected']:<10} "
             f"{stats['wins']:<8} "
             f"{stats['losses']:<8} "
-            f"{stats['win_rate_pct']:<10.2f}%"
+            f"{stats['win_rate_pct']:<10.2f}% "
+            f"${stats['total_pnl']:<11.2f} "
+            f"${stats['avg_pnl_per_trade']:<11.2f}"
         )
     
-    print("=" * 80)
+    print("=" * 100)
 
 
 def print_rejection_stats(rejection_data: Dict[str, int]):
@@ -232,6 +295,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Analyze setup logs for win-rate-by-score analysis")
     parser.add_argument("--date", type=str, help="Specific date to analyze (YYYY-MM-DD)")
+    parser.add_argument("--trades", type=str, help="Path to trades CSV file")
     parser.add_argument("--output", type=str, help="Output JSON file path")
     args = parser.parse_args()
     
@@ -241,8 +305,11 @@ def main():
         print("No logs found. Exiting.")
         return
     
+    # Load trade results
+    trade_map = load_trade_results(args.trades)
+    
     # Build statistics
-    win_rate_data = build_win_rate_by_score(logs)
+    win_rate_data = build_win_rate_by_score(logs, trade_map)
     rejection_data = build_rejection_reason_stats(logs)
     gate_data = build_gate_pass_rates(logs)
     
@@ -258,6 +325,7 @@ def main():
             "rejection_reasons": rejection_data,
             "gate_pass_rates": gate_data,
             "total_evaluations": len(logs),
+            "total_trades": len(trade_map),
             "analysis_date": datetime.now().isoformat(),
         }
         

@@ -95,6 +95,7 @@ class Position:
     opened_at: datetime
     score: int
     grade: str
+    setup_id: str  # Link to setup evaluation
     # Trailing / kill-switch state
     peak_price: float | None = None
     trail_activated: bool = False
@@ -647,6 +648,7 @@ def run_backtest(
                 "lot": pos.lot,
                 "score": pos.score,
                 "grade": pos.grade,
+                "setup_id": pos.setup_id,  # Link to setup evaluation
                 "reason": reason,
                 "pnl": round(pnl, 4),
             })
@@ -1077,6 +1079,7 @@ def run_backtest(
             sl_reason=str(level_reason),
             opened_at=now_ts.to_pydatetime(),
             score=int(score_result.get("score", 0) or 0),
+            setup_id=setup_id,  # Link to setup evaluation
             grade=str(score_result.get("grade", "")),
         ))
         ticket_seq += 1
@@ -1103,6 +1106,7 @@ def run_backtest(
             "lot": pos.lot,
             "score": pos.score,
             "grade": pos.grade,
+            "setup_id": pos.setup_id,  # Link to setup evaluation
             "reason": "end_of_backtest",
             "pnl": round(pnl, 4),
         })

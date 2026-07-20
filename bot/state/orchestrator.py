@@ -224,7 +224,7 @@ class StrategyOrchestrator:
             can_open_more = self.risk_engine.can_open_more_trades(active_trade_count)
             gate_results["gate_5_concurrent_trades"] = {
                 "pass": can_open_more,
-                "raw": {"active_trade_count": active_trade_count, "max_trades": self.risk_engine.max_trades}
+                "raw": {"active_trade_count": active_trade_count, "max_trades": self.risk_engine.max_concurrent_trades}
             }
             
             if not can_open_more:
