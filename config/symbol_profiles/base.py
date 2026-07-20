@@ -48,10 +48,10 @@ DEFAULT_PROFILE = {
     },
     # Phase 1: Structural shift variant configuration
     "structural_shift": {
-        "variant": "original",  # Options: "original", "variant_a", "variant_b"
+        "variant": "variant_a",  # Options: "original", "variant_a", "variant_b"
         # Variant A: Weighted collapse - single strength input from all three signals
         "variant_a": {
-            "enabled": False,
+            "enabled": True,
             "strength_scale": "continuous",  # "continuous" or "tiered"
             "displacement_tiers": [0.8, 1.0, 1.3, 1.8],  # ATR multiplier buckets
             "sweep_weight": 1.0,
@@ -67,7 +67,7 @@ DEFAULT_PROFILE = {
         },
         # Freshness/decay window (applies to both variants)
         "freshness_window": {
-            "enabled": False,
+            "enabled": True,
             "n1_max_bars": 5,  # Max bars from sweep to displacement
             "n2_max_bars": 8,  # Max bars from displacement to BOS/CHoCH
             "n3_max_bars": 13,  # Max bars from BOS/CHoCH to entry
@@ -75,7 +75,7 @@ DEFAULT_PROFILE = {
     },
     # Phase 2: Displacement tier system for position sizing
     "displacement_tiers": {
-        "enabled": False,
+        "enabled": True,
         "tier_1": {
             "min_atr_mult": 0.8,
             "max_atr_mult": 1.0,
