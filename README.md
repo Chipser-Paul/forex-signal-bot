@@ -1,5 +1,9 @@
 # forex-signal-bot
 
+Algorithmic Trading Bot for XAUUSDm/BTCUSDm — modular 9-engine 
+signal architecture (market structure, liquidity, fair-value-gap, 
+confluence scoring, risk, and news/session filters).
+
 A modular Forex trading / signal generation project. It contains components for strategy research, backtesting, a bot/engine to generate and execute signals, and a mobile/front-end wrapped in a Flutter app.
 
 This README is customized from the repository contents. Please review and update configuration placeholders (API keys, broker credentials) before running.
@@ -83,4 +87,4 @@ Contributions are welcome. Please open an issue to discuss major changes first.
 
 ## License
 
-TBD — add a LICENSE file if you want to make this project open-source under a specific license.
+License: MIT — see LICENSE file for details.
