@@ -1,5 +1,6 @@
 .env
 .env.*
+!.env.example
 secrets/
 venv/
 dl_env/
@@ -17,3 +18,15 @@ data/
 .tmp.drivedownload/
 .tmp.driveupload/
 .claude/settings.local.json
+# Generated research outputs and local tooling artifacts
+backtests/cached_data/
+backtests/diagnostic_run_*/
+backtests/trace_run_*/
+backtests/warmup_*/
+backtests/shadow_*/
+backtests/shadow_mode_*/
+frontend/utils/.bot_process.json
+frontend/utils/.ui_process.json
+analysis_results.json
+.tmp_*.py
+.kilo/

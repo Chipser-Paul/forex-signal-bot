@@ -1,90 +1,114 @@
-# forex-signal-bot
+# Forex Signal Bot
 
-Algorithmic Trading Bot for XAUUSDm/BTCUSDm — modular 9-engine 
-signal architecture (market structure, liquidity, fair-value-gap, 
-confluence scoring, risk, and news/session filters).
+Forex Signal Bot is a Python trading research and execution project for MetaTrader 5. It explores SMC-style market structure analysis, liquidity mapping, fair value gaps, risk controls, backtesting, and dashboard tooling for strategy evaluation.
 
-A modular Forex trading / signal generation project. It contains components for strategy research, backtesting, a bot/engine to generate and execute signals, and a mobile/front-end wrapped in a Flutter app.
+Repository: https://github.com/Chipser-Paul/forex-signal-bot
 
-This README is customized from the repository contents. Please review and update configuration placeholders (API keys, broker credentials) before running.
+## Hiring-Manager Snapshot
 
-## Project layout (high level)
+- Python system with modular analysis, execution, state, risk, and notification layers
+- MetaTrader 5 integration for market data and broker connection workflows
+- Backtesting utilities with generated trade summaries and equity curves
+- Streamlit-style frontend modules for dashboard, settings, analytics, AI assistant, and session management
+- AI-assisted analysis hooks through Groq/OpenAI-compatible chat APIs
+- Tests for session-clock behavior and architecture notes in `ARCHITECTURE.md`
 
-- main.py — entry point for the bot/streamlit dashboard or orchestration.
-- bot/ — core bot logic and integrations with messaging/broker(s).
-- strategies/ — trading strategies and signal generation code.
-- backtests/ — backtesting scripts and historical analysis.
-- frontend/ — web frontend (if present).
-- mobile_app/ — Flutter mobile application (mobile client).
-- requirements.txt — Python dependencies.
+## Important Safety Note
+
+This is a research and portfolio engineering project, not financial advice and not a guaranteed trading system. Live trading requires independent review, broker testing, risk controls, and responsible capital management.
 
 ## Features
 
-- Strategy-based Forex signal generation
-- Backtesting utilities for strategy evaluation
-- Mobile and web front-ends to view signals and trades
-- Trade execution helpers and utilities
+- Market structure and structural-shift analysis
+- Liquidity mapping and fair value gap detection
+- Symbol-specific configuration profiles
+- Risk engine and trade execution modules
+- Shadow-mode backtesting and diagnostic scripts
+- Telegram and Firebase notification hooks
+- Frontend utilities for MT5 login, dashboard, analytics, settings, and AI assistance
+- Optional Groq-powered AI analysis helpers
 
-## Requirements
+## Tech Stack
 
-- Python 3.9+ (3.10 recommended)
-- pip
-- Flutter SDK (only if you intend to build/run mobile_app)
+- Python
+- MetaTrader5 package
+- pandas and NumPy
+- scikit-learn
+- FastAPI / Uvicorn utilities
+- Streamlit-style frontend modules
+- Firebase Admin SDK
+- Groq/OpenAI-compatible API calls
 
-Install Python dependencies:
+## Project Layout
+
+```text
+main.py                  Main bot runner
+bot/                     Analysis, execution, state, and utility modules
+config/                  Symbol profiles and shared configuration
+strategies/smc_engine/   SMC-style strategy components
+utils/                   MT5 connection, indicators, logging, notifications, risk helpers
+frontend/                Dashboard, settings, analytics, AI assistant, and session utilities
+backtests/               Backtest scripts and generated strategy research outputs
+tests/                   Focused Python tests
+docs/                    Supporting documentation
+ARCHITECTURE.md          System architecture notes
+```
+
+## Local Setup
+
+1. Create and activate a virtual environment.
+
+2. Install dependencies:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # macOS / Linux
-.\.venv\Scripts\activate  # Windows
-python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Configuration
+3. Create your environment file:
 
-This project requires external credentials (API keys, broker credentials, chat tokens). Create a `.env` file or export environment variables before running. Example variables (replace with your provider names and keys):
-
-- BROKER_API_KEY
-- BROKER_SECRET
-- TELEGRAM_BOT_TOKEN (if the bot uses Telegram for alerts)
-- STREAMLIT_SERVER_PORT (if running the Streamlit dashboard)
-
-Example .env (do NOT commit your secrets):
-
-```
-BROKER_API_KEY=your_api_key_here
-BROKER_SECRET=your_secret_here
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF
+```bash
+copy .env.example .env
 ```
 
-## Running
+4. Configure MT5 credentials and optional notification/API keys.
 
-- To run the main bot/dashboard (replace with the actual command your repo uses):
+5. Run a basic test:
+
+```bash
+python -m pytest tests
+```
+
+6. Start the main runner only after your MT5 terminal and credentials are configured:
 
 ```bash
 python main.py
-# or if there is a Streamlit dashboard
-streamlit run main.py
 ```
 
-- To run backtests (example):
+## Environment Variables
 
-```bash
-python backtests/run_backtest.py --strategy strategies/your_strategy.py --from 2020-01-01 --to 2024-12-31
-```
+See `.env.example` for placeholders.
 
-- To build/run the mobile app (in mobile_app/): follow the Flutter README in mobile_app/ (mobile_app/README.md).
+Key values:
 
-## Development notes
+- `MT5_LOGIN`
+- `MT5_PASSWORD`
+- `MT5_SERVER`
+- `BOT_ACTIVE_ENGINE`
+- `BOT_CAPITAL`
+- `GROQ_API_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `FIREBASE_SERVICE_ACCOUNT_PATH`
+- `NEWS_EVENTS_PATH`
 
-- Add or update strategies in the strategies/ directory.
-- Keep backtests isolated from production data; use saved historical datasets in backtests/data/ or similar.
+## Repository Hygiene
 
-## Contributing
+Generated runtime data, caches, diagnostic runs, and local process files should stay out of commits. The `.gitignore` includes patterns for runtime folders, Python bytecode, `.env` files, cached market data, and temporary patch files.
 
-Contributions are welcome. Please open an issue to discuss major changes first.
+## Current Status
+
+Active research project. Best presented to hiring managers as a Python systems, data workflow, and trading-platform integration project rather than as a production financial product.
 
 ## License
 
-License: MIT — see LICENSE file for details.
+MIT
