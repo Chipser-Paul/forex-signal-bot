@@ -12,10 +12,10 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCSVgRQs_U7-O-ZLQDg6tnmQYN0rmKC66g',
-    appId: '1:954001179455:android:954d13ac5a92ee8b7c098a',
-    messagingSenderId: '954001179455',
-    projectId: 'forex-signal-bot-1cd11',
-    storageBucket: 'forex-signal-bot-1cd11.firebasestorage.app',
+    apiKey: 'YOUR_FIREBASE_ANDROID_API_KEY',
+    appId: 'YOUR_FIREBASE_ANDROID_APP_ID',
+    messagingSenderId: 'YOUR_FIREBASE_MESSAGING_SENDER_ID',
+    projectId: 'YOUR_FIREBASE_PROJECT_ID',
+    storageBucket: 'YOUR_FIREBASE_STORAGE_BUCKET',
   );
 }

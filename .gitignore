@@ -13,6 +13,12 @@ history.db
 open_trades.json
 logs/
 runtime/
+mobile_app/lib/firebase_options.dart
+mobile_app/android/app/google-services.json
+frontend/utils/.bot_state.json
+frontend/utils/.session.json
+frontend/session_key.key
+frontend/session_data.json
 *.log
 data/
 .tmp.drivedownload/
