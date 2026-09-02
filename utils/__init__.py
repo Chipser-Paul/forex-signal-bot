@@ -6,6 +6,8 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
+from bot.data.candles import normalize_candles
+
 MODEL_PATH = "models/ai_model.pkl"
 DATA_FOLDER = "data/offline"
 
@@ -22,9 +24,7 @@ def load_price_data(symbol, timeframe='M5'):
         raise FileNotFoundError(f"Price data not found for {symbol} at {file_path}")
     df = pd.read_csv(file_path)
     df.columns = [col.lower() for col in df.columns]
-    df['time'] = pd.to_datetime(df['time'], unit='s', errors='coerce')
-    df.dropna(inplace=True)
-    return df
+    return normalize_candles(df, timeframe, final_candle_complete=False)
 
 def load_strategies(symbol: str) -> list:
     """

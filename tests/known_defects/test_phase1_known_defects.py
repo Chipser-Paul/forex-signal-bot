@@ -8,7 +8,7 @@ import pytest
 
 @pytest.mark.known_defect
 @pytest.mark.xfail(
-    reason="KD-RISK-001 (Phase 3): caller-supplied score risk can exceed RiskEngine.max_risk_per_trade",
+    reason="KD-RISK-001 (Phase 4): caller-supplied score risk can exceed RiskEngine.max_risk_per_trade",
     strict=True,
 )
 def test_risk_engine_caps_caller_risk_at_the_central_maximum(fake_mt5):
@@ -22,7 +22,7 @@ def test_risk_engine_caps_caller_risk_at_the_central_maximum(fake_mt5):
 
 @pytest.mark.known_defect
 @pytest.mark.xfail(
-    reason="KD-REGIME-001 (Phase 2): scalar ATR makes the volatility ratio effectively one",
+    reason="KD-REGIME-001 (Phase 6): scalar ATR makes the volatility ratio effectively one",
     strict=True,
 )
 def test_regime_classifier_detects_recent_volatility_expansion():
@@ -53,7 +53,7 @@ def test_regime_classifier_detects_recent_volatility_expansion():
 
 @pytest.mark.known_defect
 @pytest.mark.xfail(
-    reason="KD-NEWS-001 (Phase 3): missing news source currently fails open",
+    reason="KD-NEWS-001 (Phase 6): missing news source currently fails open",
     strict=True,
 )
 def test_missing_news_source_fails_closed(monkeypatch):
@@ -66,7 +66,7 @@ def test_missing_news_source_fails_closed(monkeypatch):
 
 @pytest.mark.known_defect
 @pytest.mark.xfail(
-    reason="KD-OB-001 (Phase 2): mitigation is inferred from closing outside rather than a zone revisit",
+    reason="KD-OB-001 (Phase 6): mitigation is inferred from closing outside rather than a zone revisit",
     strict=True,
 )
 def test_order_block_is_not_mitigated_without_a_zone_revisit():
@@ -84,7 +84,7 @@ def test_order_block_is_not_mitigated_without_a_zone_revisit():
 
 @pytest.mark.known_defect
 @pytest.mark.xfail(
-    reason="KD-STOPS-001 (Phase 3): invalid-stop retry assigns distances as absolute prices",
+    reason="KD-STOPS-001 (Phase 5): invalid-stop retry assigns distances as absolute prices",
     strict=True,
 )
 def test_invalid_stop_retry_converts_distances_to_absolute_prices(monkeypatch, fake_mt5):

@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 
-from bot.analysis.bias_engine import analyze_timeframe_bias
+from bot.data.candles import (
+    align_causal_observations,
+    as_utc_timestamp,
+    causal_snapshot,
+    get_timeframe_spec,
+)
 from bot.data.market_data import fetch_ohlcv
 from strategies.smc_engine.market_structure import analyze_market_structure
 
@@ -16,23 +23,14 @@ DXY_SYMBOL_CANDIDATES = (
     "USDX.i",
 )
 
-
-def _close_array(rates) -> np.ndarray | None:
-    """Extract closes from either a pandas DataFrame or a sequence of rate dicts."""
-    if rates is None:
-        return None
-    if isinstance(rates, pd.DataFrame):
-        if rates.empty or "close" not in rates.columns:
-            return None
-        return rates["close"].astype(float).to_numpy()
-    if isinstance(rates, (list, tuple)):
-        closes = []
-        for row in rates:
-            if isinstance(row, dict) and row.get("close") is not None:
-                closes.append(float(row["close"]))
-        return np.array(closes, dtype=float) if closes else None
-    return None
-
+DXY_BASKET = (
+    ("EURUSDm", 0.576, True),
+    ("USDJPYm", 0.136, False),
+    ("GBPUSDm", 0.119, True),
+    ("USDCADm", 0.091, False),
+    ("USDSEKm", 0.042, False),
+    ("USDCHFm", 0.036, False),
+)
 
 def _resolve_dxy_symbol(symbol_candidates: tuple[str, ...] = DXY_SYMBOL_CANDIDATES) -> str | None:
     """Try to find a working DXY symbol from MT5"""
@@ -43,66 +41,99 @@ def _resolve_dxy_symbol(symbol_candidates: tuple[str, ...] = DXY_SYMBOL_CANDIDAT
     return None
 
 
-def get_synthetic_dxy(timeframe="H1", bars=100):
+def build_synthetic_dxy_from_frames(
+    frames: dict[str, pd.DataFrame],
+    timeframe: str,
+    bars: int,
+    decision_timestamp: object,
+) -> tuple[np.ndarray | None, int, dict[str, object]]:
+    """Build the existing weighted basket from causally aligned closes."""
+    spec = get_timeframe_spec(timeframe)
+    decision = as_utc_timestamp(decision_timestamp, field="decision_timestamp")
+    min_bars = max(1, int(bars * 0.8))
+    usable: dict[str, pd.DataFrame] = {}
+    metadata: dict[str, tuple[float, bool]] = {}
+    total_available_weight = 0.0
+    missing_weight = 0.0
+
+    for symbol, weight, invert in DXY_BASKET:
+        frame = frames.get(symbol)
+        snapshot = (
+            causal_snapshot(frame, decision, max_bars=bars)
+            if frame is not None and not frame.empty
+            else pd.DataFrame()
+        )
+        if len(snapshot) >= min_bars:
+            usable[symbol] = snapshot
+            metadata[symbol] = (weight, invert)
+            total_available_weight += weight
+        else:
+            missing_weight += weight
+
+    if not usable or total_available_weight <= 0:
+        return None, 0, {"reason": "no_usable_components", "components": {}}
+
+    alignment = align_causal_observations(
+        usable,
+        decision,
+        max_staleness=spec.duration,
+    )
+    aligned = alignment.frame.tail(bars)
+    if len(aligned) < min_bars:
+        return None, len(usable), {
+            "reason": "insufficient_aligned_history",
+            "components": alignment.diagnostics,
+        }
+
+    weighted_closes = np.zeros(len(aligned), dtype=float)
+    for symbol in sorted(usable):
+        weight, invert = metadata[symbol]
+        adjusted_weight = weight + (weight / total_available_weight) * missing_weight
+        closes = aligned[symbol].astype(float).to_numpy()
+        if invert:
+            if np.any(closes <= 0):
+                return None, len(usable), {
+                    "reason": f"non_positive_inverted_component:{symbol}",
+                    "components": alignment.diagnostics,
+                }
+            closes = 1.0 / closes
+        weighted_closes += closes * adjusted_weight
+
+    return weighted_closes, len(usable), {
+        "reason": None,
+        "rows": len(aligned),
+        "latest_available_at": aligned.index[-1].isoformat(),
+        "components": alignment.diagnostics,
+    }
+
+
+def get_synthetic_dxy(timeframe="H1", bars=100, decision_timestamp=None):
     """
     Build synthetic DXY from 6 major pairs using ICE basket weights.
     Returns array of synthetic DXY values or None if insufficient data.
     """
-    # ICE basket weights (approximate)
-    BASKET = [
-        ("EURUSDm", 0.576, True),   # Inverted
-        ("USDJPYm", 0.136, False),  # Direct  
-        ("GBPUSDm", 0.119, True),   # Inverted
-        ("USDCADm", 0.091, False),  # Direct
-        ("USDSEKm", 0.042, False),  # Direct
-        ("USDCHFm", 0.036, False),  # Direct
-    ]
-    
-    available_components = []
-    total_available_weight = 0.0
-    missing_weight = 0.0
-    
-    # Issue: Relax strict bars check to 80% of requested bars
-    MIN_BARS = int(bars * 0.8)
-    
-    for symbol, weight, invert in BASKET:
-        rates = fetch_ohlcv(symbol, timeframe, bars=bars)
-        if rates is not None and len(rates) >= MIN_BARS:
-            available_components.append((symbol, weight, invert, rates))
-            total_available_weight += weight
-        else:
-            missing_weight += weight
-    
-    if not available_components:
-        return None, 0
-        
-    # Redistribute missing weight proportionally across available components
-    weighted_closes = None
-    for symbol, weight, invert, rates in available_components:
-        # Calculate adjusted weight including redistributed portion
-        adjusted_weight = weight + (weight / total_available_weight) * missing_weight
-        closes = _close_array(rates)
-        if closes is None or len(closes) < MIN_BARS:
-            continue
-        if invert:
-            # Issue 3 fix: Handle division by zero for inverted pairs
-            closes = np.where(closes > 0, 1.0 / closes, np.nan)
-            if np.any(np.isnan(closes)):
-                continue  # skip this pair for this scan
-        component = closes * adjusted_weight
-        if weighted_closes is None:
-            weighted_closes = component
-        else:
-            # Align symbols with slightly different history lengths.
-            min_len = min(len(weighted_closes), len(component))
-            weighted_closes = weighted_closes[-min_len:]
-            component = component[-min_len:]
-            weighted_closes += component
+    decision = as_utc_timestamp(
+        decision_timestamp or datetime.now(timezone.utc),
+        field="decision_timestamp",
+    )
+    frames: dict[str, pd.DataFrame] = {}
+    for symbol, _weight, _invert in DXY_BASKET:
+        rates = fetch_ohlcv(
+            symbol,
+            timeframe,
+            bars=bars,
+            decision_timestamp=decision,
+        )
+        if rates is not None and not rates.empty:
+            frames[symbol] = rates
 
-    if weighted_closes is None or len(weighted_closes) < MIN_BARS:
-        return None, 0
-
-    return weighted_closes, len(available_components)  # array of synthetic DXY values, number of pairs used
+    values, count, _diagnostics = build_synthetic_dxy_from_frames(
+        frames,
+        timeframe,
+        bars,
+        decision,
+    )
+    return values, count
 
 
 def get_dxy_bias(timeframe="H1", bars=100, lookback=20):
@@ -159,9 +190,18 @@ def get_dxy_bias_from_array(dxy_values, lookback=20):
         return "neutral"
 
 
-def _gold_direction_snapshot(symbol: str, silent: bool = False) -> dict[str, object]:
+def _gold_direction_snapshot(
+    symbol: str,
+    silent: bool = False,
+    decision_timestamp: object | None = None,
+) -> dict[str, object]:
     """Get gold direction from market structure analysis"""
-    df = fetch_ohlcv(symbol, "H1", bars=220)
+    df = fetch_ohlcv(
+        symbol,
+        "H1",
+        bars=220,
+        decision_timestamp=decision_timestamp,
+    )
     result = analyze_market_structure(df, silent=silent) if df is not None and not df.empty else None
     if not result:
         return {
@@ -184,13 +224,22 @@ def analyze_dxy_correlation(symbol: str = "XAUUSDm", silent: bool = False) -> di
     Returns the full DXY block for the log and scorer.
     Uses synthetic DXY implementation.
     """
-    gold = _gold_direction_snapshot(symbol, silent=silent)
+    decision = datetime.now(timezone.utc)
+    gold = _gold_direction_snapshot(
+        symbol,
+        silent=silent,
+        decision_timestamp=decision,
+    )
     gold_dir = str(gold["direction"])
     gold_state = str(gold["state"])
     gold_lead_bias = gold.get("lead_bias")
 
     # Try to get synthetic DXY with pair count
-    dxy_values, basket_pairs_used = get_synthetic_dxy("H1", 100)
+    dxy_values, basket_pairs_used = get_synthetic_dxy(
+        "H1",
+        100,
+        decision_timestamp=decision,
+    )
     if dxy_values is None:
         return {
             "available": False,

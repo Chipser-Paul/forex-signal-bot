@@ -43,17 +43,17 @@ def test_include_current_is_an_explicit_opt_in(fake_mt5):
 
 @pytest.mark.unit
 @pytest.mark.characterization
-def test_normalization_preserves_duplicates_and_fills_missing_columns():
-    rates = [
+def test_normalization_rejects_duplicates_and_missing_ohlc_fields():
+    incomplete_rates = [
         {"time": 1_700_000_000, "open": 1.0, "close": 1.1},
         {"time": 1_700_000_000, "open": 1.0, "close": 1.1},
     ]
-    frame = market_data.normalize_rates_frame(rates)
-    assert len(frame) == 2
-    assert frame["time"].duplicated().sum() == 1
-    for column in ("high", "low", "tick_volume"):
-        assert column in frame.columns
-        assert frame[column].isna().all()
+    with pytest.raises(ValueError, match="missing required fields"):
+        market_data.normalize_rates_frame(incomplete_rates)
+
+    duplicate_rates = [_rate(1_700_000_000, 1.1), _rate(1_700_000_000, 1.2)]
+    with pytest.raises(ValueError, match="Duplicate candle open_time"):
+        market_data.normalize_rates_frame(duplicate_rates, final_candle_complete=True)
 
 
 @pytest.mark.unit

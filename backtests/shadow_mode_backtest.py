@@ -21,7 +21,20 @@ import MetaTrader5 as mt5  # pyright: ignore[reportMissingImports]
 import pandas as pd  # pyright: ignore[reportMissingModuleSource]
 
 from bot.analysis.bias_engine import TIMEFRAME_WEIGHTS, resolve_trade_bias
-from bot.analysis.dxy_filter import get_dxy_bias_from_array
+from bot.analysis.dxy_filter import (
+    DXY_BASKET,
+    build_synthetic_dxy_from_frames,
+    get_dxy_bias_from_array,
+)
+from bot.data.candles import (
+    CandleDataError,
+    as_utc_timestamp,
+    causal_end_positions,
+    causal_snapshot,
+    get_timeframe_spec,
+    normalize_candles,
+)
+from bot.data.market_data import get_mt5_timeframe
 from bot.analysis.fvg_engine import get_unfilled_fvgs
 from bot.analysis.liquidity_map import get_asian_session_range, get_previous_day_levels, get_previous_week_levels
 from bot.execution.confluence_scorer import score_setup
@@ -47,26 +60,6 @@ import strategies.smc_engine.strategy_state as strategy_state_module
 import utils.log as log_module
 import main as main_module
 from main import _build_orchestrator_trade_levels
-
-TIMEFRAME_MAP = {
-    "M5": mt5.TIMEFRAME_M5,
-    "M15": mt5.TIMEFRAME_M15,
-    "M30": mt5.TIMEFRAME_M30,
-    "H1": mt5.TIMEFRAME_H1,
-    "H4": mt5.TIMEFRAME_H4,
-    "D1": mt5.TIMEFRAME_D1,
-    "W1": mt5.TIMEFRAME_W1,
-}
-
-DXY_BASKET = [
-    ("EURUSDm", 0.576, True),
-    ("USDJPYm", 0.136, False),
-    ("GBPUSDm", 0.119, True),
-    ("USDCADm", 0.091, False),
-    ("USDSEKm", 0.042, False),
-    ("USDCHFm", 0.036, False),
-]
-
 
 def _mute_logs() -> None:
     def _noop(*_args: Any, **_kwargs: Any) -> None:
@@ -244,13 +237,16 @@ def _parse_date(value: str) -> datetime:
     return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
 
-def _to_df(rates: Any) -> pd.DataFrame:
-    df = pd.DataFrame(rates)
-    if df.empty:
-        return df
-    df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
-    df.set_index("time", inplace=True)
-    return df
+def _normalize_historical_frame(data: Any, timeframe: str) -> pd.DataFrame:
+    frame = data.copy(deep=True) if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
+    if frame.empty:
+        return normalize_candles(frame, timeframe)
+    if (
+        frame.attrs.get("causal_normalized")
+        and frame.attrs.get("timeframe") == get_timeframe_spec(timeframe).name
+    ):
+        return frame.copy(deep=True)
+    return normalize_candles(frame, timeframe, final_candle_complete=False)
 
 
 def _fetch_range(symbol: str, timeframe: str, start: datetime, end: datetime, use_cache: bool = True, force_refresh: bool = False) -> pd.DataFrame:
@@ -261,7 +257,9 @@ def _fetch_range(symbol: str, timeframe: str, start: datetime, end: datetime, us
         cache_path = CACHE_DIR / cache_key
         if cache_path.exists():
             try:
-                return pd.read_pickle(str(cache_path))
+                return _normalize_historical_frame(pd.read_pickle(str(cache_path)), timeframe)
+            except CandleDataError:
+                raise
             except Exception:
                 pass  # corrupted cache — re-fetch
 
@@ -279,14 +277,14 @@ def _fetch_range(symbol: str, timeframe: str, start: datetime, end: datetime, us
     cursor = start
     while cursor <= end:
         chunk_end = min(cursor + timedelta(days=chunk_days), end)
-        rates = mt5.copy_rates_range(symbol, TIMEFRAME_MAP[timeframe], cursor, chunk_end)
-        df = _to_df(rates)
+        rates = mt5.copy_rates_range(symbol, get_mt5_timeframe(timeframe), cursor, chunk_end)
+        df = pd.DataFrame(rates)
         if not df.empty:
             frames.append(df)
         cursor = chunk_end + timedelta(seconds=1)
     if not frames:
         return pd.DataFrame()
-    result = pd.concat(frames).sort_index().loc[~pd.concat(frames).sort_index().index.duplicated(keep="last")]
+    result = _normalize_historical_frame(pd.concat(frames, ignore_index=True), timeframe)
 
     if use_cache:
         if cache_path is None:
@@ -412,26 +410,22 @@ def _build_liquidity_map(symbol: str, structure_context: dict | None, m15_slice:
 def _synthetic_dxy_context(symbol: str, gold_structure: dict | None, dxy_frames: dict[str, pd.DataFrame], now_ts) -> dict[str, object]:
     if not symbol.startswith("XAU"):
         return {"available": False, "relationship": "not_applicable", "confirms_bias": False, "reduce_size": False}
-    components = []
-    total_weight = 0.0
-    for pair, weight, invert in DXY_BASKET:
-        df = dxy_frames.get(pair)
-        if df is None or df.empty:
-            continue
-        closes = df[df.index <= now_ts]["close"].tail(100).astype(float).to_numpy()
-        if len(closes) < 80:
-            continue
-        if invert:
-            closes = 1.0 / closes
-        components.append((closes, weight))
-        total_weight += weight
-    if not components or total_weight <= 0:
-        return {"available": False, "source": "synthetic_basket", "dxy_bias": "unavailable", "confirms_bias": False, "reduce_size": False, "basket_pairs_used": 0}
-    min_len = min(len(c[0]) for c in components)
-    dxy = None
-    for closes, weight in components:
-        part = closes[-min_len:] * (weight / total_weight)
-        dxy = part if dxy is None else dxy + part
+    dxy, component_count, alignment = build_synthetic_dxy_from_frames(
+        dxy_frames,
+        "H1",
+        100,
+        now_ts,
+    )
+    if dxy is None:
+        return {
+            "available": False,
+            "source": "synthetic_basket",
+            "dxy_bias": "unavailable",
+            "confirms_bias": False,
+            "reduce_size": False,
+            "basket_pairs_used": component_count,
+            "alignment": alignment,
+        }
     dxy_dir = get_dxy_bias_from_array(dxy)
     gold_dir = str((gold_structure or {}).get("structure", "neutral"))
     gold_state = str((gold_structure or {}).get("state", "range"))
@@ -452,7 +446,8 @@ def _synthetic_dxy_context(symbol: str, gold_structure: dict | None, dxy_frames:
         "relationship": "inverse_confirmed" if confirms else "divergence" if divergence else "conflict" if conflicts else "neutral",
         "confirms_bias": bool(confirms),
         "reduce_size": bool(conflicts),
-        "basket_pairs_used": len(components),
+        "basket_pairs_used": component_count,
+        "alignment": alignment,
     }
 
 
@@ -469,12 +464,41 @@ def _dxy_cache_key(dxy_frames: dict[str, pd.DataFrame], now_ts) -> tuple:
         if df is None or df.empty:
             key.append((pair, None))
             continue
-        try:
-            pos = df.index.get_loc(now_ts, method='ffill')
-            key.append((pair, str(df.index[pos])))
-        except (KeyError, TypeError):
-            key.append((pair, None))
+        snapshot = causal_snapshot(df, now_ts, max_bars=1)
+        key.append(
+            (pair, snapshot["available_at"].iloc[-1].isoformat())
+            if not snapshot.empty
+            else (pair, None)
+        )
     return tuple(key)
+
+
+def _causal_timeframe_views(
+    data_frames: dict[str, pd.DataFrame],
+    decision_timestamp: object,
+    *,
+    limits: dict[str, int] | None = None,
+) -> tuple[dict[str, pd.DataFrame], str | None]:
+    """Build deterministic completed-candle views for one backtest decision."""
+    decision = as_utc_timestamp(decision_timestamp, field="decision_timestamp")
+    views: dict[str, pd.DataFrame] = {}
+    missing: list[str] = []
+    for timeframe in ("W1", "D1", "H4", "H1", "M15"):
+        frame = data_frames.get(timeframe)
+        view = (
+            causal_snapshot(
+                frame,
+                decision,
+                max_bars=(limits or {}).get(timeframe, 320),
+            )
+            if frame is not None and not frame.empty
+            else pd.DataFrame()
+        )
+        views[timeframe] = view
+        if view.empty:
+            missing.append(timeframe)
+    reason = f"insufficient_completed_htf_history:{','.join(missing)}" if missing else None
+    return views, reason
 
 
 def _pnl(symbol: str, direction: str, lot: float, entry: float, exit_price: float, cost: CostModel | None = None) -> float:
@@ -512,11 +536,23 @@ def run_backtest(
     entry_bars = int(profile.get("entry_bars", 150))
     warmup_start = start - timedelta(days=370)
 
-    data_frames = {tf: _fetch_range(symbol, tf, warmup_start, end) for tf in ("W1", "D1", "H4", "H1", "M15", entry_tf)}
+    data_frames = {
+        tf: _normalize_historical_frame(
+            _fetch_range(symbol, tf, warmup_start, end),
+            tf,
+        )
+        for tf in ("W1", "D1", "H4", "H1", "M15", entry_tf)
+    }
     entry_df_all = data_frames[entry_tf]
     if entry_df_all is None or entry_df_all.empty:
         raise RuntimeError(f"No {entry_tf} data for {symbol}")
-    dxy_frames = {pair: _fetch_range(pair, "H1", warmup_start, end) for pair, _w, _i in DXY_BASKET}
+    dxy_frames = {
+        pair: _normalize_historical_frame(
+            _fetch_range(pair, "H1", warmup_start, end),
+            "H1",
+        )
+        for pair, _w, _i in DXY_BASKET
+    }
 
     state = StrategyState()
     open_positions: list[Position] = []
@@ -549,7 +585,12 @@ def run_backtest(
     )
     total_costs = 0.0
 
-    test_rows = entry_df_all[(entry_df_all.index >= start) & (entry_df_all.index <= end)]
+    start_timestamp = as_utc_timestamp(start, field="backtest start")
+    end_timestamp = as_utc_timestamp(end, field="backtest end")
+    test_rows = entry_df_all[
+        (entry_df_all["available_at"] >= start_timestamp)
+        & (entry_df_all["available_at"] <= end_timestamp)
+    ]
     total = len(test_rows)
 
     # Pre-compute M5 ATR for ATR-based trailing modes
@@ -567,10 +608,11 @@ def run_backtest(
     for tf in ("W1", "D1", "H4", "H1", "M15"):
         df = data_frames.get(tf)
         if df is not None and not df.empty:
-            tf_positions[tf] = df.index.get_indexer(test_rows.index, method='ffill')
-    m5_positions = entry_df_all.index.get_indexer(test_rows.index)
+            tf_positions[tf] = causal_end_positions(df, test_rows["available_at"])
+    m5_positions = causal_end_positions(entry_df_all, test_rows["available_at"])
 
-    for idx, (now_ts, candle) in enumerate(test_rows.iterrows(), start=1):
+    for idx, (_candle_open_time, candle) in enumerate(test_rows.iterrows(), start=1):
+        now_ts = as_utc_timestamp(candle["available_at"], field="entry candle availability")
         loop_day = now_ts.date()
         if loop_day != current_day:
             current_day = loop_day
@@ -582,12 +624,12 @@ def run_backtest(
 
         # Build M15 view for kill-switch before position loop (only when positions exist)
         i = idx - 1
-        current_m15_idx = int(tf_positions.get("M15", [0])[i]) if "M15" in tf_positions and i < len(tf_positions["M15"]) and tf_positions["M15"][i] >= 0 else -1
+        current_m15_idx = int(tf_positions.get("M15", [0])[i]) if "M15" in tf_positions and i < len(tf_positions["M15"]) and tf_positions["M15"][i] > 0 else 0
         m15_closed = pd.DataFrame()
         if open_positions and current_m15_idx > 0 and data_frames.get("M15") is not None:
             all_m15 = data_frames["M15"]
             m15_start = max(0, current_m15_idx - 20)
-            m15_closed = all_m15.iloc[m15_start:current_m15_idx]
+            m15_closed = all_m15.iloc[m15_start:current_m15_idx].copy()
 
         survivors: list[Position] = []
         for pos in open_positions:
@@ -667,18 +709,27 @@ def run_backtest(
         for tf in ("W1", "D1", "H4", "H1", "M15"):
             df = data_frames.get(tf)
             pos_arr = tf_positions.get(tf)
-            pos = int(pos_arr[i]) if pos_arr is not None and i < len(pos_arr) and pos_arr[i] >= 0 else -1
-            if df is not None and pos >= 0:
-                start_row = max(0, pos - 319)
-                tf_frames[tf] = df.iloc[start_row:pos + 1].copy()
+            end_pos = int(pos_arr[i]) if pos_arr is not None and i < len(pos_arr) and pos_arr[i] > 0 else 0
+            if df is not None and end_pos > 0:
+                start_row = max(0, end_pos - 320)
+                tf_frames[tf] = df.iloc[start_row:end_pos].copy()
             else:
                 tf_frames[tf] = pd.DataFrame()
-        m5_pos = int(m5_positions[i]) if i < len(m5_positions) and m5_positions[i] >= 0 else -1
-        entry_slice = entry_df_all.iloc[max(0, m5_pos - entry_bars + 1):m5_pos + 1].copy() if m5_pos >= 0 else pd.DataFrame()
+        m5_end_pos = int(m5_positions[i]) if i < len(m5_positions) and m5_positions[i] > 0 else 0
+        entry_slice = entry_df_all.iloc[max(0, m5_end_pos - entry_bars):m5_end_pos].copy() if m5_end_pos > 0 else pd.DataFrame()
         h1_slice = tf_frames["H1"].tail(structure_bars).copy()
         m15_slice = tf_frames["M15"].tail(220).copy()
         d1_slice = tf_frames["D1"].tail(10).copy()
         w1_slice = tf_frames["W1"].tail(10).copy()
+
+        missing_timeframes = [tf for tf, frame in tf_frames.items() if frame.empty]
+        if entry_slice.empty or missing_timeframes:
+            action_counts["skip"] += 1
+            suffix = ",".join(missing_timeframes or [entry_tf])
+            no_trade_counts[f"insufficient_completed_htf_history:{suffix}"] += 1
+            continue
+        if any((frame["available_at"] > now_ts).any() for frame in tf_frames.values()):
+            raise RuntimeError("Causal HTF snapshot contains future candles")
 
         session_context = get_session_context(now_ts.to_pydatetime())
         session_context["session_allowed"] = True

@@ -105,25 +105,25 @@ reimplements many gates. Parity is therefore an observed goal, not an assumption
 
 | Setting | Sources, highest precedence first | Live source | Backtest source | Known mismatch / repair |
 | --- | --- | --- | --- | --- |
-| MT5 identity | Bot child environment, then direct-run `.env`; expected identity defaults to supplied identity | One-shot child contract, scrubbed after use | Terminal used only for history/cache misses | Backtest still requires terminal for uncached data; Phase 2 isolation |
-| Enabled symbols | `main.py:SYMBOLS`; session can disable BTC only | `XAUUSDm`, `BTCUSDm`, `btc_enabled` | CLI `--symbol` | Different selection models; Phase 2 |
+| MT5 identity | Bot child environment, then direct-run `.env`; expected identity defaults to supplied identity | One-shot child contract, scrubbed after use | Terminal used only for history/cache misses | Backtest still requires terminal for uncached data; later offline-data work |
+| Enabled symbols | `main.py:SYMBOLS`; session can disable BTC only | `XAUUSDm`, `BTCUSDm`, `btc_enabled` | CLI `--symbol` | Different selection models; later configuration work |
 | Capital | Latest valid `.session.json` capital, then `BOT_CAPITAL`, then 1000 | Session refresh wins after startup | `--capital`, default 1000 | UI and backtest are separate; documented only |
-| Risk per trade | Confluence score risk (1.5%/2%) when nonzero, then profile; DXY may multiply by 0.75 | Score-derived caller value sent to `RiskEngine` | Same score/profile expression | Exceeds central 1% field; `KD-RISK-001`, Phase 3 |
-| Maximum risk | No enforced cap on caller `risk_pct`; `RiskEngine.max_risk_per_trade` is only a default | Nominal 1% field | Same | Not actually a maximum; Phase 3 |
-| Daily drawdown | `RiskEngine.max_daily_drawdown=3%` of account balance | Realized daily P/L argument | Simulated realized daily P/L | Floating loss excluded; `KD-RISK-002`, Phase 3 |
-| Minimum R:R target | Symbol `min_rr` deep-merged over default 3.0 | XAU 1.5; BTC inherits 3.0 | Profile unless `--min-rr` overrides | CLI can diverge; Phase 2 parity work |
+| Risk per trade | Confluence score risk (1.5%/2%) when nonzero, then profile; DXY may multiply by 0.75 | Score-derived caller value sent to `RiskEngine` | Same score/profile expression | Exceeds central 1% field; `KD-RISK-001`, Phase 4 |
+| Maximum risk | No enforced cap on caller `risk_pct`; `RiskEngine.max_risk_per_trade` is only a default | Nominal 1% field | Same | Not actually a maximum; Phase 4 |
+| Daily drawdown | `RiskEngine.max_daily_drawdown=3%` of account balance | Realized daily P/L argument | Simulated realized daily P/L | Floating loss excluded; `KD-RISK-002`, Phase 4 |
+| Minimum R:R target | Symbol `min_rr` deep-merged over default 3.0 | XAU 1.5; BTC inherits 3.0 | Profile unless `--min-rr` overrides | CLI can diverge; Phase 3 parity work |
 | Execution R:R floor | Symbol `min_execution_rr` over default 1.2 | Post-fill guard, XAU 1.2/BTC 1.4 | No post-fill broker drift | Live-only concept; retain but model in Phase 3 |
-| Session permission | Sunday and UTC hours 0/11 hard blocked; session context otherwise informational | Wall-clock UTC | Row timestamp | Wall-clock injection is incomplete; Phase 2 |
-| Spread/slippage | Broker bid/ask and request deviation; setup log uses placeholder spread 20 | Live tick plus deviation | CLI defaults both to zero | Historical evidence often optimistic; Phase 2 |
-| News source | `NEWS_EVENTS_PATH`; absent/invalid feed becomes clear fallback | Optional local JSON | No equivalent real feed in loop | Fails open; `KD-NEWS-001`, Phase 3 |
-| Entry mode | `entry_model.determine_entry` from score/context | Market or limit readiness check | Market at row close or same-row limit range | Same-candle fill risk; `KD-BACKTEST-001`, Phase 2 |
+| Session permission | Sunday and UTC hours 0/11 hard blocked; session context otherwise informational | Wall-clock UTC | Row timestamp | Wall-clock injection is incomplete; later runtime work |
+| Spread/slippage | Broker bid/ask and request deviation; setup log uses placeholder spread 20 | Live tick plus deviation | CLI defaults both to zero | Historical evidence often optimistic; later cost-model work |
+| News source | `NEWS_EVENTS_PATH`; absent/invalid feed becomes clear fallback | Optional local JSON | No equivalent real feed in loop | Fails open; `KD-NEWS-001`, Phase 6 |
+| Entry mode | `entry_model.determine_entry` from score/context | Market or limit readiness check | Market at row close or same-row limit range | Same-candle fill risk; `KD-BACKTEST-001`, Phase 3 |
 | Partial close | Hard-coded `PARTIAL_CLOSE_RATIO=0.5` | 50% at 1R if broker volume allows | Not simulated | `KD-EXIT-001`, Phase 3 |
 | Trailing | Symbol `trailing`, then `htf_bos` fallback | XAU `atr_3x`; BTC default fallback | CLI defaults `live_atr_3x` for all symbols | Mode naming and fallback differ; Phase 3 |
 | Profit lock | Hard-coded runtime tiers passed by `runtime/loop.py`; function defaults otherwise | 8/12/16/20 currency-unit tiers | Not modeled | UI `lock_pct` is not the runtime source; Phase 3 |
-| DXY | Resolved DXY broker symbol/correlation analysis | Live MT5 series | Synthetic weighted FX basket | Different instruments and timing; Phase 2 |
-| Symbol thresholds | Deep-merged profile mutates analysis module globals | Applied before evaluation/monitoring | Applied before backtest | Global mutation can leak between symbols/tests; Phase 2 |
-| Backtest costs | CLI values | Not applicable | Spread/slippage/commission, all default zero | Older result files omit cost metadata; Phase 2 |
-| Engine mode | `BOT_ACTIVE_ENGINE`, default orchestrator | Orchestrator or legacy | Reimplemented orchestrator-like loop | Backtest does not call live orchestrator; Phase 2 |
+| DXY | Resolved DXY broker symbol/correlation analysis | Live MT5 series | Synthetic weighted FX basket | Timestamp alignment repaired in Phase 2; instrument/formula policy remains Phase 6 |
+| Symbol thresholds | Deep-merged profile mutates analysis module globals | Applied before evaluation/monitoring | Applied before backtest | Global mutation can leak between symbols/tests; later configuration work |
+| Backtest costs | CLI values | Not applicable | Spread/slippage/commission, all default zero | Older result files omit cost metadata; later cost-model work |
+| Engine mode | `BOT_ACTIVE_ENGINE`, default orchestrator | Orchestrator or legacy | Reimplemented orchestrator-like loop | Backtest does not call live orchestrator; Phase 3 |
 
 ## 7. State and persistence inventory
 
@@ -166,16 +166,16 @@ reimplements many gates. Parity is therefore an observed goal, not an assumption
 
 | ID | Expected correct behavior | Evidence | Status | Repair phase |
 | --- | --- | --- | --- | --- |
-| KD-DATA-001 | Historical HTF analysis sees only candles completed by the simulated timestamp | Backtest slices include the ffilled current HTF row | Documented | Phase 2 |
-| KD-BACKTEST-001 | Signal evaluation and entry fill cannot use the same candle's full range | Entry can be created/fill-tested on the current row | Documented | Phase 2 |
+| KD-DATA-001 | Historical HTF analysis sees only candles completed by the simulated timestamp | Baseline found opening-time `ffill`; Phase 2 regression: `test_kd_data_001_m5_decision_during_h1_excludes_current_h1` | Repaired in Phase 2 | Phase 2 |
+| KD-BACKTEST-001 | Signal evaluation and entry fill cannot use the same candle's full range | Entry can be created/fill-tested on the current row | Documented | Phase 3 |
 | KD-EXIT-001 | Backtest models the live 50% partial close at 1R | Backtest has no live-equivalent partial close path | Documented | Phase 3 |
-| KD-RISK-001 | Central max risk caps all caller-derived percentages | `test_risk_engine_caps_caller_risk_at_the_central_maximum` | Strict xfail | Phase 3 |
-| KD-RISK-002 | Daily breaker includes floating P/L | API receives realized scalar only | Documented | Phase 3 |
-| KD-REGIME-001 | Regime compares current ATR with historical ATR distribution | `test_regime_classifier_detects_recent_volatility_expansion` | Strict xfail | Phase 2 |
-| KD-NEWS-001 | Missing required news data fails closed | `test_missing_news_source_fails_closed` | Strict xfail | Phase 3 |
-| KD-OB-001 | Mitigation means a valid revisit/consumption of the zone | `test_order_block_is_not_mitigated_without_a_zone_revisit` | Strict xfail | Phase 2 |
-| KD-STOPS-001 | Retry converts stop distances into direction-aware absolute prices | `test_invalid_stop_retry_converts_distances_to_absolute_prices` | Strict xfail | Phase 3 |
-| KD-CIRCUIT-001 | Completed live outcomes update each symbol's cascade state | No live call to `StrategyState.record_trade_result` was found | Documented | Phase 3 |
+| KD-RISK-001 | Central max risk caps all caller-derived percentages | `test_risk_engine_caps_caller_risk_at_the_central_maximum` | Strict xfail | Phase 4 |
+| KD-RISK-002 | Daily breaker includes floating P/L | API receives realized scalar only | Documented | Phase 4 |
+| KD-REGIME-001 | Regime compares current ATR with historical ATR distribution | `test_regime_classifier_detects_recent_volatility_expansion` | Strict xfail | Phase 6 |
+| KD-NEWS-001 | Missing required news data fails closed | `test_missing_news_source_fails_closed` | Strict xfail | Phase 6 |
+| KD-OB-001 | Mitigation means a valid revisit/consumption of the zone | `test_order_block_is_not_mitigated_without_a_zone_revisit` | Strict xfail | Phase 6 |
+| KD-STOPS-001 | Retry converts stop distances into direction-aware absolute prices | `test_invalid_stop_retry_converts_distances_to_absolute_prices` | Strict xfail | Phase 5 |
+| KD-CIRCUIT-001 | Completed live outcomes update each symbol's cascade state | No live call to `StrategyState.record_trade_result` was found | Documented | Phase 4 |
 | KD-PERSIST-001 | Restart-critical JSON writes are atomic and coordinated with journal/DB | `open_trades.json` and several process/log files overwrite directly | Documented | Phase 4 |
 
 ## 10. Live/backtest mismatch register
@@ -185,6 +185,10 @@ implementations, synthetic versus broker DXY, absent partial closes, trailing-mo
 fallback differences, realized-only drawdown, and zero-default historical costs.
 These issues invalidate parity and profitability conclusions until their assigned
 future phases are complete.
+
+Phase 2 repaired only the causal HTF and timestamp-alignment findings. The data
+contract and regression evidence are recorded in `docs/PHASE2_CAUSAL_DATA.md`;
+the remaining execution and strategy mismatches above are still open.
 
 ## 11. Existing backtest evidence
 
@@ -248,11 +252,15 @@ credentials. It is an environment record, not a cross-platform universal lock.
 
 ## 14. Deferred work
 
-- Phase 2: candle alignment, historical visibility, same-candle fills, DXY/data
-  parity, regime and OB semantics, symbol/global configuration isolation.
-- Phase 3: risk cap, floating drawdown, news policy, execution retries, partial and
-  trailing parity, circuit-breaker outcome wiring.
-- Phase 4: atomic restart state, persistence coordination and operational hardening.
+- Phase 2: causal candle alignment, historical visibility and timestamp-based DXY
+  alignment (completed; see `docs/PHASE2_CAUSAL_DATA.md`).
+- Phase 3: same-candle fills, market/limit execution modeling, partial closes and
+  trailing parity.
+- Phase 4: risk cap, floating drawdown, circuit-breaker outcome wiring, atomic
+  restart state and persistence coordination.
+- Phase 5: broker execution retries and invalid-stop handling.
+- Phase 6: regime/ATR behavior, order-block semantics and news policy.
+- Later phase: symbol/global configuration isolation and operational hardening.
 
 ## 15. Interpretation warning
 
