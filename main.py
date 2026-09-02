@@ -3,6 +3,11 @@ from __future__ import annotations
 import sys
 import os
 
+from app_security.environment import consume_child_credentials
+
+
+_RUNTIME_MT5_CONTRACT = consume_child_credentials() if __name__ == "__main__" else None
+
 # Handle Windows console encoding issues
 if sys.platform == "win32":
     try:
@@ -836,12 +841,17 @@ def _execute_orchestrator_live_body(
     base_risk_pct = float(score.get("risk_pct") or cfg.get("risk_per_trade", 0.01))
     risk_pct = base_risk_pct * 0.75 if dxy_reduce_size else base_risk_pct
     
+    # Phase 2: Apply displacement tier position size adjustment
+    displacement_tier_adjustment = context.get("displacement_tier_adjustment") or {}
+    position_size_pct = float(displacement_tier_adjustment.get("position_size_pct", 1.0))
+    
     lot = ACTIVE_RISK_ENGINE.calculate_position_size(
         symbol=symbol,
         account_balance=max(1.0, CAPITAL + account_profit_today),
         stop_distance_price=abs(current_price - sl),
         risk_pct=risk_pct,
         enforce_min_volume=True,
+        position_size_pct=position_size_pct,  # Phase 2: Displacement tier adjustment
     )
     if lot is None:
         no_trade(
@@ -2036,7 +2046,7 @@ def monitor_trades(open_trades):
 
 #  ENTRYPOINT 
 if __name__ == "__main__":
-    if not connect_mt5():
+    if not connect_mt5(_RUNTIME_MT5_CONTRACT):
         log(" MT5 connection failed. Exiting.", "red")
         raise SystemExit(1)
 

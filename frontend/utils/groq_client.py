@@ -5,11 +5,11 @@ import os
 import urllib.error
 import urllib.request
 
-from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
+from app_security.environment import load_project_environment
 
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-load_dotenv()
+load_project_environment()
 
 
 def groq_status() -> tuple[bool, str]:

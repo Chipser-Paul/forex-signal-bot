@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 import time
+from html import escape
 from pathlib import Path
 
 import streamlit as st  # pyright: ignore[reportMissingImports]
 
+from app_security.models import mask_identifier
+from utils.auth import get_authenticated_credentials
 from utils.bot_control import get_bot_state
 from utils.bot_runner import get_bot_status
 from utils.mt5_connector import (
@@ -19,27 +22,32 @@ from utils.ui_launcher import get_ui_status
 
 
 def dashboard_page() -> None:
-    session = load_session()
-    if not session:
-        st.warning("No active session. Please log in again.")
+    credentials = get_authenticated_credentials(st.session_state)
+    if credentials is None:
+        st.warning("Authentication is required. Please log in again.")
+        st.session_state["page"] = "login"
         st.stop()
 
-    login = session.get("login")
-    password = session.get("password")
-    server = session.get("server")
+    session = load_session() or {}
+    login = credentials.login
+    password = credentials.password
+    server = credentials.server
     refresh_rate = int(session.get("refresh_interval", 5))
 
     with st.spinner("Connecting to MT5..."):
         account_data, error = connect_mt5(login, password, server)
         if error or not account_data:
-            st.error(f"Failed to connect to MT5: {error}")
+            st.error("MT5 connection or account identity verification failed.")
             st.stop()
+
+    masked_login = escape(mask_identifier(account_data["login"]))
+    display_server = escape(str(account_data["server"]))
 
     st.markdown(
         f"""
         <div class="app-hero">
             <h1>Mission Control</h1>
-            <p>Account {account_data['login']} | Server {account_data['server']} | Clean live view of performance, risk, and system health.</p>
+            <p>Account {masked_login} | Server {display_server} | Clean live view of performance, risk, and system health.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -209,7 +217,7 @@ def dashboard_page() -> None:
                         <tr>
                             <td>MT5 Session</td>
                             <td><span class="pill success">OK</span></td>
-                            <td>Account {account_data['login']}</td>
+                            <td>Account {masked_login}</td>
                         </tr>
                         <tr>
                             <td>Telegram</td>

@@ -5,10 +5,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
+from app_security.environment import load_project_environment
 
 
-load_dotenv()
+load_project_environment()
 
 
 def send_telegram(message: str) -> bool:

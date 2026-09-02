@@ -19,6 +19,7 @@ class RiskEngine:
         stop_distance_price: float,
         risk_pct: float | None = None,
         enforce_min_volume: bool = True,
+        position_size_pct: float = 1.0,  # Phase 2: Displacement tier adjustment
     ) -> float | None:
         if account_balance <= 0 or stop_distance_price <= 0:
             return None
@@ -40,7 +41,7 @@ class RiskEngine:
         if tick_value <= 0 or tick_size <= 0 or volume_min <= 0:
             return None
 
-        risk_amount = account_balance * risk_pct
+        risk_amount = account_balance * risk_pct * position_size_pct  # Apply tier adjustment
         risk_per_lot = (stop_distance_price / tick_size) * tick_value
         if risk_per_lot <= 0:
             return None

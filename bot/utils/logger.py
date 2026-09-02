@@ -10,6 +10,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from app_security.redaction import sanitize_mapping
+
 
 class TradeLog:
     """
@@ -571,7 +573,7 @@ class TradeLog:
 
         # Append one line to .jsonl file
         with open(filepath, "a") as f:
-            json.dump(self._log, f, separators=(",", ":"))
+            json.dump(sanitize_mapping(self._log), f, separators=(",", ":"))
             f.write("\n")
 
     def write_pretty(self, filepath: str) -> None:
@@ -588,6 +590,6 @@ class TradeLog:
 
         # Overwrite with pretty-printed JSON
         with open(filepath, "w") as f:
-            json.dump(self._log, f, indent=2)
+            json.dump(sanitize_mapping(self._log), f, indent=2)
 
 

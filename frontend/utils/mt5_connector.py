@@ -2,6 +2,10 @@ import MetaTrader5 as mt5
 import time
 from datetime import datetime, timezone
 
+from app_security.identity import verify_mt5_identity
+from app_security.models import mask_identifier
+from app_security.redaction import redact_text
+
 
 def connect_mt5(login: int, password: str, server: str):
     """Initialize and connect to MT5 using provided credentials."""
@@ -12,21 +16,33 @@ def connect_mt5(login: int, password: str, server: str):
 
         # Ensure correct formats
         login = int(str(login).strip())
-        password = str(password).strip()
+        password = str(password)
         server = str(server).strip()
 
         # Attempt connection
         if not mt5.initialize(login=login, password=password, server=server):
-            error = mt5.last_error()
+            error = redact_text(mt5.last_error(), (password,))
             print(f"[MT5 ERROR] Connection failed: {error}")
             return None, error
 
         account_info = mt5.account_info()
         if account_info is None:
-            error = mt5.last_error()
+            error = redact_text(mt5.last_error(), (password,))
             print(f"[MT5 WARN] Account info unavailable: {error}")
             mt5.shutdown()
             return None, error
+
+        verification = verify_mt5_identity(
+            account_info,
+            expected_login=login,
+            expected_server=server,
+        )
+        if not verification.ok:
+            print(f"[MT5 SECURITY] {verification.reason}")
+            mt5.shutdown()
+            return None, verification.reason
+
+        connected_server = str(getattr(account_info, "server", "") or server)
 
         account_data = {
             "login": account_info.login,
@@ -36,15 +52,19 @@ def connect_mt5(login: int, password: str, server: str):
             "profit": account_info.profit,
             "margin": account_info.margin,
             "currency": account_info.currency,
-            "server": server,
+            "server": connected_server,
         }
 
-        print(f"[MT5 OK] Connected successfully: {account_data['login']} ({account_data['server']})")
+        print(
+            "[MT5 SECURITY] Account identity verified: "
+            f"{mask_identifier(account_data['login'])}"
+        )
         return account_data, None
 
     except Exception as e:
-        print(f"[MT5 ERROR] Exception during connection: {e}")
-        return None, str(e)
+        safe_error = redact_text(e, (password,))
+        print(f"[MT5 ERROR] Exception during connection: {safe_error}")
+        return None, safe_error
 
 
 def get_account_info():
@@ -62,7 +82,7 @@ def get_account_info():
         print("[MT5 WARN] No account info returned.")
         return None
     except Exception as e:
-        print(f"[MT5 ERROR] Error fetching account info: {e}")
+        print(f"[MT5 ERROR] Error fetching account info: {redact_text(e)}")
         return None
 
 
@@ -85,7 +105,7 @@ def get_open_trades():
         return trades
 
     except Exception as e:
-        print(f"[MT5 ERROR] Error fetching open trades: {e}")
+        print(f"[MT5 ERROR] Error fetching open trades: {redact_text(e)}")
         return {}
 
 
@@ -104,7 +124,7 @@ def shutdown_mt5():
         mt5.shutdown()
         print("[MT5 INFO] Connection closed.")
     except Exception as e:
-        print(f"[MT5 ERROR] Error closing connection: {e}")
+        print(f"[MT5 ERROR] Error closing connection: {redact_text(e)}")
 
 
 def get_closed_profit_today():
@@ -120,5 +140,5 @@ def get_closed_profit_today():
             total += float(getattr(d, "profit", 0.0))
         return total
     except Exception as e:
-        print(f"[MT5 ERROR] Error fetching today's closed profit: {e}")
+        print(f"[MT5 ERROR] Error fetching today's closed profit: {redact_text(e)}")
         return 0.0

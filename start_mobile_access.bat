@@ -9,6 +9,7 @@ cd /d "%ROOT_DIR%"
 set "PY_EXE=%ROOT_DIR%\dl_env\Scripts\python.exe"
 set "ST_EXE=%ROOT_DIR%\dl_env\Scripts\streamlit.exe"
 set "TAILSCALE_URL=http://paul.tail9b1221.ts.net:8501"
+set "FOREX_REMOTE_ACCESS=1"
 
 echo Starting mobile access (Tailscale mode)...
 echo Target URL: %TAILSCALE_URL%
@@ -37,5 +38,7 @@ echo Started.
 echo 1) Keep the Streamlit window open.
 echo 2) Ensure Tailscale is ON on laptop and phone.
 echo 3) Open this URL in app/browser: %TAILSCALE_URL%
+echo 4) Application-token and MT5 authentication are both required.
+echo    HTTP transport is acceptable here only through the encrypted Tailscale path.
 echo.
 pause

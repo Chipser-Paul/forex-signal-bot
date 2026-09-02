@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 import sys
+from typing import Iterable
+
+from app_security.redaction import redact_text
 
 try:
     from colorama import Fore, Style, init  # pyright: ignore[reportMissingModuleSource]
@@ -39,9 +42,14 @@ def _safe_text(value: object) -> str:
         return text.encode("ascii", errors="replace").decode("ascii", errors="replace")
 
 
-def log(msg: object, color: str | None = None) -> None:
+def log(
+    msg: object,
+    color: str | None = None,
+    *,
+    secrets: Iterable[object] = (),
+) -> None:
     ts = datetime.now().strftime("%H:%M:%S")
-    text = _safe_text(msg)
+    text = _safe_text(redact_text(msg, secrets))
     prefix = f"[{ts}] "
     shade = COLORS.get((color or "").lower())
     if shade:

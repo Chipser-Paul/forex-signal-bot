@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from app_security.redaction import sanitize_mapping
 from utils.analytics_db import record_trade_event
 
 LOG_DIR = Path("logs")
@@ -39,11 +40,12 @@ def _json_safe(value: Any) -> Any:
 
 
 def _append_event(payload: dict[str, Any]) -> None:
+    safe_payload = sanitize_mapping(payload)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with JOURNAL_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        f.write(json.dumps(safe_payload, ensure_ascii=False) + "\n")
     try:
-        record_trade_event(payload)
+        record_trade_event(safe_payload)
     except Exception:
         pass
 

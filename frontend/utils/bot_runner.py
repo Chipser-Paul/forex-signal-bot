@@ -8,6 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from app_security.models import MT5Credentials
+from app_security.redaction import redact_text
+
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 PROCESS_FILE = Path(__file__).resolve().parent / ".bot_process.json"
@@ -59,27 +62,41 @@ def get_bot_status() -> dict[str, Any]:
     }
 
 
-def start_bot(capital: float) -> tuple[bool, str]:
+def start_bot(capital: float, credentials: MT5Credentials) -> tuple[bool, str]:
     status = get_bot_status()
     if status["running"]:
         return False, "Bot is already running."
+    if not credentials.login or not credentials.password or not credentials.server:
+        return False, "Authenticated MT5 credentials are required."
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     cmd = [sys.executable, str(ROOT_DIR / "main.py")]
     try:
         env = os.environ.copy()
-        env["BOT_CAPITAL"] = str(capital)
-        proc = subprocess.Popen(
-            cmd,
-            cwd=str(ROOT_DIR),
-            stdin=subprocess.DEVNULL,
-            stdout=open(LOG_FILE, "a", encoding="utf-8"),
-            stderr=open(LOG_FILE, "a", encoding="utf-8"),
-            env=env,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+        env.pop("APP_ACCESS_TOKEN", None)
+        env.update(
+            {
+                "BOT_CAPITAL": str(capital),
+                "MT5_LOGIN": credentials.login,
+                "MT5_PASSWORD": credentials.password,
+                "MT5_SERVER": credentials.server,
+                "EXPECTED_MT5_LOGIN": credentials.login,
+                "EXPECTED_MT5_SERVER": credentials.server,
+            }
         )
+        with open(LOG_FILE, "a", encoding="utf-8") as log_handle:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(ROOT_DIR),
+                stdin=subprocess.DEVNULL,
+                stdout=log_handle,
+                stderr=log_handle,
+                env=env,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+            )
     except Exception as exc:
-        return False, f"Failed to start bot: {exc}"
+        safe_error = redact_text(exc, (credentials.password,))
+        return False, f"Failed to start bot safely: {safe_error}"
 
     _save_process(
         {

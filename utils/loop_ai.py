@@ -8,13 +8,12 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
-
+from app_security.environment import load_project_environment
 from utils.analytics_db import record_ai_review
 from utils.log import log
 
 
-load_dotenv()
+load_project_environment()
 
 _QUEUE: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=32)
 _WORKER: threading.Thread | None = None

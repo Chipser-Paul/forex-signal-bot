@@ -1,21 +1,27 @@
 from __future__ import annotations
 
 import os
+from html import escape
 from pathlib import Path
 
 import streamlit as st  # pyright: ignore[reportMissingImports]
 
+from app_security.models import mask_identifier
+from utils.auth import clear_authenticated_session, get_authenticated_credentials
 from utils.bot_control import get_bot_state, set_bot_state
 from utils.bot_runner import get_bot_status, start_bot, stop_bot
+from utils.mt5_connector import shutdown_mt5
 from utils.session_manager import clear_session, load_session, save_session
 from utils.ui_launcher import get_ui_status, start_ui, stop_ui
 
 
 def settings_page() -> None:
-    session = load_session()
-    if not session:
-        st.warning("No active session. Please log in again.")
+    credentials = get_authenticated_credentials(st.session_state)
+    if credentials is None:
+        st.warning("Authentication is required. Please log in again.")
+        st.session_state["page"] = "login"
         st.stop()
+    session = load_session() or {}
 
     capital = float(session.get("capital", 1000.0))
     daily_target_pct = float(session.get("daily_target_pct", 1.0))
@@ -106,11 +112,11 @@ def settings_page() -> None:
                 <div class="mini-stat-grid">
                     <div class="mini-stat">
                         <div class="mini-label">Login</div>
-                        <div class="mini-value">{session.get('login', '-')}</div>
+                        <div class="mini-value">{escape(mask_identifier(credentials.login))}</div>
                     </div>
                     <div class="mini-stat">
                         <div class="mini-label">Server</div>
-                        <div class="mini-value">{session.get('server', '-')}</div>
+                        <div class="mini-value">{escape(credentials.server)}</div>
                     </div>
                     <div class="mini-stat">
                         <div class="mini-label">Refresh</div>
@@ -125,8 +131,13 @@ def settings_page() -> None:
                 unsafe_allow_html=True,
             )
             if st.button("Logout Session", key="logout_settings", width="stretch"):
-                clear_session()
-                st.session_state["page"] = "login"
+                clear_session(
+                    forget_credentials=True,
+                    login=credentials.login,
+                    server=credentials.server,
+                )
+                clear_authenticated_session(st.session_state)
+                shutdown_mt5()
                 st.success("Session cleared.")
                 st.stop()
 
@@ -147,7 +158,7 @@ def settings_page() -> None:
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Start Bot", width="stretch", key="settings_start_bot"):
-                    ok, msg = start_bot(float(session.get("capital", 1000.0)))
+                    ok, msg = start_bot(float(session.get("capital", 1000.0)), credentials)
                     if ok:
                         set_bot_state("running")
                         st.success(msg)

@@ -4,7 +4,9 @@ numpy
 ta
 scikit-learn
 python-dotenv
+keyring
 termcolor
 firebase-admin
 fastapi
 uvicorn
+streamlit

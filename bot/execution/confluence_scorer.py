@@ -28,7 +28,7 @@ def score_setup(context) -> dict[str, object]:
     valid_ob = bool(context.get("valid_ob_present"))
     fvg_in_ob = bool(context.get("fvg_in_ob_zone"))
     liquidity_swept = bool(context.get("liquidity_swept_before_entry"))
-    internal_bos = bool(context.get("internal_bos_on_m15"))
+    # NOTE: internal_bos moved to Gate 10 (hard boolean gate), not scored here
     session_allowed = bool(context.get("session_allowed", True))
     dxy_confirms = bool(context.get("dxy_confirms_bias"))
     news_clear = bool(context.get("no_news_in_30min"))
@@ -38,7 +38,7 @@ def score_setup(context) -> dict[str, object]:
     add(valid_ob, 2, "Valid order block present")
     add(fvg_in_ob, 1, "FVG overlaps the order block zone")
     add(liquidity_swept, 2, "Liquidity sweep occurred before entry")
-    add(internal_bos, 1, "Internal M15 BOS/CHoCH confirmed")
+    # Internal M15 BOS/CHoCH removed from scoring - now Gate 10 hard check
     add(session_allowed, 1, "All-session trading enabled")
     add(dxy_confirms, 1, "DXY confirms or supports the setup")
     add(news_clear, 1, "No nearby high-impact news blackout")

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "phase": "Phase 1 - Reproducible Baseline and Test Foundation",
+  "phase0_parent_commit": "55f7dd3488eec695fa1b7c1810177e5d40c6932a",
+  "security_checkpoint_commit": "6ac9222a38b6545516ec16fa403fcc6ca7f83bdc",
+  "created_at_utc": "2026-09-02T15:22:59.0620966Z",
+  "python": {
+    "implementation": "CPython",
+    "version": "3.10.9",
+    "architecture": "64-bit"
+  },
+  "platform": {
+    "system": "Windows",
+    "test_scope": "Windows and Python 3.10"
+  },
+  "isolated_worktree": {
+    "branch": "phase/1-baseline",
+    "starting_commit": "55f7dd3488eec695fa1b7c1810177e5d40c6932a",
+    "status_at_manifest_creation": "dirty: reviewed Phase 1 files not yet committed"
+  },
+  "file_hashes_sha256": {
+    "requirements.txt": "035d556c1a2b680865175353003a868c970e71d32d4f7012403ffbafe27727e4",
+    "requirements-dev.txt": "b6797ec9038b2506c4630f9e1cbfc20eccd63c8caf4d44a8720263e640d42756",
+    "requirements-baseline-win-py310.txt": "cd6e19122ff159288e520861dedb043e8d1c5519de5b0b59ff43da230e7431f4",
+    ".env.example": "c5308e66c69d290ffa2324fc70961e83c8b10957f94e18bdb49f1fc94240700b",
+    ".streamlit/config.toml": "0c50229de748a9b3bb42c4bfd6b38f5073cd08cf90b4bb67d614ac01f83ba715",
+    "config/symbol_profiles/base.py": "307288df804939661a7990f14fbe85b6790a63bbfc0023e9833858d4997351a9",
+    "config/symbol_profiles/xauusdm.py": "f73f208d98e5c27c0ab3e944e8440ac8fd3038ac79898de6882e047f057c987f",
+    "config/symbol_profiles/btcusdm.py": "0f7e8ac3769706b6d5fe6ba43ce1f6d7633dc2f6352c4eb6c4ecef7eb6af79b3"
+  },
+  "test_counts": {
+    "verification_environment": "RUN_WINDOWS_KEYRING_INTEGRATION=1",
+    "collected_tests": 63,
+    "passed": 58,
+    "failed": 0,
+    "skipped": 0,
+    "xfailed": 5,
+    "xpassed": 0,
+    "subtests_passed": 10
+  },
+  "known_defect_ids": [
+    "KD-DATA-001",
+    "KD-BACKTEST-001",
+    "KD-EXIT-001",
+    "KD-RISK-001",
+    "KD-RISK-002",
+    "KD-REGIME-001",
+    "KD-NEWS-001",
+    "KD-OB-001",
+    "KD-STOPS-001",
+    "KD-CIRCUIT-001",
+    "KD-PERSIST-001"
+  ],
+  "backtest_data": {
+    "tracked_pickle_count": 44,
+    "git_tree_sha1": "60b9ea26a559ae90da7a226cf327426c07d06463",
+    "validation_status": "non-validated"
+  },
+  "backtest_results": {
+    "result_set_count": 16,
+    "git_tree_sha1_at_phase0_parent": "5d06c8f44976d2489d75c161c3da0ad4755b9aff",
+    "validation_status": "non-validated: known alignment and execution mismatches apply",
+    "summary_sha256": {
+      "shadow_3m_rr15": "6b733915985754defbbc9a8a24395fe9daf723b84c8da0a63408a322da6dcb8d",
+      "shadow_3m_rr15_aligned": "abc51bdfd4812de815afa9daab19af8331cb5283794d1c0fb861d8b43656b922",
+      "shadow_3m_rr15_phase0_baseline": "abc51bdfd4812de815afa9daab19af8331cb5283794d1c0fb861d8b43656b922",
+      "shadow_3m_rr2": "59b081c4dbe77a1a0551cfd12c662ec1ed51b132677ecce7db4ca37ee391d82e",
+      "shadow_3m_rr3": "07f3ce0d5e8688ea48a9acd4a8dc24ba1d58bbccc97103c2b0a7460da8ba345a",
+      "shadow_mode_atr3x_maxcap40": "9f70d56d107b6c8ce13785b29b025ec386928992837148cb58d3f5812348787f",
+      "shadow_mode_atr3x_maxcap40_oos": "cd8bdf2a7303cfdab403000fa32badd68c2e735468e224b001d2f25723a3f5fb",
+      "shadow_mode_early_bos": "0587d865da4098213d97704a216a32fd09a2fecc37a9a363e4b2f7c096031cde",
+      "shadow_mode_july_test": "e17222e3b913c7afc0692ef6e103a100ce5aa4052cc7710ebadabddce97fb149",
+      "shadow_mode_trail_1_5x": "d5d315c96d7abc45d8c2970a0fdf9808f19a4897da64da13f27a8a0549a45efe",
+      "shadow_mode_trail_2stage": "d6bee65943a150dc9cfc5deb2f47548be3a4014b62d6afd97f7e5e1fe8215a59",
+      "shadow_mode_trail_2x": "78c6e7da442526ec48668a475c73cabc3c0a03869c2857a6e724df4cef96631c",
+      "shadow_mode_trail_atr3x": "05beb03b52d4a0163c07446148f3d4f3ff7501d914faa33cd6a97ffecd5da0ba",
+      "shadow_mode_v5": "c4b4f2a01137764102589b740ffc41377417370ccb83f1d6102309ef8bb9df2c",
+      "shadow_mode_wider_sl_v2": "4b55bc2c89807fede88c6f3c717253d3eab4e5229c9b41c4505cac90fce8f384",
+      "shadow_mode_wider_sl_v2_short": "0ad00bebc4504d6955e67cc49adf5235aad6a7c5ecce54605551dde237e23b8a"
+    }
+  },
+  "profitability_evidence": false
+}
