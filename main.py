@@ -33,6 +33,7 @@ import pandas as pd # pyright: ignore[reportMissingModuleSource]
 import numpy as np # pyright: ignore[reportMissingImports]
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+from typing import Callable
 import MetaTrader5 as mt5  # pyright: ignore[reportMissingImports]
 from trade_manager import manage_open_trades
 
@@ -64,24 +65,34 @@ from bot.execution.risk import (
     symbol_specification_from_mt5,
     validation_policy,
 )
+from bot.execution.broker import (
+    ExecutionAction,
+    ExecutionError as BrokerExecutionError,
+    ExecutionRegistry,
+    ExecutionRegistryStore,
+    ExecutionStatus as BrokerExecutionStatus,
+    LocalPosition,
+    SecureBrokerExecutor,
+    execution_policy_from_environment,
+    stable_execution_id,
+)
 from bot.execution.lifecycle import (
+    ActionConfirmation,
     ActionType,
-    Direction as LifecycleDirection,
     FillKind,
     ReadinessStyle,
     create_entry_state,
     is_price_ready,
     process_entry_event,
     manage_position,
-    reconcile_action_fill,
+    reconcile_confirmed_actions,
     record_fill,
+    stable_id as lifecycle_stable_id,
 )
 from bot.execution.live_adapter import (
-    dispatch_actions,
     intent_from_strategy_entry,
     management_config_from_live,
     market_event_from_tick,
-    order_request_for_action,
 )
 from bot.execution.lifecycle.serialization import (
     outcome_to_event,
@@ -120,6 +131,7 @@ LOOP_DELAY = 60
 OPEN_JSON = Path("open_trades.json")
 SESSION_JSON = Path("frontend") / "utils" / ".session.json"
 RISK_STATE_DIR = Path("runtime") / "risk_state"
+EXECUTION_STATE_DIR = Path("runtime") / "execution_state"
 STRATEGY_STATES = {}
 PENDING_ENTRY_STATES = {}
 SHADOW_STRATEGY_STATES = {}
@@ -312,30 +324,130 @@ def _consume_live_risk_outcome(position, *, now: datetime) -> bool:
 _last_tighten = {}  # ticket -> datetime
 
 
-def close_position_immediately(symbol: str, ticket: int, direction: str, volume: float, reason: str) -> bool:
-    tick = mt5.symbol_info_tick(symbol)
-    if tick is None:
-        return False
+def _live_broker_executor(symbols: tuple[str, ...]) -> SecureBrokerExecutor:
+    policy = execution_policy_from_environment(os.environ, symbols)
+    registry_path = EXECUTION_STATE_DIR / f"strategy-{policy.magic_number}.json"
+    return SecureBrokerExecutor(
+        mt5,
+        policy,
+        ExecutionRegistry(ExecutionRegistryStore(registry_path)),
+    )
 
-    close_req = {
-        "action": mt5.TRADE_ACTION_DEAL,
-        "symbol": symbol,
-        "position": ticket,
-        "volume": volume,
-        "type": mt5.ORDER_TYPE_SELL if direction == "buy" else mt5.ORDER_TYPE_BUY,
-        "price": tick.bid if direction == "buy" else tick.ask,
-        "deviation": 20,
-        "magic": 123456,
-        "comment": reason,
-    }
-    res = mt5.order_send(close_req)
-    if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+
+def _execution_risk_recheck(
+    symbol: str,
+    direction: str,
+    open_trades: dict,
+) -> Callable[[float, float, float], float | None]:
+    def recheck(entry: float, stop: float, maximum_volume: float) -> float | None:
+        now = datetime.now(timezone.utc)
+        decision = _approve_live_risk(
+            symbol,
+            direction,
+            entry,
+            stop,
+            open_trades,
+            now=now,
+        )
+        if not decision.approved or decision.normalized_volume is None:
+            return None
+        approved = float(decision.normalized_volume)
+        return approved if approved <= maximum_volume + 1e-12 else maximum_volume
+
+    return recheck
+
+
+def _submit_live_entry(
+    *,
+    symbol: str,
+    direction: str,
+    lot: float,
+    stop: float,
+    target: float,
+    intent,
+    tick_event,
+    risk_decision: RiskDecision,
+    open_trades: dict,
+    comment: str,
+    context: dict,
+) -> tuple[dict | None, str]:
+    trade_id = lifecycle_stable_id(
+        intent.signal_id,
+        tick_event.event_id,
+        FillKind.LIVE_MARKET.value,
+    )
+    try:
+        executor = _live_broker_executor((symbol,))
+        execution = execute_trade(
+            symbol=symbol,
+            direction=direction,
+            lot=lot,
+            sl=stop,
+            tp=target,
+            comment=comment,
+            context=context,
+            executor=executor,
+            action_id=stable_execution_id(trade_id, "entry"),
+            signal_id=intent.signal_id,
+            trade_id=trade_id,
+            risk_decision_id=risk_decision.decision_id,
+            approved_volume=float(risk_decision.normalized_volume),
+            approved_stop=stop,
+            requested_trigger=intent.requested_trigger,
+            created_at=tick_event.timestamp,
+            expires_at=intent.expires_at,
+            risk_recheck=_execution_risk_recheck(symbol, direction, open_trades),
+        )
+    except (BrokerExecutionError, OSError, ValueError) as exc:
+        log(f"[EXECUTION] {symbol} broker safety rejected submission: {exc}", "red")
+        execution = None
+    return execution, trade_id
+
+
+def close_position_immediately(
+    symbol: str,
+    ticket: int,
+    direction: str,
+    volume: float,
+    reason: str,
+    *,
+    signal_id: str,
+    trade_id: str,
+    risk_decision_id: str,
+) -> bool:
+    """Close only a proven Phase 5-owned position through the secured adapter."""
+    try:
+        executor = _live_broker_executor((symbol,))
+        action_id = stable_execution_id(trade_id, "emergency-close", reason)
+        request = executor.position_request(
+            action_id=action_id,
+            signal_id=signal_id,
+            trade_id=trade_id,
+            symbol=symbol,
+            direction=direction,
+            action_type=ExecutionAction.FULL_CLOSE,
+            volume=volume,
+            executable_price=1.0,
+            position_ticket=ticket,
+            risk_decision_id=risk_decision_id,
+            approved_volume=volume,
+            created_at=datetime.now(timezone.utc),
+        )
+        result = executor.execute(request)
+    except (BrokerExecutionError, OSError, ValueError) as exc:
+        log(f"[EXECUTION] Emergency close blocked: {exc}", "red")
+        return False
+    if (
+        result.status is BrokerExecutionStatus.CONFIRMED
+        and result.executed_volume + 1e-12 >= volume
+    ):
         log_trade_close(
             ticket=ticket,
             symbol=symbol,
-            exit_price=float(close_req["price"]),
+            exit_price=result.executed_price,
             reason=reason,
-            source="execution_guard",
+            source="phase5_secured_execution_guard",
+            details={"action_id": action_id, "execution_reason": result.reason.value},
         )
         return True
     return False
@@ -1152,12 +1264,16 @@ def _execute_orchestrator_live_body(
         f"SL={sl:.2f} TP={tp:.2f} RR={rr:.2f}",
         "green",
     )
-    execution = execute_trade(
+    execution, broker_trade_id = _submit_live_entry(
         symbol=symbol,
         direction=direction,
         lot=lot,
-        sl=sl,
-        tp=tp,
+        stop=sl,
+        target=tp,
+        intent=intent,
+        tick_event=tick_event,
+        risk_decision=risk_decision,
+        open_trades=open_trades,
         comment="SMC-Orchestrator",
         context=strategy_context,
     )
@@ -1200,6 +1316,9 @@ def _execute_orchestrator_live_body(
             direction=direction,
             volume=float(execution["lot"]),
             reason="orchestrator_guard_low_rr",
+            signal_id=intent.signal_id,
+            trade_id=broker_trade_id,
+            risk_decision_id=risk_decision.decision_id,
         )
         no_trade("execution_guard_low_rr", f"fill_rr={actual_rr:.3f}", "yellow")
         return
@@ -1216,6 +1335,8 @@ def _execute_orchestrator_live_body(
             "source": "live_mt5",
             "configuration_id": intent.configuration_id,
             "ticket": ticket,
+            "execution_action_id": execution["execution_action_id"],
+            "risk_decision_id": risk_decision.decision_id,
         },
     )
 
@@ -1837,12 +1958,16 @@ def evaluate_symbol(symbol, open_trades, debug=True):
         PENDING_ENTRY_STATES.pop(symbol, None)
 
         log(f"[] {symbol} MARKET {direction.upper()} | lot={full_lot}", "green")
-        execution = execute_trade(
+        execution, broker_trade_id = _submit_live_entry(
             symbol=symbol,
             direction=direction,
             lot=full_lot,
-            sl=sl,
-            tp=tp,
+            stop=sl,
+            target=tp,
+            intent=intent,
+            tick_event=tick_event,
+            risk_decision=risk_decision,
+            open_trades=open_trades,
             comment="SMC-Market",
             context=strategy_context,
         )
@@ -1891,6 +2016,9 @@ def evaluate_symbol(symbol, open_trades, debug=True):
                     direction=direction,
                     volume=float(execution["lot"]),
                     reason="execution_guard_low_rr",
+                    signal_id=intent.signal_id,
+                    trade_id=broker_trade_id,
+                    risk_decision_id=risk_decision.decision_id,
                 )
                 no_trade(
                     "execution_guard_low_rr",
@@ -1913,6 +2041,8 @@ def evaluate_symbol(symbol, open_trades, debug=True):
                     "configuration_id": intent.configuration_id,
                     "ticket": ticket,
                     "legacy_analysis_path": True,
+                    "execution_action_id": execution["execution_action_id"],
+                    "risk_decision_id": risk_decision.decision_id,
                 },
             )
             open_trades.setdefault(symbol, [])
@@ -2064,16 +2194,15 @@ def monitor_trades(open_trades):
     """Manage live positions through the shared Phase 3 lifecycle reducer."""
     updated = {}
     positions = {int(position.ticket): position for position in (mt5.positions_get() or [])}
-    constants = {
-        "TRADE_ACTION_DEAL": mt5.TRADE_ACTION_DEAL,
-        "TRADE_ACTION_SLTP": mt5.TRADE_ACTION_SLTP,
-        "ORDER_TYPE_BUY": mt5.ORDER_TYPE_BUY,
-        "ORDER_TYPE_SELL": mt5.ORDER_TYPE_SELL,
-    }
-
     for sym, records in open_trades.items():
         profile = apply_symbol_profile(sym)
         keep = []
+        try:
+            broker_executor = _live_broker_executor((sym,))
+        except (BrokerExecutionError, OSError, ValueError) as exc:
+            log(f"[EXECUTION] {sym} management blocked: {exc}", "red")
+            updated[sym] = list(records) if isinstance(records, list) else [records]
+            continue
         for raw_trade in records if isinstance(records, list) else [records]:
             if not isinstance(raw_trade, dict) or raw_trade.get("ticket") is None:
                 continue
@@ -2165,59 +2294,125 @@ def monitor_trades(open_trades):
             )
             lifecycle_result = manage_position(position, market_event, management_config)
 
-            def request_builder(action):
-                return order_request_for_action(
-                    action,
-                    symbol=sym,
-                    ticket=ticket,
-                    direction=LifecycleDirection(direction),
-                    current_tp=final_target,
-                    bid=float(tick_data.bid),
-                    ask=float(tick_data.ask),
-                    constants=constants,
-                    digits=int(getattr(info, "digits", 2) or 2),
-                )
-
+            executed = []
+            dispatch_error = None
             try:
-                executed = dispatch_actions(
-                    lifecycle_result.actions,
-                    request_builder=request_builder,
-                    send_order=mt5.order_send,
-                    success_retcode=mt5.TRADE_RETCODE_DONE,
-                )
-            except RuntimeError as exc:
+                for action in lifecycle_result.actions:
+                    if action.action_type is ActionType.PARTIAL_SKIPPED:
+                        executed.append((action, None))
+                        continue
+                    action_mapping = {
+                        ActionType.PARTIAL_CLOSE: ExecutionAction.PARTIAL_CLOSE,
+                        ActionType.FINAL_CLOSE: ExecutionAction.FULL_CLOSE,
+                        ActionType.MODIFY_STOP: ExecutionAction.MODIFY_STOP,
+                    }
+                    broker_action = action_mapping[action.action_type]
+                    requested_quantity = (
+                        float(action.quantity)
+                        if action.action_type in (
+                            ActionType.PARTIAL_CLOSE,
+                            ActionType.FINAL_CLOSE,
+                        )
+                        and action.quantity is not None
+                        else float(broker_position.volume)
+                    )
+                    execution_request = broker_executor.position_request(
+                        action_id=action.action_id,
+                        signal_id=position.signal_id,
+                        trade_id=position.trade_id,
+                        symbol=sym,
+                        direction=direction,
+                        action_type=broker_action,
+                        volume=requested_quantity,
+                        executable_price=float(
+                            tick_data.bid if direction == "buy" else tick_data.ask
+                        ),
+                        position_ticket=ticket,
+                        risk_decision_id=str(
+                            position.adapter_metadata.get(
+                                "risk_decision_id",
+                                "phase4-existing-position",
+                            )
+                        ),
+                        approved_volume=float(broker_position.volume),
+                        created_at=market_event.timestamp,
+                        stop_price=(
+                            float(action.new_stop)
+                            if action.action_type is ActionType.MODIFY_STOP
+                            else None
+                        ),
+                        target_price=(
+                            final_target
+                            if action.action_type is ActionType.MODIFY_STOP
+                            else None
+                        ),
+                        approved_stop=(
+                            position.current_stop
+                            if action.action_type is ActionType.MODIFY_STOP
+                            else None
+                        ),
+                    )
+                    broker_result = broker_executor.execute(execution_request)
+                    if broker_result.status not in (
+                        BrokerExecutionStatus.CONFIRMED,
+                        BrokerExecutionStatus.PARTIALLY_FILLED,
+                    ):
+                        raise RuntimeError(
+                            f"{action.action_id}:{broker_result.reason.value}"
+                        )
+                    executed.append((action, broker_result))
+            except (BrokerExecutionError, RuntimeError, ValueError) as exc:
                 log(f"[LIFECYCLE] {sym} action dispatch failed: {exc}", "red")
-                keep.append(trade)
-                continue
+                dispatch_error = exc
 
-            managed = lifecycle_result.position
+            confirmations = []
             for action, broker_result in executed:
                 if (
                     broker_result is not None
                     and action.action_type in (ActionType.PARTIAL_CLOSE, ActionType.FINAL_CLOSE)
-                    and float(getattr(broker_result, "price", 0.0) or 0.0) > 0
+                    and broker_result.executed_price is not None
+                    and broker_result.executed_volume > 0
                 ):
-                    managed = reconcile_action_fill(
-                        managed,
-                        action,
-                        float(broker_result.price),
-                        management_config,
+                    confirmations.append(
+                        ActionConfirmation(
+                            action_id=action.action_id,
+                            executed_quantity=float(broker_result.executed_volume),
+                            executed_price=float(broker_result.executed_price),
+                        )
                     )
+                elif broker_result is not None:
+                    confirmations.append(ActionConfirmation(action_id=action.action_id))
                 log_trade_event(
                     ticket=ticket,
                     symbol=sym,
                     event_name=f"lifecycle_{action.action_type.value.lower()}",
                     details={
-                        "signal_id": managed.signal_id,
-                        "trade_id": managed.trade_id,
+                        "signal_id": position.signal_id,
+                        "trade_id": position.trade_id,
                         "event_id": action.event_id,
                         "action_id": action.action_id,
                         "quantity": action.quantity,
                         "requested_price": action.requested_price,
                         "new_stop": action.new_stop,
                         "reason": action.reason.value if hasattr(action.reason, "value") else action.reason,
+                        "execution_reason": (
+                            None if broker_result is None else broker_result.reason.value
+                        ),
+                        "executed_quantity": (
+                            None if broker_result is None else broker_result.executed_volume
+                        ),
                     },
                 )
+
+            managed = reconcile_confirmed_actions(
+                position,
+                lifecycle_result,
+                confirmations,
+                management_config,
+            )
+            if dispatch_error is not None and not executed:
+                keep.append(trade)
+                continue
 
             if managed.status.value == "CLOSED":
                 closed_event = outcome_to_event(managed)
@@ -2255,17 +2450,140 @@ def monitor_trades(open_trades):
         save_open_trades(updated)
     return updated
 
+
+def _consume_reconciled_close(trade: dict, close_data: dict, *, now: datetime) -> bool:
+    """Consume one broker-confirmed complete close without replaying partials."""
+    try:
+        _policy, snapshot, authority = _live_risk_authority(now=now)
+        trade_id = str(trade["trade_id"])
+        outcome = ClosedTradeOutcome(
+            outcome_id=risk_stable_ref(
+                trade_id,
+                "broker-reconciled-close",
+                close_data.get("deal_id"),
+            ),
+            trade_id=trade_id,
+            timestamp=now,
+            gross_realized_pnl=(
+                float(trade.get("realized_gross_pnl", 0.0))
+                + float(close_data.get("pnl", 0.0))
+            ),
+            metadata={
+                "cost_basis": "broker_reported_gross_before_complete_cost_model",
+                "source": "phase5_startup_reconciliation",
+            },
+        )
+        _state, consumed = authority.consume_outcome(snapshot, outcome, now=now)
+        return consumed
+    except (KeyError, RiskError, OSError, ValueError) as exc:
+        log(f"[RECONCILIATION] Close outcome was not consumed: {exc}", "red")
+        return False
+
+
+def reconcile_broker_startup(open_trades: dict) -> bool:
+    """Fail closed unless persisted lifecycle and broker ownership reconcile."""
+    now = datetime.now(timezone.utc)
+    try:
+        executor = _live_broker_executor(tuple(SYMBOLS))
+        broker_positions = tuple(mt5.positions_get() or ())
+        broker_orders = tuple(mt5.orders_get() or ())
+        recent_deals = tuple(mt5.history_deals_get(now - timedelta(days=7), now) or ())
+    except (BrokerExecutionError, OSError, ValueError, AttributeError) as exc:
+        log(f"[RECONCILIATION] Startup blocked: {exc}", "red")
+        return False
+
+    local_positions: list[LocalPosition] = []
+    local_by_ticket: dict[int, dict] = {}
+    for symbol, records in open_trades.items():
+        for trade in records if isinstance(records, list) else [records]:
+            if not isinstance(trade, dict) or trade.get("ticket") is None:
+                continue
+            ticket = int(trade["ticket"])
+            local_by_ticket[ticket] = trade
+            local_positions.append(
+                LocalPosition(
+                    trade_id=str(trade.get("trade_id") or f"legacy-{ticket}"),
+                    symbol=symbol,
+                    ticket=ticket,
+                    direction=str(trade.get("direction") or "unknown"),
+                    remaining_volume=float(
+                        trade.get("remaining_quantity") or trade.get("lot") or 0.0
+                    ),
+                    stop=(float(trade["sl"]) if trade.get("sl") else None),
+                    target=(float(trade["tp"]) if trade.get("tp") else None),
+                )
+            )
+
+    results = executor.reconciler.reconcile_startup(
+        local_positions,
+        broker_positions=broker_positions,
+        broker_orders=broker_orders,
+        recent_deals=recent_deals,
+        now=now,
+    )
+    for result in results:
+        if result.state.value == "CLOSED_CONFIRMED" and result.position_ticket in local_by_ticket:
+            trade = local_by_ticket[result.position_ticket]
+            close_data = _find_recent_close_deal(
+                int(result.position_ticket),
+                str(trade.get("symbol") or ""),
+            )
+            if close_data is None:
+                return False
+            _consume_reconciled_close(trade, close_data, now=now)
+            for symbol in list(open_trades):
+                records = open_trades[symbol]
+                values = records if isinstance(records, list) else [records]
+                filtered = [
+                    item
+                    for item in values
+                    if not isinstance(item, dict)
+                    or int(item.get("ticket", -1)) != int(result.position_ticket)
+                ]
+                if filtered:
+                    open_trades[symbol] = filtered
+                else:
+                    open_trades.pop(symbol, None)
+        elif result.state.value == "RECOVERED":
+            recovered = dict(result.recovered)
+            symbol = str(recovered["symbol"])
+            open_trades.setdefault(symbol, []).append(
+                {
+                    "ticket": int(result.position_ticket),
+                    "symbol": symbol,
+                    "trade_id": str(recovered["trade_id_fragment"]),
+                    "signal_id": str(recovered["trade_id_fragment"]),
+                    "direction": str(recovered["direction"]),
+                    "entry_price": float(recovered["entry_price"]),
+                    "lot": float(recovered["remaining_volume"]),
+                    "remaining_quantity": float(recovered["remaining_volume"]),
+                    "sl": float(recovered["stop"]),
+                    "tp": float(recovered["target"]),
+                    "reconciliation_state": "RECOVERED",
+                    "partial_history": "UNKNOWN",
+                }
+            )
+    if any(result.block_new_entries for result in results):
+        blocked = [result.reason.value for result in results if result.block_new_entries]
+        log(f"[RECONCILIATION] Startup requires owner review: {sorted(set(blocked))}", "red")
+        return False
+    save_open_trades(open_trades)
+    return True
+
 #  ENTRYPOINT 
 if __name__ == "__main__":
     if not connect_mt5(_RUNTIME_MT5_CONTRACT):
         log(" MT5 connection failed. Exiting.", "red")
         raise SystemExit(1)
 
-    open_trades = load_open_trades()
+    open_trades = load_open_trades(strict=True)
     # normalize format
     for k, v in list(open_trades.items()):
         if isinstance(v, int):
             open_trades[k] = [v]
+    if not reconcile_broker_startup(open_trades):
+        log(" Broker reconciliation failed closed. Exiting.", "red")
+        raise SystemExit(1)
 
     log(
         " Strategy Bot started "

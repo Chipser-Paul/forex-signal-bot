@@ -384,6 +384,31 @@ class LifecycleAction:
 
 
 @dataclass(frozen=True)
+class ActionConfirmation:
+    """Broker-confirmed execution details for one planned lifecycle action."""
+
+    action_id: str
+    executed_quantity: float | None = None
+    executed_price: float | None = None
+
+    def __post_init__(self) -> None:
+        if not self.action_id:
+            raise LifecycleError("confirmed action identity is required")
+        if self.executed_quantity is not None:
+            object.__setattr__(
+                self,
+                "executed_quantity",
+                positive(self.executed_quantity, "confirmed action quantity"),
+            )
+        if self.executed_price is not None:
+            object.__setattr__(
+                self,
+                "executed_price",
+                positive(self.executed_price, "confirmed action price"),
+            )
+
+
+@dataclass(frozen=True)
 class ManagementConfig:
     partial_close_fraction: float = 0.5
     partial_target_r: float = 1.0

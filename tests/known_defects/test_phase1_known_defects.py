@@ -80,28 +80,16 @@ def test_order_block_is_not_mitigated_without_a_zone_revisit():
 
 
 @pytest.mark.known_defect
-@pytest.mark.xfail(
-    reason="KD-STOPS-001 (Phase 5): invalid-stop retry assigns distances as absolute prices",
-    strict=True,
-)
-def test_invalid_stop_retry_converts_distances_to_absolute_prices(monkeypatch, fake_mt5):
-    import trade_executor
+def test_invalid_stop_retry_converts_distances_to_absolute_prices(fake_mt5, tmp_path):
+    from bot.execution.broker import ExecutionAction
+    from bot.execution.broker.validation import corrected_absolute_levels
+    from tests.phase5.helpers import entry_request, executor
 
-    sent: list[dict] = []
-    responses = [
-        SimpleNamespace(retcode=fake_mt5.TRADE_RETCODE_INVALID_STOPS, comment="invalid"),
-        None,
-    ]
+    engine = executor(fake_mt5, tmp_path)
+    request = entry_request(engine)
+    snapshot = engine.snapshot("XAUUSDm", "buy", ExecutionAction.ENTRY)
+    stop, target = corrected_absolute_levels(request, snapshot.symbol, snapshot.tick)
 
-    def fake_send(request):
-        sent.append(dict(request))
-        return responses.pop(0)
-
-    monkeypatch.setattr(trade_executor, "_send", fake_send)
-    monkeypatch.setattr(trade_executor, "fetch_ohlcv", lambda *args, **kwargs: pd.DataFrame({"close": [100.0]}))
-    monkeypatch.setattr(trade_executor, "adapt_tp_sl", lambda *args, **kwargs: (5.0, 10.0))
-
-    trade_executor.execute_trade("XAUUSDm", "buy", 0.1, 95.0, 110.0)
-
-    assert sent[1]["sl"] == 95.0
-    assert sent[1]["tp"] == 110.0
+    assert stop == 99.9
+    assert target == 102.0
+    assert stop != snapshot.symbol.stops_level_points * snapshot.symbol.point

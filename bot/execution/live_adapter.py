@@ -131,6 +131,8 @@ def order_request_for_action(
     ask: float,
     constants: Mapping[str, int],
     digits: int,
+    deviation: int,
+    magic: int,
 ) -> dict[str, Any] | None:
     if action.action_type is ActionType.PARTIAL_SKIPPED:
         return None
@@ -154,8 +156,8 @@ def order_request_for_action(
                 else constants["ORDER_TYPE_BUY"]
             ),
             "price": float(bid if direction is Direction.BUY else ask),
-            "deviation": 20,
-            "magic": 123456,
+            "deviation": int(deviation),
+            "magic": int(magic),
             "comment": (
                 "Lifecycle partial"
                 if action.action_type is ActionType.PARTIAL_CLOSE
@@ -172,14 +174,7 @@ def dispatch_actions(
     send_order: Callable[[dict[str, Any]], Any],
     success_retcode: int,
 ) -> tuple[tuple[LifecycleAction, Any], ...]:
-    executed: list[tuple[LifecycleAction, Any]] = []
-    for action in actions:
-        request = request_builder(action)
-        if request is None:
-            executed.append((action, None))
-            continue
-        result = send_order(request)
-        if result is None or getattr(result, "retcode", None) != success_retcode:
-            raise RuntimeError(f"lifecycle action rejected: {action.action_id}")
-        executed.append((action, result))
-    return tuple(executed)
+    del actions, request_builder, send_order, success_retcode
+    raise RuntimeError(
+        "legacy lifecycle dispatcher is disabled; use SecureBrokerExecutor"
+    )

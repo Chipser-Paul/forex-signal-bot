@@ -79,19 +79,52 @@ def test_live_monitor_dispatches_shared_actions_once(
     monkeypatch,
     fake_mt5,
     allow_fake_order,
+    tmp_path,
 ):
     import main
+    from tests.phase5.helpers import configure_broker, executor
 
     trade = _live_trade_record()
+    configure_broker(fake_mt5)
+    observed_at = datetime(2026, 1, 5, 10, 10, tzinfo=timezone.utc)
     fake_mt5.positions = [
-        SimpleNamespace(ticket=7, volume=1.0, sl=90.0, tp=120.0, type=fake_mt5.ORDER_TYPE_BUY, profit=10.0)
+        SimpleNamespace(
+            ticket=7,
+            symbol="XAUUSDm",
+            volume=1.0,
+            sl=90.0,
+            tp=120.0,
+            type=fake_mt5.ORDER_TYPE_BUY,
+            profit=10.0,
+            magic=771234,
+            comment=f"p5:{trade['trade_id'][:8]}:entry123",
+        )
     ]
     fake_mt5.tick = SimpleNamespace(
-        time_msc=int(datetime(2026, 1, 5, 10, 10, tzinfo=timezone.utc).timestamp() * 1000),
+        time_msc=int(observed_at.timestamp() * 1000),
         bid=110.0,
         ask=110.0,
     )
-    allow_fake_order(SimpleNamespace(retcode=fake_mt5.TRADE_RETCODE_DONE, price=110.0))
+    broker_executor = executor(fake_mt5, tmp_path)
+    broker_executor.clock = lambda: observed_at
+    fake_mt5.tick = SimpleNamespace(
+        time_msc=int(observed_at.timestamp() * 1000),
+        bid=110.0,
+        ask=110.0,
+    )
+    fake_mt5.order_check_response = lambda request: SimpleNamespace(
+        retcode=0,
+        volume=request.get("volume", 0.0),
+    )
+    allow_fake_order(
+        lambda request: SimpleNamespace(
+            retcode=fake_mt5.TRADE_RETCODE_DONE,
+            price=110.0,
+            volume=request.get("volume", 0.0),
+            position=7,
+        )
+    )
+    monkeypatch.setattr(main, "_live_broker_executor", lambda _symbols: broker_executor)
     frames = {
         "M15": _frame(10, "15min"),
         "M5": _frame(20, "5min"),
@@ -137,7 +170,7 @@ def test_legacy_live_analysis_path_cannot_bypass_shared_entry_lifecycle():
 
     source = inspect.getsource(main.evaluate_symbol)
     shared = source.index("intent_from_strategy_entry", source.index("if trading_allowed:"))
-    order = source.index("execution = execute_trade", shared)
+    order = source.index("_submit_live_entry", shared)
     assert shared < order
     assert "process_entry_event" in source[shared:order]
     assert "record_fill" in source[order:]

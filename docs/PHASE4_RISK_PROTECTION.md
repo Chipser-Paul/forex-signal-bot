@@ -184,9 +184,9 @@ Key approvals/rejections are `APPROVED`, `INVALID_POLICY`,
 
 ## 20. Remaining limitations
 
-Phase 5 owns margin/order checks, spread-entry protection, filling modes,
-invalid-stop retry, magic-number ownership, startup broker reconciliation and any
-ownership-safe liquidation. Phase 6 owns DXY arithmetic, regime/ATR, order-block
+Phase 5 completes margin/order checks, spread-entry protection, filling modes,
+invalid-stop retry, magic-number ownership, startup broker reconciliation and
+ownership-safe liquidation; see `PHASE5_BROKER_SAFETY.md`. Phase 6 owns DXY arithmetic, regime/ATR, order-block
 and news policy. Phase 7 owns slippage, complete spread/commission/swap treatment,
 gap risk, tick reconstruction and performance validation. Other runtime JSON
 stores are not represented as risk state and remain non-atomic where previously

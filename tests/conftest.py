@@ -40,9 +40,39 @@ class FakeMT5(types.ModuleType):
     ORDER_TYPE_BUY = 0
     ORDER_TYPE_SELL = 1
     ORDER_TIME_GTC = 0
+    ORDER_FILLING_FOK = 0
     ORDER_FILLING_IOC = 1
+    ORDER_FILLING_RETURN = 2
+    SYMBOL_FILLING_FOK = 1
+    SYMBOL_FILLING_IOC = 2
+    SYMBOL_TRADE_EXECUTION_REQUEST = 0
+    SYMBOL_TRADE_EXECUTION_INSTANT = 1
+    SYMBOL_TRADE_EXECUTION_MARKET = 2
+    SYMBOL_TRADE_EXECUTION_EXCHANGE = 3
+    SYMBOL_TRADE_MODE_DISABLED = 0
+    SYMBOL_TRADE_MODE_LONGONLY = 1
+    SYMBOL_TRADE_MODE_SHORTONLY = 2
+    SYMBOL_TRADE_MODE_CLOSEONLY = 3
+    SYMBOL_TRADE_MODE_FULL = 4
     TRADE_RETCODE_DONE = 10009
+    TRADE_RETCODE_PLACED = 10008
+    TRADE_RETCODE_DONE_PARTIAL = 10010
+    TRADE_RETCODE_REQUOTE = 10004
+    TRADE_RETCODE_REJECT = 10006
+    TRADE_RETCODE_CANCEL = 10007
+    TRADE_RETCODE_ERROR = 10011
+    TRADE_RETCODE_TIMEOUT = 10012
+    TRADE_RETCODE_INVALID = 10013
+    TRADE_RETCODE_INVALID_VOLUME = 10014
+    TRADE_RETCODE_INVALID_PRICE = 10015
     TRADE_RETCODE_INVALID_STOPS = 10016
+    TRADE_RETCODE_TRADE_DISABLED = 10017
+    TRADE_RETCODE_MARKET_CLOSED = 10018
+    TRADE_RETCODE_NO_MONEY = 10019
+    TRADE_RETCODE_PRICE_CHANGED = 10020
+    TRADE_RETCODE_PRICE_OFF = 10021
+    TRADE_RETCODE_INVALID_FILL = 10030
+    TRADE_RETCODE_CONNECTION = 10031
     DEAL_ENTRY_OUT = 1
     DEAL_ENTRY_OUT_BY = 3
 
@@ -55,14 +85,22 @@ class FakeMT5(types.ModuleType):
         self.rates: Any = []
         self.range_rates: Any | None = None
         self.positions: list[Any] = []
+        self.orders: list[Any] = []
         self.deals: list[Any] = []
         self.account: Any | None = None
         self.tick = SimpleNamespace(bid=99.9, ask=100.1)
+        self.terminal = SimpleNamespace(connected=True, trade_allowed=True)
         self.symbol = SimpleNamespace(
             name="XAUUSDm",
+            visible=True,
+            trade_mode=self.SYMBOL_TRADE_MODE_FULL,
+            trade_exemode=self.SYMBOL_TRADE_EXECUTION_MARKET,
+            filling_mode=self.SYMBOL_FILLING_FOK | self.SYMBOL_FILLING_IOC,
             point=0.01,
             digits=2,
             stops_level=10,
+            trade_stops_level=10,
+            trade_freeze_level=5,
             trade_tick_value=1.0,
             trade_tick_size=0.01,
             trade_contract_size=100.0,
@@ -75,6 +113,7 @@ class FakeMT5(types.ModuleType):
         self.order_response: Any | None = None
         self.order_check_response: Any | None = None
         self.order_calc_profit_response: Any | None = None
+        self.order_calc_margin_response: Any | None = None
 
     def _record(self, name: str, *args: Any, **kwargs: Any) -> None:
         self.calls.append((name, args, kwargs))
@@ -96,7 +135,7 @@ class FakeMT5(types.ModuleType):
 
     def terminal_info(self) -> Any | None:
         self._record("terminal_info")
-        return None
+        return self.terminal
 
     def symbol_info(self, symbol: str) -> Any:
         self._record("symbol_info", symbol)
@@ -126,6 +165,10 @@ class FakeMT5(types.ModuleType):
         self._record("positions_get", *args, **kwargs)
         return list(self.positions)
 
+    def orders_get(self, *args: Any, **kwargs: Any) -> list[Any]:
+        self._record("orders_get", *args, **kwargs)
+        return list(self.orders)
+
     def history_deals_get(self, *args: Any, **kwargs: Any) -> list[Any]:
         self._record("history_deals_get", *args, **kwargs)
         return list(self.deals)
@@ -134,13 +177,15 @@ class FakeMT5(types.ModuleType):
         self._record("order_check", request)
         if not self.allow_order_check:
             raise UnsafeExternalCall("order_check requires explicit fake enablement")
-        return self.order_check_response
+        response = self.order_check_response
+        return response(request) if callable(response) else response
 
     def order_send(self, request: dict[str, Any]) -> Any:
         self._record("order_send", request)
         if not self.allow_order_send:
             raise UnsafeExternalCall("order_send requires explicit fake enablement")
-        return self.order_response
+        response = self.order_response
+        return response(request) if callable(response) else response
 
     def order_calc_profit(
         self,
@@ -153,6 +198,17 @@ class FakeMT5(types.ModuleType):
         self._record("order_calc_profit", order_type, symbol, volume, entry, close)
         response = self.order_calc_profit_response
         return response(order_type, symbol, volume, entry, close) if callable(response) else response
+
+    def order_calc_margin(
+        self,
+        order_type: int,
+        symbol: str,
+        volume: float,
+        price: float,
+    ) -> Any:
+        self._record("order_calc_margin", order_type, symbol, volume, price)
+        response = self.order_calc_margin_response
+        return response(order_type, symbol, volume, price) if callable(response) else response
 
 
 FAKE_MT5 = FakeMT5()
@@ -235,6 +291,11 @@ def isolate_external_boundaries(monkeypatch: pytest.MonkeyPatch):
         "NEWS_EVENTS_PATH",
         "BOT_CAPITAL",
         "BOT_ACTIVE_ENGINE",
+        "BOT_MAGIC_NUMBER",
+        "BOT_MAX_SPREAD_POINTS_XAUUSDM",
+        "BOT_MAX_DEVIATION_POINTS_XAUUSDM",
+        "BOT_MAX_SPREAD_POINTS_BTCUSDM",
+        "BOT_MAX_DEVIATION_POINTS_BTCUSDM",
     ):
         monkeypatch.delenv(name, raising=False)
 

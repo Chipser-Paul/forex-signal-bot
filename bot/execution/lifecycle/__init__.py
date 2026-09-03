@@ -14,8 +14,15 @@ from .adapters import (
     run_historical_lifecycle,
     run_live_mock_lifecycle,
 )
-from .management import force_close, manage_position, normalized_outcome, reconcile_action_fill
+from .management import (
+    force_close,
+    manage_position,
+    normalized_outcome,
+    reconcile_action_fill,
+    reconcile_confirmed_actions,
+)
 from .models import (
+    ActionConfirmation,
     ActionType,
     AmbiguityPolicy,
     Direction,
@@ -38,6 +45,7 @@ from .models import (
 )
 
 __all__ = [
+    "ActionConfirmation",
     "ActionType",
     "AmbiguityPolicy",
     "Direction",
@@ -68,6 +76,7 @@ __all__ = [
     "prospective_bar_fill",
     "record_fill",
     "reconcile_action_fill",
+    "reconcile_confirmed_actions",
     "run_historical_lifecycle",
     "run_live_mock_lifecycle",
     "stable_id",

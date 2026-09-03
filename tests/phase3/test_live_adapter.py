@@ -101,6 +101,8 @@ def test_order_translation_separates_partial_close_and_stop_modification():
         ask=110.1,
         constants=constants,
         digits=2,
+        deviation=5,
+        magic=771234,
     )
     modify = order_request_for_action(
         _action(ActionType.MODIFY_STOP, new_stop=100.123),
@@ -112,27 +114,21 @@ def test_order_translation_separates_partial_close_and_stop_modification():
         ask=110.1,
         constants=constants,
         digits=2,
+        deviation=5,
+        magic=771234,
     )
     assert partial["action"] == 1 and partial["volume"] == 0.5
     assert modify == {"action": 2, "symbol": "TEST", "position": 7, "sl": 100.12, "tp": 120.0}
 
 
-def test_dispatch_uses_only_injected_order_function_and_rejects_failure():
+def test_legacy_dispatch_is_incapable_of_broker_mutation():
     action = _action(ActionType.PARTIAL_CLOSE, quantity=0.5)
     calls = []
-    success = SimpleNamespace(retcode=10009)
-    executed = dispatch_actions(
-        (action,),
-        request_builder=lambda _action: {"safe": True},
-        send_order=lambda request: calls.append(request) or success,
-        success_retcode=10009,
-    )
-    assert calls == [{"safe": True}]
-    assert executed[0][1] is success
-    with pytest.raises(RuntimeError, match="rejected"):
+    with pytest.raises(RuntimeError, match="disabled"):
         dispatch_actions(
             (action,),
             request_builder=lambda _action: {"safe": True},
-            send_order=lambda _request: SimpleNamespace(retcode=1),
+            send_order=lambda request: calls.append(request),
             success_retcode=10009,
         )
+    assert calls == []

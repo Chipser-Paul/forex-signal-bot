@@ -5,6 +5,7 @@ from dataclasses import replace
 from typing import Iterable
 
 from .models import (
+    ActionConfirmation,
     ActionType,
     Direction,
     ExitReason,
@@ -20,6 +21,7 @@ from .models import (
     TradeOutcome,
     finite,
     make_transition,
+    positive,
     stable_id,
     validate_position,
 )
@@ -480,11 +482,18 @@ def reconcile_action_fill(
     action: LifecycleAction,
     actual_price: float,
     config: ManagementConfig,
+    actual_quantity: float | None = None,
 ) -> PositionState:
-    """Replace a planned close price with the adapter's confirmed fill price."""
+    """Reconcile planned close accounting with the broker's actual fill."""
     if action.action_type not in (ActionType.PARTIAL_CLOSE, ActionType.FINAL_CLOSE):
         return position
     actual_price = finite(actual_price, "actual close fill")
+    quantity = action.quantity if actual_quantity is None else positive(
+        actual_quantity,
+        "actual close quantity",
+    )
+    if quantity > action.quantity + 1e-12:
+        raise LifecycleError("actual close quantity cannot exceed the requested quantity")
     found = False
     components: list[PnlComponent] = []
     for component in position.pnl_components:
@@ -495,20 +504,161 @@ def reconcile_action_fill(
         components.append(
             replace(
                 component,
+                quantity=quantity,
                 exit_price=actual_price,
-                gross_pnl=_gross_pnl(position, component.quantity, actual_price, config),
+                gross_pnl=_gross_pnl(position, quantity, actual_price, config),
             )
         )
     if not found:
         raise LifecycleError("confirmed fill does not match a lifecycle close action")
     gross = sum(component.gross_pnl for component in components)
+    unfilled = float(action.quantity) - quantity
+    closed_quantity = position.closed_quantity - unfilled
+    remaining_quantity = position.remaining_quantity + unfilled
+    final_completed = (
+        action.action_type is ActionType.FINAL_CLOSE
+        and remaining_quantity <= config.numeric_tolerance
+    )
     return replace(
         position,
         pnl_components=tuple(components),
         realized_gross_pnl=gross,
         current_r_multiple=_gross_r(position, gross, config),
-        exit_price=actual_price if action.action_type is ActionType.FINAL_CLOSE else position.exit_price,
+        closed_quantity=closed_quantity,
+        remaining_quantity=0.0 if final_completed else remaining_quantity,
+        status=(
+            LifecycleStatus.CLOSED
+            if final_completed
+            else LifecycleStatus.PARTIALLY_CLOSED
+        ),
+        exit_time=position.exit_time if final_completed else None,
+        exit_price=actual_price if final_completed else None,
+        exit_reason=position.exit_reason if final_completed else None,
     )
+
+
+def reconcile_confirmed_actions(
+    original: PositionState,
+    planned: ManagementResult,
+    confirmations: Iterable[ActionConfirmation],
+    config: ManagementConfig,
+) -> PositionState:
+    """Apply only broker-confirmed actions from an optimistic management plan."""
+    actions = {action.action_id: action for action in planned.actions}
+    confirmed = {confirmation.action_id: confirmation for confirmation in confirmations}
+    unknown = set(confirmed) - set(actions)
+    if unknown:
+        raise LifecycleError("confirmation does not belong to the management plan")
+
+    current = original
+    accepted_any = False
+    for action in planned.actions:
+        if action.action_type is ActionType.PARTIAL_SKIPPED:
+            current = replace(
+                current,
+                partial_close_attempted=True,
+                partial_close_skip_reason=str(action.reason),
+                processed_action_ids=current.processed_action_ids + (action.action_id,),
+            )
+            accepted_any = True
+            continue
+
+        confirmation = confirmed.get(action.action_id)
+        if confirmation is None:
+            continue
+        accepted_any = True
+
+        if action.action_type is ActionType.MODIFY_STOP:
+            if action.new_stop is None:
+                raise LifecycleError("confirmed stop action has no stop price")
+            current = replace(
+                current,
+                current_stop=action.new_stop,
+                processed_action_ids=current.processed_action_ids + (action.action_id,),
+            )
+            continue
+
+        if action.action_type not in (ActionType.PARTIAL_CLOSE, ActionType.FINAL_CLOSE):
+            raise LifecycleError("unsupported confirmed lifecycle action")
+        if confirmation.executed_quantity is None or confirmation.executed_price is None:
+            raise LifecycleError("confirmed close requires executed quantity and price")
+        if confirmation.executed_quantity > action.quantity + config.numeric_tolerance:
+            raise LifecycleError("confirmed close exceeds its planned quantity")
+        if confirmation.executed_quantity > current.remaining_quantity + config.numeric_tolerance:
+            raise LifecycleError("confirmed close exceeds remaining position quantity")
+
+        quantity = min(confirmation.executed_quantity, current.remaining_quantity)
+        remaining = max(0.0, current.remaining_quantity - quantity)
+        component = PnlComponent(
+            action_id=action.action_id,
+            timestamp=action.timestamp,
+            quantity=quantity,
+            entry_price=current.fill_price,
+            exit_price=confirmation.executed_price,
+            gross_pnl=_gross_pnl(current, quantity, confirmation.executed_price, config),
+            reason=action.reason or "broker_confirmed_close",
+        )
+        components = current.pnl_components + (component,)
+        gross = sum(item.gross_pnl for item in components)
+        closes_position = remaining <= config.numeric_tolerance
+        next_status = (
+            LifecycleStatus.CLOSED if closes_position else LifecycleStatus.PARTIALLY_CLOSED
+        )
+        transitions = current.transitions
+        if next_status is not current.status:
+            transitions += (
+                make_transition(
+                    event_id=action.event_id,
+                    timestamp=action.timestamp,
+                    from_status=current.status,
+                    to_status=next_status,
+                    reason=str(
+                        action.reason.value
+                        if isinstance(action.reason, ExitReason)
+                        else action.reason
+                    ),
+                ),
+            )
+        current = replace(
+            current,
+            status=next_status,
+            remaining_quantity=0.0 if closes_position else remaining,
+            closed_quantity=current.initial_quantity if closes_position else current.closed_quantity + quantity,
+            partial_close_attempted=(
+                True
+                if action.action_type is ActionType.PARTIAL_CLOSE
+                else current.partial_close_attempted
+            ),
+            partial_close_occurred=(
+                True
+                if action.action_type is ActionType.PARTIAL_CLOSE
+                else current.partial_close_occurred
+            ),
+            realized_gross_pnl=gross,
+            current_r_multiple=_gross_r(current, gross, config),
+            processed_action_ids=current.processed_action_ids + (action.action_id,),
+            pnl_components=components,
+            transitions=transitions,
+            exit_time=action.timestamp if closes_position else None,
+            exit_price=confirmation.executed_price if closes_position else None,
+            exit_reason=action.reason if closes_position else None,
+        )
+
+    if not accepted_any:
+        return original
+    current = replace(
+        current,
+        highest_favorable_price=planned.position.highest_favorable_price,
+        lowest_favorable_price=planned.position.lowest_favorable_price,
+        ambiguity_policy_used=(
+            current.ambiguity_policy_used or planned.position.ambiguity_policy_used
+        ),
+        processed_event_ids=planned.position.processed_event_ids,
+        last_processed_event_id=planned.position.last_processed_event_id,
+        last_event_time=planned.position.last_event_time,
+    )
+    validate_position(current)
+    return current
 
 
 def normalized_outcome(position: PositionState) -> TradeOutcome:
