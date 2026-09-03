@@ -40,6 +40,17 @@ from bot.analysis.liquidity_map import get_asian_session_range, get_previous_day
 from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
 from bot.execution.risk_engine import RiskEngine
+from bot.execution.risk import (
+    AccountSnapshot,
+    CircuitStatus,
+    ClosedTradeOutcome,
+    InMemoryRiskAuthority,
+    OpenRiskItem,
+    SymbolRiskSpecification,
+    initialize_risk_state,
+    stable_ref as risk_stable_ref,
+    validation_policy,
+)
 from bot.execution.lifecycle import (
     Direction as LifecycleDirection,
     EntryState,
@@ -55,6 +66,7 @@ from bot.execution.lifecycle import (
     manage_position,
     new_entry_intent,
     process_entry_event,
+    prospective_bar_fill,
     record_fill,
     stable_id,
 )
@@ -96,7 +108,6 @@ def _mute_logs() -> None:
 @dataclass
 class PendingEntry:
     entry_state: EntryState
-    risk_pct: float
     sl_reason: str
     score: int
     grade: str
@@ -116,6 +127,129 @@ class CostModel:
         # Spread is paid once (enter at ask, exit at bid); slippage on both fills.
         price_cost = self.spread_price + 2.0 * self.slippage_price
         return price_cost * lot * self.contract_size + self.commission_per_lot * lot
+
+
+def _backtest_account_snapshot(
+    *,
+    account_ref: str,
+    capital: float,
+    realized_pnl: float,
+    positions: list[PositionState],
+    mark_price: float,
+    contract_size: float,
+    timestamp: datetime,
+) -> AccountSnapshot:
+    balance = capital + realized_pnl
+    floating_pnl = sum(
+        position.direction.sign
+        * (mark_price - position.fill_price)
+        * position.remaining_quantity
+        * contract_size
+        for position in positions
+    )
+    return AccountSnapshot(
+        account_ref=account_ref,
+        balance=balance,
+        equity=balance + floating_pnl,
+        floating_pnl=floating_pnl,
+        margin=0.0,
+        free_margin=balance + floating_pnl,
+        currency="SIMULATED",
+        timestamp=timestamp,
+        source="shadow_backtest",
+    )
+
+
+def _backtest_open_risk(
+    positions: list[PositionState],
+    *,
+    mark_price: float,
+    contract_size: float,
+) -> tuple[OpenRiskItem, ...]:
+    items = []
+    for position in positions:
+        stop = position.current_stop
+        wrong_side = (
+            position.direction is LifecycleDirection.BUY and stop >= mark_price
+        ) or (
+            position.direction is LifecycleDirection.SELL and stop <= mark_price
+        )
+        locked_profit = (
+            position.direction is LifecycleDirection.BUY and stop >= position.fill_price
+        ) or (
+            position.direction is LifecycleDirection.SELL and stop <= position.fill_price
+        )
+        estimated_loss = None
+        method = "invalid_stop"
+        if not wrong_side:
+            estimated_loss = (
+                0.0
+                if locked_profit
+                else abs(position.fill_price - stop)
+                * position.remaining_quantity
+                * contract_size
+            )
+            method = "locked_profit_floor" if locked_profit else "backtest_contract_size"
+        items.append(
+            OpenRiskItem(
+                trade_id=position.trade_id,
+                symbol=position.symbol,
+                direction=position.direction.value,
+                remaining_volume=position.remaining_quantity,
+                current_reference_price=mark_price,
+                current_stop=stop,
+                estimated_loss=estimated_loss,
+                ownership="strategy",
+                calculation_method=method,
+                entry_price=position.fill_price,
+            )
+        )
+    return tuple(items)
+
+
+def _refresh_backtest_risk(
+    authority: InMemoryRiskAuthority,
+    *,
+    account_ref: str,
+    capital: float,
+    realized_pnl: float,
+    positions: list[PositionState],
+    mark_price: float,
+    contract_size: float,
+    timestamp: datetime,
+) -> AccountSnapshot:
+    snapshot = _backtest_account_snapshot(
+        account_ref=account_ref,
+        capital=capital,
+        realized_pnl=realized_pnl,
+        positions=positions,
+        mark_price=mark_price,
+        contract_size=contract_size,
+        timestamp=timestamp,
+    )
+    authority.refresh(snapshot, now=timestamp)
+    return snapshot
+
+
+def _consume_backtest_outcome(
+    authority: InMemoryRiskAuthority,
+    position: PositionState,
+) -> bool:
+    if position.exit_time is None:
+        raise RuntimeError("closed backtest position lacks an exit timestamp")
+    return authority.consume_outcome(
+        ClosedTradeOutcome(
+            outcome_id=risk_stable_ref(
+                position.trade_id,
+                "final",
+                position.exit_time.isoformat(),
+            ),
+            trade_id=position.trade_id,
+            timestamp=position.exit_time,
+            gross_realized_pnl=position.realized_gross_pnl,
+            metadata={"cost_basis": "gross_before_costs", "source": "shadow_backtest"},
+        )
+    )
 
 
 def _check_kill_switch(
@@ -555,8 +689,6 @@ def run_backtest(
     no_trade_counts: Counter[str] = Counter()
     action_counts: Counter[str] = Counter()
     realized_pnl = 0.0
-    current_day = None
-    day_start_realized_pnl = 0.0
     ticket_seq = 1
     bias_cache: dict[tuple, dict[str, object]] = {}
     structure_cache: dict[str | None, dict[str, object]] = {}
@@ -591,6 +723,42 @@ def run_backtest(
 
     start_timestamp = as_utc_timestamp(start, field="backtest start")
     end_timestamp = as_utc_timestamp(end, field="backtest end")
+    risk_policy = validation_policy({})
+    risk_specification = SymbolRiskSpecification(
+        symbol=symbol,
+        tick_size=float(getattr(symbol_info, "trade_tick_size", point) or point),
+        tick_value=float(getattr(symbol_info, "trade_tick_value", 0.0) or 0.0),
+        volume_min=float(getattr(symbol_info, "volume_min", 0.0) or 0.0),
+        volume_max=float(getattr(symbol_info, "volume_max", 0.0) or 0.0),
+        volume_step=float(getattr(symbol_info, "volume_step", 0.0) or 0.0),
+        price_precision=int(getattr(symbol_info, "digits", 0) or 0),
+        contract_size=contract_size,
+    )
+    risk_account_ref = risk_stable_ref(
+        "shadow_backtest",
+        symbol,
+        start_timestamp.isoformat(),
+        float(capital),
+    )
+    initial_snapshot = AccountSnapshot(
+        account_ref=risk_account_ref,
+        balance=float(capital),
+        equity=float(capital),
+        floating_pnl=0.0,
+        margin=0.0,
+        free_margin=float(capital),
+        currency="SIMULATED",
+        timestamp=start_timestamp.to_pydatetime(),
+        source="shadow_backtest",
+    )
+    risk_authority = InMemoryRiskAuthority(
+        risk_policy,
+        initialize_risk_state(
+            initial_snapshot,
+            risk_policy,
+            known_strategy_positions=0,
+        ),
+    )
     test_rows = entry_df_all[
         (entry_df_all["available_at"] >= start_timestamp)
         & (entry_df_all["available_at"] <= end_timestamp)
@@ -617,11 +785,6 @@ def run_backtest(
 
     for idx, (_candle_open_time, candle) in enumerate(test_rows.iterrows(), start=1):
         now_ts = as_utc_timestamp(candle["available_at"], field="entry candle availability")
-        loop_day = now_ts.date()
-        if loop_day != current_day:
-            current_day = loop_day
-            day_start_realized_pnl = realized_pnl
-
         open_price = float(candle["open"])
         high = float(candle["high"])
         low = float(candle["low"])
@@ -675,89 +838,153 @@ def run_backtest(
             total_costs += trade_cost
             realized_pnl -= trade_cost
             net_pnl = managed.realized_gross_pnl - trade_cost
-            trade_dir = "bullish" if managed.direction is LifecycleDirection.BUY else "bearish"
-            state.record_trade_result(
-                trade_dir,
-                "win" if net_pnl > 0 else "loss",
-                now=now_ts.to_pydatetime(),
-            )
+            _consume_backtest_outcome(risk_authority, managed)
             trades.append(_lifecycle_trade_record(managed, net_pnl, trade_cost))
             booked_gross_by_trade.pop(managed.trade_id, None)
         open_positions = survivors
 
-        if pending_entry is not None:
-            entry_decision = process_entry_event(
-                pending_entry.entry_state,
-                base_event,
-                tolerance=pending_entry.tolerance,
+        try:
+            account_snapshot = _refresh_backtest_risk(
+                risk_authority,
+                account_ref=risk_account_ref,
+                capital=capital,
+                realized_pnl=realized_pnl,
+                positions=open_positions,
+                mark_price=close,
+                contract_size=contract_size,
+                timestamp=now_ts.to_pydatetime(),
             )
-            pending_entry.entry_state = entry_decision.state
-            if entry_decision.state.status in (
-                LifecycleStatus.EXPIRED,
-                LifecycleStatus.CANCELLED,
-                LifecycleStatus.REJECTED,
-            ):
-                no_trade_counts[f"pending_{entry_decision.state.status.value.lower()}"] += 1
-                pending_entry = None
-            elif entry_decision.triggered:
-                fill_price = float(entry_decision.proposed_fill_price)
-                intent = entry_decision.state.intent
-                lot = risk_engine.calculate_position_size(
-                    symbol=symbol,
-                    account_balance=max(1.0, capital + realized_pnl),
-                    stop_distance_price=abs(fill_price - intent.stop_loss),
-                    risk_pct=pending_entry.risk_pct,
-                    enforce_min_volume=True,
-                    position_size_pct=1.0,
-                )
-                if lot is None:
-                    no_trade_counts["risk_below_min_volume"] += 1
-                elif not risk_engine.validate_rr(fill_price, intent.stop_loss, intent.final_target):
-                    no_trade_counts["filled_rr_below_orchestrator_minimum"] += 1
-                else:
-                    filled = record_fill(
-                        entry_decision.state,
-                        base_event,
-                        fill_price=fill_price,
-                        quantity=float(lot),
-                        fill_kind=entry_decision.fill_kind or FillKind.SIMULATED_TRIGGER,
-                        adapter_metadata={
-                            "source": "shadow_backtest",
-                            "configuration_id": intent.configuration_id,
-                            "ticket": ticket_seq,
-                            "sl_reason": pending_entry.sl_reason,
-                            "score": pending_entry.score,
-                            "grade": pending_entry.grade,
-                            "setup_id": pending_entry.setup_id,
-                        },
-                    )
-                    ticket_seq += 1
-                    state.mark_entry_filled()
-                    first_management = manage_position(filled, base_event, lifecycle_config)
-                    managed = first_management.position
-                    realized_pnl += managed.realized_gross_pnl
-                    booked_gross_by_trade[managed.trade_id] = managed.realized_gross_pnl
-                    action_counts["entry_triggered"] += 1
-                    for action in first_management.actions:
-                        action_counts[f"lifecycle_{action.action_type.value.lower()}"] += 1
-                    if managed.status is LifecycleStatus.CLOSED:
-                        trade_cost = cost.round_trip(managed.initial_quantity)
-                        total_costs += trade_cost
-                        realized_pnl -= trade_cost
-                        net_pnl = managed.realized_gross_pnl - trade_cost
-                        trade_dir = "bullish" if managed.direction is LifecycleDirection.BUY else "bearish"
-                        state.record_trade_result(
-                            trade_dir,
-                            "win" if net_pnl > 0 else "loss",
-                            now=now_ts.to_pydatetime(),
-                        )
-                        trades.append(_lifecycle_trade_record(managed, net_pnl, trade_cost))
-                        booked_gross_by_trade.pop(managed.trade_id, None)
-                    else:
-                        open_positions.append(managed)
-                pending_entry = None
+        except (ValueError, TypeError):
+            account_snapshot = None
+            no_trade_counts["risk_invalid_simulated_equity"] += 1
 
-        equity_rows.append({"timestamp": now_ts.isoformat(), "equity": round(capital + realized_pnl, 4), "open_positions": len(open_positions)})
+        if pending_entry is not None:
+            intent = pending_entry.entry_state.intent
+            risk_decision = None
+            if intent.expires_at is not None and base_event.timestamp >= intent.expires_at:
+                entry_decision = process_entry_event(
+                    pending_entry.entry_state,
+                    base_event,
+                    tolerance=pending_entry.tolerance,
+                )
+            else:
+                prospective = prospective_bar_fill(
+                    intent,
+                    base_event,
+                    pending_entry.tolerance,
+                )
+                prospective_entry = (
+                    float(prospective[0])
+                    if prospective is not None
+                    else float(intent.requested_trigger)
+                )
+                if account_snapshot is not None:
+                    risk_decision = risk_authority.decide(
+                        snapshot=account_snapshot,
+                        specification=risk_specification,
+                        direction=intent.direction.value,
+                        entry=prospective_entry,
+                        stop=intent.stop_loss,
+                        open_risk_items=_backtest_open_risk(
+                            open_positions,
+                            mark_price=close,
+                            contract_size=contract_size,
+                        ),
+                        now=now_ts.to_pydatetime(),
+                        requested_risk_fraction=risk_policy.base_risk_fraction,
+                    )
+                if risk_decision is None or not risk_decision.approved:
+                    reason = (
+                        "INVALID_SIMULATED_EQUITY"
+                        if risk_decision is None
+                        else risk_decision.reason.value
+                    )
+                    no_trade_counts[f"risk_{reason.lower()}"] += 1
+                    entry_decision = None
+                else:
+                    entry_decision = process_entry_event(
+                        pending_entry.entry_state,
+                        base_event,
+                        tolerance=pending_entry.tolerance,
+                    )
+            if entry_decision is None:
+                pass
+            else:
+                pending_entry.entry_state = entry_decision.state
+                if entry_decision.state.status in (
+                    LifecycleStatus.EXPIRED,
+                    LifecycleStatus.CANCELLED,
+                    LifecycleStatus.REJECTED,
+                ):
+                    no_trade_counts[f"pending_{entry_decision.state.status.value.lower()}"] += 1
+                    pending_entry = None
+                elif entry_decision.triggered:
+                    assert risk_decision is not None and risk_decision.normalized_volume is not None
+                    fill_price = float(entry_decision.proposed_fill_price)
+                    intent = entry_decision.state.intent
+                    lot = float(risk_decision.normalized_volume)
+                    if not risk_engine.validate_rr(fill_price, intent.stop_loss, intent.final_target):
+                        no_trade_counts["filled_rr_below_orchestrator_minimum"] += 1
+                    else:
+                        filled = record_fill(
+                            entry_decision.state,
+                            base_event,
+                            fill_price=fill_price,
+                            quantity=lot,
+                            fill_kind=entry_decision.fill_kind or FillKind.SIMULATED_TRIGGER,
+                            initial_risk_account_currency=risk_decision.estimated_normalized_loss,
+                            adapter_metadata={
+                                "source": "shadow_backtest",
+                                "configuration_id": intent.configuration_id,
+                                "ticket": ticket_seq,
+                                "sl_reason": pending_entry.sl_reason,
+                                "score": pending_entry.score,
+                                "grade": pending_entry.grade,
+                                "setup_id": pending_entry.setup_id,
+                                "risk_decision_id": risk_decision.decision_id,
+                            },
+                        )
+                        ticket_seq += 1
+                        state.mark_entry_filled()
+                        first_management = manage_position(filled, base_event, lifecycle_config)
+                        managed = first_management.position
+                        realized_pnl += managed.realized_gross_pnl
+                        booked_gross_by_trade[managed.trade_id] = managed.realized_gross_pnl
+                        action_counts["entry_triggered"] += 1
+                        for action in first_management.actions:
+                            action_counts[f"lifecycle_{action.action_type.value.lower()}"] += 1
+                        if managed.status is LifecycleStatus.CLOSED:
+                            trade_cost = cost.round_trip(managed.initial_quantity)
+                            total_costs += trade_cost
+                            realized_pnl -= trade_cost
+                            net_pnl = managed.realized_gross_pnl - trade_cost
+                            _consume_backtest_outcome(risk_authority, managed)
+                            trades.append(_lifecycle_trade_record(managed, net_pnl, trade_cost))
+                            booked_gross_by_trade.pop(managed.trade_id, None)
+                        else:
+                            open_positions.append(managed)
+                    pending_entry = None
+
+        try:
+            account_snapshot = _refresh_backtest_risk(
+                risk_authority,
+                account_ref=risk_account_ref,
+                capital=capital,
+                realized_pnl=realized_pnl,
+                positions=open_positions,
+                mark_price=close,
+                contract_size=contract_size,
+                timestamp=now_ts.to_pydatetime(),
+            )
+        except (ValueError, TypeError):
+            account_snapshot = None
+
+        equity_value = (
+            account_snapshot.equity
+            if account_snapshot is not None
+            else capital + realized_pnl
+        )
+        equity_rows.append({"timestamp": now_ts.isoformat(), "equity": round(equity_value, 4), "open_positions": len(open_positions)})
 
         if idx % 500 == 0:
             print(f"[SHADOW PROGRESS] {idx}/{total} ({(idx / max(total, 1)) * 100:.1f}%)", flush=True)
@@ -770,6 +997,17 @@ def run_backtest(
         if len(open_positions) >= pair_limit:
             action_counts["skip"] += 1
             no_trade_counts["max_concurrent_trades_hit"] += 1
+            continue
+
+        if account_snapshot is None:
+            action_counts["halt"] += 1
+            no_trade_counts["risk_invalid_simulated_equity"] += 1
+            continue
+        if risk_authority.state.circuit_status is not CircuitStatus.ACTIVE:
+            action_counts["halt"] += 1
+            no_trade_counts[
+                f"risk_{risk_authority.state.circuit_status.value.lower()}"
+            ] += 1
             continue
 
         tf_frames = {}
@@ -818,12 +1056,6 @@ def run_backtest(
             action_counts["pause"] += 1
             no_trade_counts["news_blackout"] += 1
             continue
-        daily_realized_pnl = realized_pnl - day_start_realized_pnl
-        if risk_engine.check_daily_drawdown(daily_realized_pnl, capital):
-            action_counts["halt"] += 1
-            no_trade_counts["daily_drawdown_limit_hit"] += 1
-            continue
-        
         # Initialize setup logging for this iteration
         setup_id = generate_setup_id(symbol, timestamp=now_ts.to_pydatetime())
         gate_results = {}
@@ -881,13 +1113,6 @@ def run_backtest(
                 outcome="rejected",
                 outcome_detail="htf_bias_unconfirmed"
             )
-            continue
-
-        # CASCADE CIRCUIT BREAKER: block direction after 2 same-direction losses
-        if state.is_direction_blocked(htf_bias, now=now_ts.to_pydatetime()):
-            state.reject_setup(f"cascade_breaker_blocked_{htf_bias}")
-            action_counts["skip"] += 1
-            no_trade_counts[f"cascade_breaker_blocked_{htf_bias}"] += 1
             continue
 
         structure_key = _last_index_key(h1_slice)
@@ -1199,7 +1424,6 @@ def run_backtest(
         )
         pending_entry = PendingEntry(
             entry_state=create_entry_state(signal_intent),
-            risk_pct=float(score_result.get("risk_pct") or profile.get("risk_per_trade", 0.01)),
             sl_reason=str(level_reason),
             score=int(score_result.get("score", 0) or 0),
             grade=str(score_result.get("grade", "")),
@@ -1236,6 +1460,7 @@ def run_backtest(
                 trade_cost,
             )
         )
+        _consume_backtest_outcome(risk_authority, closed)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     trades_df = pd.DataFrame(trades)
@@ -1273,6 +1498,12 @@ def run_backtest(
         "trail_or_other_profit_exits": trail_profit_exits,
         "win_rate_tp_only_pct": round((tp_hit_wins / len(trades_df)) * 100.0, 2) if len(trades_df) else 0.0,
         "min_rr_target": float(risk_engine.min_rr),
+        "risk_policy": {
+            "version": risk_policy.policy_version,
+            "base_risk_fraction": risk_policy.base_risk_fraction,
+            "absolute_risk_ceiling": risk_policy.absolute_risk_ceiling,
+            "aggregate_open_risk_ceiling": risk_policy.aggregate_open_risk_ceiling,
+        },
         "cost_model": {
             "spread_points": spread_points,
             "slippage_points": slippage_points,
@@ -1289,8 +1520,10 @@ def run_backtest(
             "All-session trading is enabled; session is context only, not a trade gate.",
             "Synthetic DXY uses the repaired DataFrame-safe basket logic and contributes to confluence scoring.",
             "Liquidity/FVG/OB payloads are normalized defensively like the live orchestrator.",
-            "Entries use current SMC entry model, current confluence scorer, and current modular RiskEngine.",
-            "Exits are simulated with SL/TP and end-of-backtest closure; live trailing/profit-lock may differ.",
+            "Confluence grades are strategy metadata and have no monetary-risk authority.",
+            "Entries use the shared Phase 4 equity, exposure, sizing, and circuit policy.",
+            "Floating equity is sampled at completed-bar close; tick-level path realism remains deferred.",
+            "Configured costs are applied when non-zero; complete transaction-cost realism remains deferred.",
         ],
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")

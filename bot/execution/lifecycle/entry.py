@@ -126,7 +126,14 @@ def _source_barrier_applies(intent: EntryIntent, event: MarketEvent) -> bool:
     )
 
 
-def _bar_fill(intent: EntryIntent, event: MarketEvent, tolerance: float) -> tuple[float, FillKind] | None:
+def prospective_bar_fill(
+    intent: EntryIntent,
+    event: MarketEvent,
+    tolerance: float = 0.0,
+) -> tuple[float, FillKind] | None:
+    """Return the deterministic Phase 3 historical fill without changing state."""
+    if event.kind is not MarketEventKind.BAR:
+        raise LifecycleError("prospective historical fill requires a bar event")
     assert event.open is not None and event.high is not None and event.low is not None
     if intent.readiness_style is ReadinessStyle.IMMEDIATE:
         return event.open, FillKind.SIMULATED_OPEN
@@ -194,7 +201,7 @@ def process_entry_event(
 
     proposed: tuple[float, FillKind] | None
     if event.kind is MarketEventKind.BAR:
-        proposed = _bar_fill(intent, event, tolerance)
+        proposed = prospective_bar_fill(intent, event, tolerance)
     else:
         observed = event.price_for(intent.direction)
         proposed = (

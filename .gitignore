@@ -43,6 +43,7 @@ backtests/shadow_*/
 backtests/shadow_mode_*/
 frontend/utils/.bot_process.json
 frontend/utils/.ui_process.json
+runtime/risk_state/
 analysis_results.json
 .tmp_*.py
 .kilo/

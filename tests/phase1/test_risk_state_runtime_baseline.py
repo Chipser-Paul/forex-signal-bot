@@ -17,13 +17,13 @@ from strategies.smc_engine.strategy_state import StrategyState
 @pytest.mark.unit
 @pytest.mark.characterization
 def test_risk_engine_is_deterministic_and_normalizes_to_volume_step(fake_mt5):
-    fake_mt5.symbol.volume_step = 0.05
+    fake_mt5.symbol.volume_step = 0.01
     engine = RiskEngine()
 
-    first = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.01)
-    second = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.01)
+    first = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.0035)
+    second = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.0035)
 
-    assert first == second == 0.1
+    assert first == second == 0.03
 
 
 @pytest.mark.unit
@@ -111,7 +111,7 @@ def test_required_symbol_gate_prevents_signal_evaluation(monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.characterization
-def test_orchestrator_daily_limit_rejection_has_deterministic_gate_order(monkeypatch):
+def test_orchestrator_delegates_daily_limit_to_phase4_authority(monkeypatch):
     from bot.state import orchestrator as orchestrator_module
 
     class FixedDateTime(datetime_module.datetime):
@@ -144,12 +144,19 @@ def test_orchestrator_daily_limit_rejection_has_deterministic_gate_order(monkeyp
         active_trade_count=0,
     )
 
-    assert result.action == "halt"
-    assert result.reason == "daily_drawdown_limit_hit"
+    assert result.action == "skip"
+    assert result.reason == "htf_bias_unconfirmed"
     assert result.context["setup_id"] == "FIXED_SETUP"
-    assert result.state_name == "DAILY_LIMIT_HIT"
-    assert list(logged["gate_results"]) == [
+    assert result.state_name != "DAILY_LIMIT_HIT"
+    assert list(logged["gate_results"])[:3] == [
         "gate_1_session",
         "gate_2_news",
         "gate_4_daily_limit",
     ]
+    assert logged["gate_results"]["gate_4_daily_limit"] == {
+        "pass": True,
+        "raw": {
+            "authority": "phase4_account_risk",
+            "legacy_inputs_ignored": True,
+        },
+    }

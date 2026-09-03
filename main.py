@@ -39,7 +39,6 @@ from trade_manager import manage_open_trades
 # utils & existing modules
 from utils.fetch import fetch_ohlcv
 from utils.log import log
-from utils.risk import calculate_lot_size
 from trade_executor import execute_trade, load_open_trades, save_open_trades
 from utils.connect import connect_mt5
 from utils.indicators import calculate_atr
@@ -49,6 +48,22 @@ from utils.analytics_db import record_loop_snapshot
 from utils.loop_ai import queue_loop_analysis
 #from trend import get_trend
 from bot.execution.risk_engine import RiskEngine
+from bot.execution.risk import (
+    ClosedTradeOutcome,
+    CircuitStatus,
+    PersistentRiskAuthority,
+    RiskDecision,
+    RiskError,
+    RiskReason,
+    RiskStateStore,
+    StoreStatus,
+    account_snapshot_from_mt5,
+    mt5_profit_calculator,
+    open_risk_items_from_mt5,
+    stable_ref as risk_stable_ref,
+    symbol_specification_from_mt5,
+    validation_policy,
+)
 from bot.execution.lifecycle import (
     ActionType,
     Direction as LifecycleDirection,
@@ -104,6 +119,7 @@ PAIR_LIMITS = {"XAUUSDm": 1, "BTCUSDm": 1}  # max open trades per symbol
 LOOP_DELAY = 60
 OPEN_JSON = Path("open_trades.json")
 SESSION_JSON = Path("frontend") / "utils" / ".session.json"
+RISK_STATE_DIR = Path("runtime") / "risk_state"
 STRATEGY_STATES = {}
 PENDING_ENTRY_STATES = {}
 SHADOW_STRATEGY_STATES = {}
@@ -136,7 +152,6 @@ DAILY_TARGET_PCT = 20.0
 TARGET_PROFIT = (DAILY_TARGET_PCT / 100.0) * CAPITAL
 symbol_profits = {symbol: 0.0 for symbol in SYMBOLS}
 previous_profits = {symbol: 0.0 for symbol in SYMBOLS}
-RISK_PER_TRADE = 0.01
 MIN_EXECUTION_RR = 1.2
 
 last_profit_check = None
@@ -144,10 +159,153 @@ profit_initialized = False
 daily_target_notified = set()
 ACCOUNT_DAILY_TARGET_KEY = "__ACCOUNT__"
 
-# safety lot cap derived from capital (conservative)
-def max_lot_by_capital(capital: float) -> float:
-    # Conservative default: 0.01 lot per $100 of capital (i.e. capital/10000)
-    return max(0.01, round(capital / 10000.0, 2))
+def _tracked_trades_by_ticket(open_trades: dict) -> dict[int, dict]:
+    tracked: dict[int, dict] = {}
+    for records in open_trades.values():
+        values = records if isinstance(records, list) else [records]
+        for record in values:
+            if not isinstance(record, dict) or record.get("ticket") is None:
+                continue
+            tracked[int(record["ticket"])] = record
+    return tracked
+
+
+def _risk_decision_context(decision) -> dict:
+    return {
+        "approved": bool(decision.approved),
+        "reason": decision.reason.value,
+        "decision_id": decision.decision_id,
+        "policy_version": decision.policy_version,
+        "circuit_status": (
+            None if decision.circuit_status is None else decision.circuit_status.value
+        ),
+        "equity_basis": decision.equity_basis,
+        "requested_risk_fraction": decision.requested_risk_fraction,
+        "permitted_risk_fraction": decision.permitted_risk_fraction,
+        "monetary_risk_budget": decision.monetary_risk_budget,
+        "raw_volume": decision.raw_volume,
+        "normalized_volume": decision.normalized_volume,
+        "estimated_normalized_loss": decision.estimated_normalized_loss,
+        "aggregate_open_risk_before": decision.aggregate_open_risk_before,
+        "aggregate_open_risk_after": decision.aggregate_open_risk_after,
+        "calculation_method": decision.calculation_method,
+        "diagnostics": dict(decision.diagnostics),
+    }
+
+
+def _live_risk_authority(*, now: datetime):
+    policy = validation_policy(os.environ)
+    expected_login = None
+    expected_server = None
+    if _RUNTIME_MT5_CONTRACT is not None:
+        expected_login = _RUNTIME_MT5_CONTRACT.expected_login or None
+        expected_server = _RUNTIME_MT5_CONTRACT.expected_server or None
+    snapshot = account_snapshot_from_mt5(
+        mt5,
+        now=now,
+        expected_login=expected_login,
+        expected_server=expected_server,
+    )
+    store = RiskStateStore(RISK_STATE_DIR / f"{snapshot.account_ref}.json")
+    authority = PersistentRiskAuthority(policy, store)
+    return policy, snapshot, authority
+
+
+def _live_risk_components(open_trades: dict, *, now: datetime):
+    policy, snapshot, authority = _live_risk_authority(now=now)
+    positions = tuple(mt5.positions_get() or ())
+    tracked = _tracked_trades_by_ticket(open_trades)
+    loaded = authority.store.load()
+    initialize_requested = os.environ.get("RISK_STATE_INITIALIZE", "").strip() == "1"
+    if loaded.status is StoreStatus.UNINITIALIZED and initialize_requested:
+        if positions or tracked:
+            raise RiskError("risk state initialization requires zero open positions")
+        authority.initialize(snapshot, known_strategy_positions=0)
+    open_risk = open_risk_items_from_mt5(
+        mt5,
+        positions=positions,
+        tracked_trades=tracked,
+    )
+    return policy, snapshot, authority, open_risk
+
+
+def _approve_live_risk(
+    symbol: str,
+    direction: str,
+    entry: float,
+    stop: float,
+    open_trades: dict,
+    *,
+    now: datetime,
+):
+    try:
+        policy, snapshot, authority, open_risk = _live_risk_components(
+            open_trades,
+            now=now,
+        )
+        specification = symbol_specification_from_mt5(mt5, symbol)
+        return authority.decide(
+            snapshot=snapshot,
+            specification=specification,
+            direction=direction,
+            entry=entry,
+            stop=stop,
+            open_risk_items=open_risk,
+            now=now,
+            requested_risk_fraction=policy.base_risk_fraction,
+            profit_calculator=mt5_profit_calculator(mt5),
+        )
+    except (RiskError, OSError, ValueError) as exc:
+        message = str(exc).lower()
+        if "policy" in message or "base risk" in message:
+            reason = RiskReason.INVALID_POLICY
+        elif "identity" in message:
+            reason = RiskReason.ACCOUNT_IDENTITY_MISMATCH
+        elif "equity" in message or "balance" in message:
+            reason = RiskReason.INVALID_EQUITY
+        elif "account snapshot" in message:
+            reason = RiskReason.ACCOUNT_DATA_MISSING
+        elif "symbol" in message:
+            reason = RiskReason.INVALID_SYMBOL_SPEC
+        else:
+            reason = RiskReason.RISK_STATE_CORRUPT
+        fallback_policy = validation_policy({})
+        return RiskDecision(
+            approved=False,
+            reason=reason,
+            decision_id=risk_stable_ref(
+                fallback_policy.policy_version,
+                reason.value,
+                now.isoformat(),
+            ),
+            timestamp=now,
+            policy_version=fallback_policy.policy_version,
+            circuit_status=CircuitStatus.DATA_UNSAFE,
+            diagnostics={"boundary": "live_risk_adapter"},
+        )
+
+
+def _consume_live_risk_outcome(position, *, now: datetime) -> bool:
+    try:
+        if position.exit_time is None:
+            raise RiskError("completed lifecycle outcome is missing an exit timestamp")
+        _policy, snapshot, authority = _live_risk_authority(now=now)
+        outcome = ClosedTradeOutcome(
+            outcome_id=risk_stable_ref(
+                position.trade_id,
+                "final",
+                position.exit_time.isoformat(),
+            ),
+            trade_id=position.trade_id,
+            timestamp=position.exit_time,
+            gross_realized_pnl=position.realized_gross_pnl,
+            metadata={"cost_basis": "gross_before_costs", "source": "phase3_lifecycle"},
+        )
+        _state, consumed = authority.consume_outcome(snapshot, outcome, now=now)
+        return consumed
+    except (RiskError, OSError, ValueError) as exc:
+        log(f"[RISK] completed outcome not consumed: {exc}", "red")
+        return False
 
 
 # track last tighten time per ticket to avoid spammy repeated SL changes
@@ -399,8 +557,7 @@ def _find_recent_close_deal(ticket: int, symbol: str, lookback_days: int = 7) ->
 def apply_symbol_profile(symbol: str) -> dict:
     profile = get_symbol_profile(symbol)
 
-    global RISK_PER_TRADE, MIN_EXECUTION_RR, KILL_SWITCH_MIN_BARS_AFTER_ENTRY, KILL_SWITCH_ATR_BREAK_MULT
-    RISK_PER_TRADE = float(profile.get("risk_per_trade", 0.01))
+    global MIN_EXECUTION_RR, KILL_SWITCH_MIN_BARS_AFTER_ENTRY, KILL_SWITCH_ATR_BREAK_MULT
     MIN_EXECUTION_RR = float(profile.get("min_execution_rr", 1.2))
     # Reward target used to place TP and validate setups. Kept as the single
     # source of truth so the orchestrator-live path and the backtest agree.
@@ -896,6 +1053,28 @@ def _execute_orchestrator_live_body(
         if intent.readiness_style is ReadinessStyle.PULLBACK
         else 0.0
     )
+    try:
+        risk_decision = _approve_live_risk(
+            symbol,
+            direction,
+            current_price,
+            sl,
+            open_trades,
+            now=tick_event.timestamp,
+        )
+    except (RiskError, OSError, ValueError) as exc:
+        no_trade("risk_data_unsafe", str(exc), "red")
+        return
+    loop_context["risk"] = _risk_decision_context(risk_decision)
+    if not risk_decision.approved or risk_decision.normalized_volume is None:
+        no_trade(
+            f"risk_{risk_decision.reason.value.lower()}",
+            json.dumps(_risk_decision_context(risk_decision), sort_keys=True),
+            "yellow",
+        )
+        return
+    lot = float(risk_decision.normalized_volume)
+
     entry_decision = process_entry_event(pending_state, tick_event, tolerance=tolerance)
     if not entry_decision.triggered:
         if entry_decision.state.status.value in ("EXPIRED", "CANCELLED", "REJECTED"):
@@ -910,32 +1089,6 @@ def _execute_orchestrator_live_body(
     rr = ACTIVE_RISK_ENGINE.rr_value(current_price, sl, tp)
     if rr < ACTIVE_RISK_ENGINE.min_rr:
         no_trade("rr_below_orchestrator_minimum", f"rr={rr:.2f}", "red")
-        return
-
-    # Apply DXY-based risk reduction if needed
-    dxy_context = context.get("dxy") or {}
-    dxy_reduce_size = bool(dxy_context.get("reduce_size", False))
-    base_risk_pct = float(score.get("risk_pct") or cfg.get("risk_per_trade", 0.01))
-    risk_pct = base_risk_pct * 0.75 if dxy_reduce_size else base_risk_pct
-    
-    # Phase 2: Apply displacement tier position size adjustment
-    displacement_tier_adjustment = context.get("displacement_tier_adjustment") or {}
-    position_size_pct = float(displacement_tier_adjustment.get("position_size_pct", 1.0))
-    
-    lot = ACTIVE_RISK_ENGINE.calculate_position_size(
-        symbol=symbol,
-        account_balance=max(1.0, CAPITAL + account_profit_today),
-        stop_distance_price=abs(current_price - sl),
-        risk_pct=risk_pct,
-        enforce_min_volume=True,
-        position_size_pct=position_size_pct,  # Phase 2: Displacement tier adjustment
-    )
-    if lot is None:
-        no_trade(
-            "risk_below_min_volume",
-            f"capital={CAPITAL:.2f} risk_pct={risk_pct:.4f} stop={abs(current_price - sl):.5f}",
-            "yellow",
-        )
         return
 
     rr = ACTIVE_RISK_ENGINE.rr_value(current_price, sl, tp)
@@ -966,7 +1119,14 @@ def _execute_orchestrator_live_body(
         "ob_breaker_signal": ob_result,
         "entry_signal": entry_with_zone,
         "risk_plan": {
-            "risk_pct": risk_pct,
+            "policy_version": risk_decision.policy_version,
+            "requested_risk_fraction": risk_decision.requested_risk_fraction,
+            "permitted_risk_fraction": risk_decision.permitted_risk_fraction,
+            "monetary_risk_budget": risk_decision.monetary_risk_budget,
+            "estimated_normalized_loss": risk_decision.estimated_normalized_loss,
+            "aggregate_open_risk_before": risk_decision.aggregate_open_risk_before,
+            "aggregate_open_risk_after": risk_decision.aggregate_open_risk_after,
+            "calculation_method": risk_decision.calculation_method,
             "risk_distance": abs(current_price - sl),
             "rr_target": rr,
             "sl_reason": level_reason,
@@ -1555,53 +1715,6 @@ def evaluate_symbol(symbol, open_trades, debug=True):
         return
 
     # -------------------------------------------------
-    # 10 Lot sizing (CONFIDENCE-ADAPTIVE + CAPITAL SAFE)
-    # -------------------------------------------------
-    risk = RISK_PER_TRADE
-
-    # Raw lot from risk model
-    stop_distance_price = abs(price - sl)
-    calculated_lot = calculate_lot_size(
-        symbol=symbol,
-        capital=CAPITAL,
-        risk_per_trade=risk,
-        stop_pips=stop_distance_price,
-    )
-    if calculated_lot is None:
-        no_trade("lot_calc_failed", "risk model returned no lot size", "red")
-        return
-
-    #  Capital-based hard cap
-    capital_lot_cap = max_lot_by_capital(CAPITAL)
-
-    #  Symbol broker constraints
-    broker_lot_cap = min(symbol_info.volume_max, 0.10)
-
-    #  Final enforced lot
-    # Use capital-based sizing as primary execution model and keep risk-model lot as diagnostic.
-    requested_lot = capital_lot_cap
-    full_lot = round(
-        min(requested_lot, broker_lot_cap),
-        2
-    )
-
-    # Optional safety log (shows when risk model and capital model diverge)
-    if abs(calculated_lot - full_lot) >= 0.01:
-        log(
-            f" Lot model: risk={calculated_lot:.2f} capital={capital_lot_cap:.2f} -> execute={full_lot:.2f}",
-            "yellow"
-        )
-
-    # Final minimum-volume check
-    if full_lot < symbol_info.volume_min:
-        no_trade(
-            "lot_too_small",
-            f"lot={full_lot:.2f} min_lot={symbol_info.volume_min:.2f}",
-            "red",
-        )
-        return
-
-    # -------------------------------------------------
     #  Execute market entry
     # -------------------------------------------------
     tickets = []
@@ -1626,16 +1739,10 @@ def evaluate_symbol(symbol, open_trades, debug=True):
         "ob_breaker_signal": ob_breaker,
         "entry_signal": entry,
         "risk_plan": {
-            "risk_per_trade": risk,
             "rr_target": rr,
             "risk_distance": abs(price - sl),
             "atr_value": float(atr_val),
             "atr_buffer": float(atr_buffer),
-            "calculated_lot": float(calculated_lot),
-            "capital_lot_cap": float(capital_lot_cap),
-            "broker_lot_cap": float(broker_lot_cap),
-            "full_lot": float(full_lot),
-            "executed_lot": float(full_lot),
         },
         "levels": {
             "price": float(price),
@@ -1687,6 +1794,29 @@ def evaluate_symbol(symbol, open_trades, debug=True):
             tick,
             observed_at=datetime.now(timezone.utc),
         )
+        executable_price = float(tick.ask if direction == "buy" else tick.bid)
+        try:
+            risk_decision = _approve_live_risk(
+                symbol,
+                direction,
+                executable_price,
+                sl,
+                open_trades,
+                now=tick_event.timestamp,
+            )
+        except (RiskError, OSError, ValueError) as exc:
+            no_trade("risk_data_unsafe", str(exc), "red")
+            return
+        if not risk_decision.approved or risk_decision.normalized_volume is None:
+            no_trade(
+                f"risk_{risk_decision.reason.value.lower()}",
+                json.dumps(_risk_decision_context(risk_decision), sort_keys=True),
+                "yellow",
+            )
+            return
+        full_lot = float(risk_decision.normalized_volume)
+        strategy_context["risk_plan"].update(_risk_decision_context(risk_decision))
+        strategy_context["risk_plan"]["executed_lot"] = full_lot
         tolerance = (
             max(float(point) * 50.0, float(atr_val) * 0.05)
             if intent.readiness_style is ReadinessStyle.PULLBACK
@@ -2100,6 +2230,20 @@ def monitor_trades(open_trades):
                     source="phase3_lifecycle",
                     closed_at_utc=str(closed_event["ts_utc"]),
                     details=closed_event,
+                )
+                consumed = _consume_live_risk_outcome(
+                    managed,
+                    now=managed.exit_time or observed_at,
+                )
+                log_trade_event(
+                    ticket=ticket,
+                    symbol=sym,
+                    event_name="risk_outcome_consumed",
+                    details={
+                        "trade_id": managed.trade_id,
+                        "consumed": consumed,
+                        "policy": "phase4-validation-v1",
+                    },
                 )
                 continue
             keep.append(update_trade_record(trade, managed))

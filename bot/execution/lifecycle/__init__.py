@@ -4,6 +4,7 @@ from .entry import (
     create_entry_state,
     is_price_ready,
     new_entry_intent,
+    prospective_bar_fill,
     process_entry_event,
     record_fill,
 )
@@ -64,6 +65,7 @@ __all__ = [
     "normalized_outcome",
     "normalized_trace",
     "process_entry_event",
+    "prospective_bar_fill",
     "record_fill",
     "reconcile_action_fill",
     "run_historical_lifecycle",

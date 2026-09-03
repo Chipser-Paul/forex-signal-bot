@@ -191,33 +191,17 @@ class StrategyOrchestrator:
                     context=context,
                 )
 
-            # GATE 4: DAILY LOSS LIMIT CHECK
-            daily_pnl_pct = (daily_pnl / account_balance * 100) if account_balance > 0 else 0.0
-            
+            # Gate 4 is enforced by the Phase 4 account-level risk authority after
+            # stop construction and before lifecycle entry eligibility.  Keeping a
+            # diagnostic placeholder preserves the established gate ordering
+            # without allowing configured capital or realized-only P&L to decide.
             gate_results["gate_4_daily_limit"] = {
-                "pass": not self.risk_engine.check_daily_drawdown(daily_pnl, account_balance),
-                "raw": {"daily_pnl": daily_pnl, "daily_pnl_pct": daily_pnl_pct, "account_balance": account_balance}
+                "pass": True,
+                "raw": {
+                    "authority": "phase4_account_risk",
+                    "legacy_inputs_ignored": True,
+                },
             }
-
-            if self.risk_engine.check_daily_drawdown(daily_pnl, account_balance):
-                state.set_daily_limit_hit(True, "daily_drawdown_limit_hit")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="halt",
-                    reason="daily_drawdown_limit_hit",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="daily_drawdown_limit_hit"
-                )
-                return OrchestratorResult(
-                    action="halt",
-                    state_name=state.state_name,
-                    reason="daily_drawdown_limit_hit",
-                    context=context,
-                )
             state.set_daily_limit_hit(False)
 
             # GATE 5: MAX CONCURRENT TRADES CHECK
@@ -287,32 +271,13 @@ class StrategyOrchestrator:
                     context=context,
                 )
 
-            # CASCADE CIRCUIT BREAKER: block direction after 2 same-direction losses
-            direction_blocked = state.is_direction_blocked(htf_bias)
+            # Completed-trade loss streaks are enforced once by the Phase 4
+            # account-level circuit.  The legacy directional cascade remains in
+            # StrategyState only for backward-compatible record loading.
             gate_results["cascade_breaker"] = {
-                "pass": not direction_blocked,
-                "raw": {"blocked_direction": htf_bias if direction_blocked else None}
+                "pass": True,
+                "raw": {"authority": "phase4_account_risk", "legacy_disabled": True},
             }
-            
-            if direction_blocked:
-                state.reject_setup(f"cascade_breaker_blocked_{htf_bias}")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="skip",
-                    reason=f"cascade_breaker_blocked_{htf_bias}",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail=f"cascade_breaker_blocked_{htf_bias}"
-                )
-                return OrchestratorResult(
-                    action="skip",
-                    state_name=state.state_name,
-                    reason=f"cascade_breaker_blocked_{htf_bias}",
-                    context=context,
-                )
 
             # GATE 7: DXY CORRELATION CHECK
             if symbol.startswith("XAU"):

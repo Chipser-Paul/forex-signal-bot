@@ -74,6 +74,7 @@ class FakeMT5(types.ModuleType):
         self.allow_order_check = False
         self.order_response: Any | None = None
         self.order_check_response: Any | None = None
+        self.order_calc_profit_response: Any | None = None
 
     def _record(self, name: str, *args: Any, **kwargs: Any) -> None:
         self.calls.append((name, args, kwargs))
@@ -140,6 +141,18 @@ class FakeMT5(types.ModuleType):
         if not self.allow_order_send:
             raise UnsafeExternalCall("order_send requires explicit fake enablement")
         return self.order_response
+
+    def order_calc_profit(
+        self,
+        order_type: int,
+        symbol: str,
+        volume: float,
+        entry: float,
+        close: float,
+    ) -> Any:
+        self._record("order_calc_profit", order_type, symbol, volume, entry, close)
+        response = self.order_calc_profit_response
+        return response(order_type, symbol, volume, entry, close) if callable(response) else response
 
 
 FAKE_MT5 = FakeMT5()

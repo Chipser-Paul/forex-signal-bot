@@ -7,17 +7,14 @@ import pytest
 
 
 @pytest.mark.known_defect
-@pytest.mark.xfail(
-    reason="KD-RISK-001 (Phase 4): caller-supplied score risk can exceed RiskEngine.max_risk_per_trade",
-    strict=True,
-)
 def test_risk_engine_caps_caller_risk_at_the_central_maximum(fake_mt5):
     from bot.execution.risk_engine import RiskEngine
 
-    engine = RiskEngine(max_risk_per_trade=0.01)
-    nominal = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.01)
+    engine = RiskEngine()
+    nominal = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.0035)
     oversized = engine.calculate_position_size("XAUUSDm", 1000.0, 1.0, risk_pct=0.02)
-    assert oversized <= nominal
+    assert nominal is not None
+    assert oversized is None
 
 
 @pytest.mark.known_defect

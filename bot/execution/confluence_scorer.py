@@ -47,19 +47,16 @@ def score_setup(context) -> dict[str, object]:
 
     if score >= 10:
         grade = "A+"
-        risk_pct = 0.02
     elif score >= min_score_to_trade:
         grade = "B"
-        risk_pct = 0.015
     else:
         grade = "SKIP"
-        risk_pct = 0.0
 
     return {
         "score": score,
         "max_score": sum(int(check["max_points"]) for check in checks),
         "grade": grade,
-        "risk_pct": risk_pct,
+        "risk_authority": "central_phase4_policy",
         "passes_threshold": score >= min_score_to_trade,
         "min_score_to_trade": min_score_to_trade,
         "checks": checks,

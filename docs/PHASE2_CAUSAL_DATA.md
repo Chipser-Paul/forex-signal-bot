@@ -168,8 +168,9 @@ and exposes structured diagnostics without account information.
   repaired in Phase 3; see `docs/PHASE3_EXECUTION_PARITY.md`.
 - Shared partial-close, trailing and gross exit accounting were repaired in
   Phase 3. Tick reconstruction and transaction-cost realism remain Phase 7.
-- Risk caps, floating drawdown, circuit-breaker outcomes, and persistence remain
-  Phase 4.
+- Risk caps, floating drawdown, circuit-breaker outcomes, and atomic risk state
+  were repaired in Phase 4; see `docs/PHASE4_RISK_PROTECTION.md`. Broader runtime
+  persistence remains deferred.
 - Broker invalid-stop retries remain Phase 5.
 - ATR/regime, order-block mitigation, and news policy remain Phase 6.
 - Nominal final boundaries cannot model exchange-specific early closes; uncertain

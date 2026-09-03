@@ -149,17 +149,20 @@ bid/ask history, commission, swap and execution-cost realism remain Phase 7.
 
 ## 18. Deferred broker protections
 
-Risk caps, floating drawdown and circuit consumption remain Phase 4. Filling
+Risk caps, floating drawdown, normal lifecycle circuit consumption and atomic
+risk state were repaired in Phase 4; see `docs/PHASE4_RISK_PROTECTION.md`. Filling
 mode, invalid-stop retry, margin/spread protection, magic isolation and startup
-broker reconciliation remain Phase 5. Persistence atomicity remains Phase 4.
+broker reconciliation remain Phase 5. Risk-state persistence is complete;
+broader runtime/journal atomicity remains deferred.
 
 ## 19. Known-defect transitions
 
 `KD-BACKTEST-001` and `KD-EXIT-001` are repaired by passing Phase 3 regressions.
 The latter includes shared partial, trailing and P&L tests. Strict xfails retained:
-`KD-RISK-001` (Phase 4), `KD-STOPS-001` (Phase 5), and `KD-REGIME-001`,
-`KD-NEWS-001`, `KD-OB-001` (Phase 6). Documented drawdown, circuit and
-persistence findings remain Phase 4.
+`KD-RISK-001` is repaired by Phase 4 regressions. Retained defects are
+`KD-STOPS-001` (Phase 5), and `KD-REGIME-001`,
+`KD-NEWS-001`, `KD-OB-001` (Phase 6). The Phase 4 document records the repaired
+drawdown, circuit and risk-state persistence findings.
 
 ## 20. Testing and parity scenarios
 
