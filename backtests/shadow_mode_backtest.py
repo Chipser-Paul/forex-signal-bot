@@ -6,7 +6,7 @@ import json
 import math
 import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -40,6 +40,24 @@ from bot.analysis.liquidity_map import get_asian_session_range, get_previous_day
 from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
 from bot.execution.risk_engine import RiskEngine
+from bot.execution.lifecycle import (
+    Direction as LifecycleDirection,
+    EntryState,
+    FillKind,
+    LifecycleStatus,
+    ManagementConfig,
+    MarketEvent,
+    MarketEventKind,
+    PositionState,
+    ReadinessStyle,
+    create_entry_state,
+    force_close,
+    manage_position,
+    new_entry_intent,
+    process_entry_event,
+    record_fill,
+    stable_id,
+)
 from bot.utils.session_clock import get_session_context
 from utils.setup_logger import log_setup_evaluation, generate_setup_id
 from strategies.smc_engine.displacement_engine import detect_displacement
@@ -47,8 +65,9 @@ from strategies.smc_engine.entry_model import determine_entry
 from strategies.smc_engine.liquidity_engine import detect_liquidity_sweep
 from strategies.smc_engine.market_structure import analyze_market_structure
 from strategies.smc_engine.ob_breaker_engine import detect_ob_breaker
-from strategies.smc_engine.strategy_state import StrategyState
+from strategies.smc_engine.strategy_state import STATE_EXPIRY_MINUTES, StrategyState
 from utils.connect import connect_mt5
+from utils.indicators import calculate_atr
 from utils.symbol_profiles import get_symbol_profile
 
 import strategies.smc_engine.market_structure as market_structure_module
@@ -75,24 +94,14 @@ def _mute_logs() -> None:
 
 
 @dataclass
-class Position:
-    ticket: int
-    symbol: str
-    direction: str
-    lot: float
-    entry_price: float
-    sl: float
-    tp: float
-    risk_price: float
+class PendingEntry:
+    entry_state: EntryState
+    risk_pct: float
     sl_reason: str
-    opened_at: datetime
     score: int
     grade: str
-    setup_id: str  # Link to setup evaluation
-    # Trailing / kill-switch state
-    peak_price: float | None = None
-    trail_activated: bool = False
-    _partial_pct_closed: float = 0.0
+    setup_id: str
+    tolerance: float = 0.0
 
 
 @dataclass
@@ -109,83 +118,8 @@ class CostModel:
         return price_cost * lot * self.contract_size + self.commission_per_lot * lot
 
 
-def _update_trailing_sl_live(pos: Position, high: float, low: float, m5_atr: float, point: float, trail_cfg: dict) -> None:
-    """Mirror the live main.py ATR-3x trail: trail behind the running peak by
-    max(atr*mult, min_distance) and only ever move the stop to break-even or
-    better (never into a loss). Keeps the backtest exit engine matched to live."""
-    if m5_atr <= 0:
-        return
-    atr_mult = float(trail_cfg.get("atr_mult", 3.0))
-    min_pts = float(trail_cfg.get("min_distance_points", 100)) * point
-    trail_dist = max(m5_atr * atr_mult, min_pts)
-    if pos.direction == "buy":
-        pos.peak_price = high if pos.peak_price is None else max(pos.peak_price, high)
-        new_sl = pos.peak_price - trail_dist
-        if new_sl > pos.sl and new_sl >= pos.entry_price:
-            pos.sl = new_sl
-    else:
-        pos.peak_price = low if pos.peak_price is None else min(pos.peak_price, low)
-        new_sl = pos.peak_price + trail_dist
-        if new_sl < pos.sl and new_sl <= pos.entry_price:
-            pos.sl = new_sl
-
-
-def _apply_trailing(pos: Position, high: float, low: float, trail_mode: str, m5_atr: float, point: float, trail_cfg: dict) -> None:
-    if trail_mode == "live_atr_3x":
-        _update_trailing_sl_live(pos, high, low, m5_atr, point, trail_cfg)
-    else:
-        _update_trailing_sl(pos, high, low, trail_mode, m5_atr)
-
-
-def _get_trail_offset(pos: Position, trail_mode: str, m5_atr: float) -> float:
-    """Determine trailing SL offset in price points based on mode."""
-    if trail_mode == "1x":
-        return pos.risk_price
-    elif trail_mode == "1.5x":
-        return pos.risk_price * 1.5
-    elif trail_mode == "2x":
-        return pos.risk_price * 2.0
-    elif trail_mode == "2stage":
-        # 1.5x room until trade extends 2x risk, then tighten to 1x
-        peak_dist = abs(pos.peak_price - pos.entry_price) if pos.peak_price is not None else 0.0
-        if peak_dist >= pos.risk_price * 2.0:
-            return pos.risk_price
-        return pos.risk_price * 1.5
-    elif trail_mode == "atr-3x":
-        return m5_atr * 3.0 if m5_atr > 0 else pos.risk_price
-    return pos.risk_price
-
-
-def _update_trailing_sl(pos: Position, high: float, low: float, trail_mode: str = "1x", m5_atr: float = 0.0) -> None:
-    """Trail SL after trade has moved 1R in profit. Offset behind peak depends on trail_mode."""
-    if pos.risk_price <= 0:
-        return
-    if pos.direction == "buy":
-        if not pos.trail_activated:
-            if high >= pos.entry_price + pos.risk_price:
-                pos.trail_activated = True
-                pos.peak_price = high
-        if pos.trail_activated and pos.peak_price is not None:
-            pos.peak_price = max(pos.peak_price, high)
-            offset = _get_trail_offset(pos, trail_mode, m5_atr)
-            new_sl = pos.peak_price - offset
-            if new_sl > pos.sl:
-                pos.sl = new_sl
-    else:
-        if not pos.trail_activated:
-            if low <= pos.entry_price - pos.risk_price:
-                pos.trail_activated = True
-                pos.peak_price = low
-        if pos.trail_activated and pos.peak_price is not None:
-            pos.peak_price = min(pos.peak_price, low)
-            offset = _get_trail_offset(pos, trail_mode, m5_atr)
-            new_sl = pos.peak_price + offset
-            if new_sl < pos.sl:
-                pos.sl = new_sl
-
-
 def _check_kill_switch(
-    pos: Position,
+    pos: PositionState,
     now_ts: datetime,
     m15_closed: pd.DataFrame,
     profile: dict,
@@ -194,7 +128,8 @@ def _check_kill_switch(
     if m15_closed.empty or len(m15_closed) < 8:
         return False
     # Count closed M15 bars since position opened
-    opened = pos.opened_at.replace(tzinfo=None) if pos.opened_at.tzinfo is not None else pos.opened_at
+    opened_at = getattr(pos, "fill_timestamp", getattr(pos, "opened_at", now_ts))
+    opened = opened_at.replace(tzinfo=None) if opened_at.tzinfo is not None else opened_at
     bars_since_entry = sum(1 for ts in m15_closed.index if ts.tzinfo is not None and ts.replace(tzinfo=None) >= opened)
     kill_switch_min_bars = int(profile.get("kill_switch_min_bars", 4))
     if bars_since_entry < kill_switch_min_bars:
@@ -509,6 +444,58 @@ def _pnl(symbol: str, direction: str, lot: float, entry: float, exit_price: floa
     return float(gross - fees)
 
 
+def _lifecycle_trade_record(position, net_pnl: float, transaction_cost: float) -> dict[str, Any]:
+    metadata = dict(position.adapter_metadata)
+    reason = position.exit_reason.value if hasattr(position.exit_reason, "value") else position.exit_reason
+    return {
+        "ticket": int(metadata.get("ticket", 0)),
+        "signal_id": position.signal_id,
+        "trade_id": position.trade_id,
+        "symbol": position.symbol,
+        "direction": position.direction.value,
+        "opened_at": position.fill_timestamp.isoformat(),
+        "closed_at": position.exit_time.isoformat(),
+        "requested_entry": round(position.requested_entry, 5),
+        "entry_price": round(position.fill_price, 5),
+        "exit_price": round(float(position.exit_price), 5),
+        "initial_sl": round(position.initial_stop, 5),
+        "sl": round(position.current_stop, 5),
+        "tp": round(position.final_target, 5),
+        "risk_price": round(position.initial_risk_price, 5),
+        "sl_reason": metadata.get("sl_reason"),
+        "lot": position.initial_quantity,
+        "closed_quantity": position.closed_quantity,
+        "score": metadata.get("score", 0),
+        "grade": metadata.get("grade", ""),
+        "setup_id": metadata.get("setup_id"),
+        "reason": reason,
+        "gross_pnl": round(position.realized_gross_pnl, 4),
+        "transaction_cost": round(transaction_cost, 4),
+        "pnl": round(net_pnl, 4),
+        "partial_close_occurred": position.partial_close_occurred,
+        "pnl_components": [
+            {
+                "action_id": component.action_id,
+                "quantity": component.quantity,
+                "exit_price": component.exit_price,
+                "gross_pnl": component.gross_pnl,
+                "reason": component.reason.value if hasattr(component.reason, "value") else component.reason,
+            }
+            for component in position.pnl_components
+        ],
+        "ambiguity_policy_used": position.ambiguity_policy_used,
+        "lifecycle_transitions": [
+            {
+                "event_id": transition.event_id,
+                "from": transition.from_status.value,
+                "to": transition.to_status.value,
+                "reason": transition.reason,
+            }
+            for transition in position.transitions
+        ],
+    }
+
+
 def run_backtest(
     symbol: str,
     start: datetime,
@@ -522,6 +509,11 @@ def run_backtest(
     commission_per_lot: float = 0.0,
     min_rr: float | None = None,
 ) -> dict[str, Any]:
+    if trail_mode != "live_atr_3x":
+        raise ValueError(
+            "Phase 3 supports only the shared live_atr_3x management policy; "
+            "legacy backtest-only trailing modes were retired"
+        )
     profile = _apply_symbol_profile(symbol)
     risk_engine = RiskEngine()
     if min_rr is not None:
@@ -555,7 +547,9 @@ def run_backtest(
     }
 
     state = StrategyState()
-    open_positions: list[Position] = []
+    open_positions: list[PositionState] = []
+    pending_entry: PendingEntry | None = None
+    booked_gross_by_trade: dict[str, float] = {}
     trades: list[dict[str, Any]] = []
     equity_rows: list[dict[str, Any]] = []
     no_trade_counts: Counter[str] = Counter()
@@ -582,6 +576,16 @@ def run_backtest(
         slippage_price=slippage_points * point,
         commission_per_lot=commission_per_lot,
         contract_size=contract_size,
+    )
+    lifecycle_config = ManagementConfig(
+        partial_close_fraction=0.5,
+        partial_target_r=1.0,
+        volume_min=float(getattr(symbol_info, "volume_min", 0.01) or 0.01),
+        volume_step=float(getattr(symbol_info, "volume_step", 0.01) or 0.01),
+        pnl_per_price_unit=contract_size,
+        trailing_enabled=str(trail_cfg.get("mode", "atr_3x")) == "atr_3x",
+        trailing_atr_multiple=float(trail_cfg.get("atr_mult", 3.0)),
+        trailing_min_distance=float(trail_cfg.get("min_distance_points", 100.0)) * point,
     )
     total_costs = 0.0
 
@@ -618,9 +622,11 @@ def run_backtest(
             current_day = loop_day
             day_start_realized_pnl = realized_pnl
 
+        open_price = float(candle["open"])
         high = float(candle["high"])
         low = float(candle["low"])
         close = float(candle["close"])
+        candle_open_time = as_utc_timestamp(candle["open_time"], field="entry candle open")
 
         # Build M15 view for kill-switch before position loop (only when positions exist)
         i = idx - 1
@@ -631,74 +637,135 @@ def run_backtest(
             m15_start = max(0, current_m15_idx - 20)
             m15_closed = all_m15.iloc[m15_start:current_m15_idx].copy()
 
-        survivors: list[Position] = []
+        m5_atr = float(candle.get("atr_14", 0.0)) if pd.notna(candle.get("atr_14", None)) else 0.0
+        event_id = stable_id(symbol, entry_tf, candle_open_time.isoformat(), now_ts.isoformat())
+        base_event = MarketEvent(
+            event_id=event_id,
+            timestamp=now_ts.to_pydatetime(),
+            symbol=symbol,
+            source="shadow_backtest",
+            kind=MarketEventKind.BAR,
+            sequence=idx,
+            open=open_price,
+            high=high,
+            low=low,
+            close=close,
+            bar_open_time=candle_open_time.to_pydatetime(),
+            source_candle_id=stable_id(symbol, entry_tf, candle_open_time.isoformat()),
+            atr=m5_atr,
+        )
+
+        survivors: list[PositionState] = []
         for pos in open_positions:
-            exit_price = None
-            reason = None
-
-            m5_atr = float(candle.get("atr_14", 0.0)) if pd.notna(candle.get("atr_14", None)) else 0.0
-
-            # 1. Check SL/TP against the levels carried from the PREVIOUS bar.
-            #    Trailing is applied afterwards (step 3) so a stop moved using
-            #    this bar's extreme cannot also be "hit" on the same bar — that
-            #    look-ahead inflated backtest win rates vs live.
-            if pos.direction == "buy":
-                sl_hit = low <= pos.sl
-                tp_hit = high >= pos.tp
-                if sl_hit:
-                    exit_price, reason = pos.sl, "sl_hit"
-                elif tp_hit:
-                    exit_price, reason = pos.tp, "tp_hit"
-            else:
-                sl_hit = high >= pos.sl
-                tp_hit = low <= pos.tp
-                if sl_hit:
-                    exit_price, reason = pos.sl, "sl_hit"
-                elif tp_hit:
-                    exit_price, reason = pos.tp, "tp_hit"
-
-            # 2. Check kill-switch (structure failure) if still alive
-            if exit_price is None:
-                if _check_kill_switch(pos, now_ts, m15_closed, profile):
-                    exit_price, reason = close, "kill_switch"
-
-            # 3. Survivor: trail the stop for FUTURE bars, then carry forward
-            if exit_price is None:
-                _apply_trailing(pos, high, low, trail_mode, m5_atr, point, trail_cfg)
-                survivors.append(pos)
+            emergency = "kill_switch_structure_failure" if _check_kill_switch(pos, now_ts, m15_closed, profile) else None
+            event = replace(base_event, emergency_reason=emergency)
+            previous_gross = booked_gross_by_trade.get(pos.trade_id, 0.0)
+            management = manage_position(pos, event, lifecycle_config)
+            managed = management.position
+            gross_delta = managed.realized_gross_pnl - previous_gross
+            realized_pnl += gross_delta
+            booked_gross_by_trade[managed.trade_id] = managed.realized_gross_pnl
+            for action in management.actions:
+                action_counts[f"lifecycle_{action.action_type.value.lower()}"] += 1
+            if managed.status is not LifecycleStatus.CLOSED:
+                survivors.append(managed)
                 continue
 
-            pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, float(exit_price), cost)
-            total_costs += cost.round_trip(pos.lot)
-            realized_pnl += pnl
-            # Cascade circuit breaker: track trade result
-            trade_dir = "bullish" if pos.direction == "buy" else "bearish"
-            trade_result = "win" if pnl > 0 else "loss"
-            state.record_trade_result(trade_dir, trade_result, now=now_ts.to_pydatetime())
-            trades.append({
-                "ticket": pos.ticket,
-                "symbol": pos.symbol,
-                "direction": pos.direction,
-                "opened_at": pos.opened_at.isoformat(),
-                "closed_at": now_ts.isoformat(),
-                "entry_price": round(pos.entry_price, 5),
-                "exit_price": round(float(exit_price), 5),
-                "sl": round(pos.sl, 5),
-                "tp": round(pos.tp, 5),
-                "risk_price": round(pos.risk_price, 5),
-                "sl_reason": pos.sl_reason,
-                "lot": pos.lot,
-                "score": pos.score,
-                "grade": pos.grade,
-                "setup_id": pos.setup_id,  # Link to setup evaluation
-                "reason": reason,
-                "pnl": round(pnl, 4),
-            })
+            trade_cost = cost.round_trip(managed.initial_quantity)
+            total_costs += trade_cost
+            realized_pnl -= trade_cost
+            net_pnl = managed.realized_gross_pnl - trade_cost
+            trade_dir = "bullish" if managed.direction is LifecycleDirection.BUY else "bearish"
+            state.record_trade_result(
+                trade_dir,
+                "win" if net_pnl > 0 else "loss",
+                now=now_ts.to_pydatetime(),
+            )
+            trades.append(_lifecycle_trade_record(managed, net_pnl, trade_cost))
+            booked_gross_by_trade.pop(managed.trade_id, None)
         open_positions = survivors
+
+        if pending_entry is not None:
+            entry_decision = process_entry_event(
+                pending_entry.entry_state,
+                base_event,
+                tolerance=pending_entry.tolerance,
+            )
+            pending_entry.entry_state = entry_decision.state
+            if entry_decision.state.status in (
+                LifecycleStatus.EXPIRED,
+                LifecycleStatus.CANCELLED,
+                LifecycleStatus.REJECTED,
+            ):
+                no_trade_counts[f"pending_{entry_decision.state.status.value.lower()}"] += 1
+                pending_entry = None
+            elif entry_decision.triggered:
+                fill_price = float(entry_decision.proposed_fill_price)
+                intent = entry_decision.state.intent
+                lot = risk_engine.calculate_position_size(
+                    symbol=symbol,
+                    account_balance=max(1.0, capital + realized_pnl),
+                    stop_distance_price=abs(fill_price - intent.stop_loss),
+                    risk_pct=pending_entry.risk_pct,
+                    enforce_min_volume=True,
+                    position_size_pct=1.0,
+                )
+                if lot is None:
+                    no_trade_counts["risk_below_min_volume"] += 1
+                elif not risk_engine.validate_rr(fill_price, intent.stop_loss, intent.final_target):
+                    no_trade_counts["filled_rr_below_orchestrator_minimum"] += 1
+                else:
+                    filled = record_fill(
+                        entry_decision.state,
+                        base_event,
+                        fill_price=fill_price,
+                        quantity=float(lot),
+                        fill_kind=entry_decision.fill_kind or FillKind.SIMULATED_TRIGGER,
+                        adapter_metadata={
+                            "source": "shadow_backtest",
+                            "configuration_id": intent.configuration_id,
+                            "ticket": ticket_seq,
+                            "sl_reason": pending_entry.sl_reason,
+                            "score": pending_entry.score,
+                            "grade": pending_entry.grade,
+                            "setup_id": pending_entry.setup_id,
+                        },
+                    )
+                    ticket_seq += 1
+                    state.mark_entry_filled()
+                    first_management = manage_position(filled, base_event, lifecycle_config)
+                    managed = first_management.position
+                    realized_pnl += managed.realized_gross_pnl
+                    booked_gross_by_trade[managed.trade_id] = managed.realized_gross_pnl
+                    action_counts["entry_triggered"] += 1
+                    for action in first_management.actions:
+                        action_counts[f"lifecycle_{action.action_type.value.lower()}"] += 1
+                    if managed.status is LifecycleStatus.CLOSED:
+                        trade_cost = cost.round_trip(managed.initial_quantity)
+                        total_costs += trade_cost
+                        realized_pnl -= trade_cost
+                        net_pnl = managed.realized_gross_pnl - trade_cost
+                        trade_dir = "bullish" if managed.direction is LifecycleDirection.BUY else "bearish"
+                        state.record_trade_result(
+                            trade_dir,
+                            "win" if net_pnl > 0 else "loss",
+                            now=now_ts.to_pydatetime(),
+                        )
+                        trades.append(_lifecycle_trade_record(managed, net_pnl, trade_cost))
+                        booked_gross_by_trade.pop(managed.trade_id, None)
+                    else:
+                        open_positions.append(managed)
+                pending_entry = None
+
         equity_rows.append({"timestamp": now_ts.isoformat(), "equity": round(capital + realized_pnl, 4), "open_positions": len(open_positions)})
 
         if idx % 500 == 0:
             print(f"[SHADOW PROGRESS] {idx}/{total} ({(idx / max(total, 1)) * 100:.1f}%)", flush=True)
+
+        if pending_entry is not None:
+            action_counts["wait"] += 1
+            no_trade_counts["pending_entry_wait"] += 1
+            continue
 
         if len(open_positions) >= pair_limit:
             action_counts["skip"] += 1
@@ -1065,22 +1132,25 @@ def run_backtest(
             outcome_detail="candidate_ready"
         )
         
-        action_counts["wait"] += 1
-
         direction = str(entry.get("direction", "")).lower()
         if direction not in ("buy", "sell"):
             action_counts["skip"] += 1
             no_trade_counts["invalid_entry_direction"] += 1
             continue
-        if entry.get("entry_type") == "limit":
-            limit_price = entry.get("limit_entry")
-            if limit_price is None or not (low <= float(limit_price) <= high):
-                action_counts["wait"] += 1
-                no_trade_counts["limit_entry_wait"] += 1
-                continue
-            entry_price = float(limit_price)
-        else:
-            entry_price = close
+        readiness_style = (
+            ReadinessStyle.PULLBACK
+            if entry.get("entry_type") == "limit"
+            else ReadinessStyle.IMMEDIATE
+        )
+        if readiness_style is ReadinessStyle.PULLBACK and entry.get("limit_entry") is None:
+            action_counts["skip"] += 1
+            no_trade_counts["missing_limit_price"] += 1
+            continue
+        requested_trigger = (
+            float(entry["limit_entry"])
+            if readiness_style is ReadinessStyle.PULLBACK
+            else close
+        )
 
         entry_with_zone = dict(entry)
         if ob_zone:
@@ -1088,7 +1158,7 @@ def run_backtest(
         sl, tp, level_reason = _build_orchestrator_trade_levels(
             symbol_info,
             direction,
-            entry_price,
+            requested_trigger,
             entry_with_zone,
             entry_slice,
             internal_structure,
@@ -1099,69 +1169,73 @@ def run_backtest(
             action_counts["skip"] += 1
             no_trade_counts[f"level_build_failed:{level_reason}"] += 1
             continue
-        # Phase 2: Apply displacement tier position size adjustment (default to 1.0 for backtest)
-        position_size_pct = 1.0  # Backtest doesn't use orchestrator displacement tier system
-        
-        lot = risk_engine.calculate_position_size(
-            symbol=symbol,
-            account_balance=max(1.0, capital + realized_pnl),
-            stop_distance_price=abs(entry_price - sl),
-            risk_pct=float(score_result.get("risk_pct") or profile.get("risk_per_trade", 0.01)),
-            enforce_min_volume=True,
-            position_size_pct=position_size_pct,
-        )
-        if lot is None:
-            action_counts["skip"] += 1
-            no_trade_counts["risk_below_min_volume"] += 1
-            continue
-        if not risk_engine.validate_rr(entry_price, sl, tp):
+        if not risk_engine.validate_rr(requested_trigger, sl, tp):
             action_counts["skip"] += 1
             no_trade_counts["rr_below_orchestrator_minimum"] += 1
             continue
 
-        open_positions.append(Position(
-            ticket=ticket_seq,
+        signal_intent = new_entry_intent(
             symbol=symbol,
-            direction=direction,
-            lot=float(lot),
-            entry_price=float(entry_price),
-            sl=float(sl),
-            tp=float(tp),
-            risk_price=abs(entry_price - sl),
+            direction=LifecycleDirection(direction),
+            source_timeframe=entry_tf,
+            source_candle_open_time=candle_open_time.to_pydatetime(),
+            signal_available_at=now_ts.to_pydatetime(),
+            requested_trigger=requested_trigger,
+            stop_loss=float(sl),
+            final_target=float(tp),
+            readiness_style=readiness_style,
+            partial_close_fraction=lifecycle_config.partial_close_fraction,
+            expires_at=(now_ts + pd.Timedelta(minutes=STATE_EXPIRY_MINUTES)).to_pydatetime(),
+            source_event_id=base_event.source_candle_id,
+            source_sequence=idx,
+            strategy_metadata={"setup_id": setup_id, "score": score_result.get("score")},
+            configuration_id=f"{symbol}:{entry_tf}:phase3",
+        )
+        signal_atr = float(calculate_atr(entry_slice, period=14) or 0.0)
+        tolerance = (
+            max(point * 50, signal_atr * 0.05)
+            if readiness_style is ReadinessStyle.PULLBACK
+            else 0.0
+        )
+        pending_entry = PendingEntry(
+            entry_state=create_entry_state(signal_intent),
+            risk_pct=float(score_result.get("risk_pct") or profile.get("risk_per_trade", 0.01)),
             sl_reason=str(level_reason),
-            opened_at=now_ts.to_pydatetime(),
             score=int(score_result.get("score", 0) or 0),
-            setup_id=setup_id,  # Link to setup evaluation
             grade=str(score_result.get("grade", "")),
-        ))
-        ticket_seq += 1
-        action_counts["candidate_ready"] += 1
+            setup_id=setup_id,
+            tolerance=tolerance,
+        )
+        action_counts["candidate_created"] += 1
 
-    final_ts = end.isoformat()
     for pos in open_positions:
-        last_close = float(test_rows["close"].iloc[-1]) if not test_rows.empty else pos.entry_price
-        pnl = _pnl(symbol, pos.direction, pos.lot, pos.entry_price, last_close, cost)
-        total_costs += cost.round_trip(pos.lot)
-        realized_pnl += pnl
-        trades.append({
-            "ticket": pos.ticket,
-            "symbol": pos.symbol,
-            "direction": pos.direction,
-            "opened_at": pos.opened_at.isoformat(),
-            "closed_at": final_ts,
-            "entry_price": round(pos.entry_price, 5),
-            "exit_price": round(last_close, 5),
-            "sl": round(pos.sl, 5),
-            "tp": round(pos.tp, 5),
-            "risk_price": round(pos.risk_price, 5),
-            "sl_reason": pos.sl_reason,
-            "lot": pos.lot,
-            "score": pos.score,
-            "grade": pos.grade,
-            "setup_id": pos.setup_id,  # Link to setup evaluation
-            "reason": "end_of_backtest",
-            "pnl": round(pnl, 4),
-        })
+        last_close = float(test_rows["close"].iloc[-1]) if not test_rows.empty else pos.fill_price
+        end_event = MarketEvent(
+            event_id=stable_id(pos.trade_id, "end_of_backtest", end.isoformat()),
+            timestamp=as_utc_timestamp(end, field="backtest end close").to_pydatetime(),
+            symbol=symbol,
+            source="shadow_backtest",
+            kind=MarketEventKind.BAR,
+            sequence=total + 1,
+            open=last_close,
+            high=last_close,
+            low=last_close,
+            close=last_close,
+            bar_open_time=as_utc_timestamp(end, field="backtest end bar").to_pydatetime(),
+        )
+        closed = force_close(pos, end_event, lifecycle_config).position
+        previous_gross = booked_gross_by_trade.get(pos.trade_id, 0.0)
+        realized_pnl += closed.realized_gross_pnl - previous_gross
+        trade_cost = cost.round_trip(closed.initial_quantity)
+        total_costs += trade_cost
+        realized_pnl -= trade_cost
+        trades.append(
+            _lifecycle_trade_record(
+                closed,
+                closed.realized_gross_pnl - trade_cost,
+                trade_cost,
+            )
+        )
 
     out_dir.mkdir(parents=True, exist_ok=True)
     trades_df = pd.DataFrame(trades)
@@ -1176,8 +1250,8 @@ def run_backtest(
     wins = int((pnl_series > 0).sum())
     losses = int((pnl_series < 0).sum())
     reasons = trades_df["reason"] if ("reason" in trades_df.columns) else pd.Series(dtype=str)
-    tp_hit_wins = int(((reasons == "tp_hit") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
-    trail_profit_exits = int(((reasons != "tp_hit") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
+    tp_hit_wins = int(((reasons == "TAKE_PROFIT") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
+    trail_profit_exits = int(((reasons != "TAKE_PROFIT") & (pnl_series > 0)).sum()) if not trades_df.empty else 0
     gross_profit = float(pnl_series[pnl_series > 0].sum()) if not pnl_series.empty else 0.0
     gross_loss = float(pnl_series[pnl_series < 0].sum()) if not pnl_series.empty else 0.0
     equity_series = capital + pnl_series.cumsum() if not pnl_series.empty else pd.Series([capital])
@@ -1234,9 +1308,12 @@ def main() -> None:
     parser.add_argument("--end", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     parser.add_argument("--capital", type=float, default=1000.0)
     parser.add_argument("--out", default="backtests/shadow_mode")
-    parser.add_argument("--trail-mode", default="live_atr_3x",
-                        choices=["live_atr_3x", "1x", "1.5x", "2x", "2stage", "atr-3x"],
-                        help="live_atr_3x mirrors the live bot's trailing (default).")
+    parser.add_argument(
+        "--trail-mode",
+        default="live_atr_3x",
+        choices=["live_atr_3x"],
+        help="Shared Phase 3 lifecycle trailing policy.",
+    )
     parser.add_argument("--min-rr", type=float, default=None,
                         help="Override the reward-target RR; sweep to find the best target.")
     parser.add_argument("--spread-points", type=float, default=0.0,

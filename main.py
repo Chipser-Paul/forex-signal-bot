@@ -49,6 +49,30 @@ from utils.analytics_db import record_loop_snapshot
 from utils.loop_ai import queue_loop_analysis
 #from trend import get_trend
 from bot.execution.risk_engine import RiskEngine
+from bot.execution.lifecycle import (
+    ActionType,
+    Direction as LifecycleDirection,
+    FillKind,
+    ReadinessStyle,
+    create_entry_state,
+    is_price_ready,
+    process_entry_event,
+    manage_position,
+    reconcile_action_fill,
+    record_fill,
+)
+from bot.execution.live_adapter import (
+    dispatch_actions,
+    intent_from_strategy_entry,
+    management_config_from_live,
+    market_event_from_tick,
+    order_request_for_action,
+)
+from bot.execution.lifecycle.serialization import (
+    outcome_to_event,
+    position_from_trade_record,
+    update_trade_record,
+)
 from bot.state.orchestrator import StrategyOrchestrator
 
 # 
@@ -81,6 +105,7 @@ LOOP_DELAY = 60
 OPEN_JSON = Path("open_trades.json")
 SESSION_JSON = Path("frontend") / "utils" / ".session.json"
 STRATEGY_STATES = {}
+PENDING_ENTRY_STATES = {}
 SHADOW_STRATEGY_STATES = {}
 SHADOW_ORCHESTRATOR = StrategyOrchestrator()
 ACTIVE_ORCHESTRATOR = StrategyOrchestrator()
@@ -609,7 +634,12 @@ def _entry_price_ready_for_live_market(
     symbol_info,
 ) -> tuple[bool, str]:
     if entry.get("entry_type") != "limit":
-        return True, "market_entry"
+        return is_price_ready(
+            direction,
+            ReadinessStyle.IMMEDIATE,
+            current_price,
+            current_price,
+        ), "market_on_trigger_immediate"
 
     limit_price = entry.get("limit_entry")
     if limit_price is None:
@@ -620,9 +650,13 @@ def _entry_price_ready_for_live_market(
     point = float(getattr(symbol_info, "point", 0.0) or 0.0)
     tolerance = max(point * 50, atr_val * 0.05)
 
-    if direction == "buy" and current_price <= limit_price + tolerance:
-        return True, "limit_price_reached"
-    if direction == "sell" and current_price >= limit_price - tolerance:
+    if is_price_ready(
+        direction,
+        ReadinessStyle.PULLBACK,
+        limit_price,
+        current_price,
+        tolerance,
+    ):
         return True, "limit_price_reached"
     return False, f"waiting_for_limit:{limit_price:.5f}"
 
@@ -806,19 +840,21 @@ def _execute_orchestrator_live_body(
         return
     current_price = float(tick.ask if direction == "buy" else tick.bid)
     loop_context["price"] = current_price
-    ready, ready_reason = _entry_price_ready_for_live_market(direction, entry, signal_price, entry_df, symbol_info)
-    if not ready:
-        no_trade("entry_wait", ready_reason)
-        return
 
     entry_with_zone = dict(entry)
     if ob_result.get("valid") and ob_result.get("zone"):
         entry_with_zone["ob_zone"] = ob_result.get("zone")
 
+    requested_trigger = (
+        float(entry["limit_entry"])
+        if entry.get("entry_type") == "limit" and entry.get("limit_entry") is not None
+        else signal_price
+    )
+
     sl, tp, level_reason = _build_orchestrator_trade_levels(
         symbol_info,
         direction,
-        current_price,
+        requested_trigger,
         entry_with_zone,
         entry_df,
         context.get("internal_structure"),
@@ -829,6 +865,47 @@ def _execute_orchestrator_live_body(
     if sl is None or tp is None:
         no_trade("level_build_failed", level_reason, "red")
         return
+
+    intent = intent_from_strategy_entry(
+        symbol=symbol,
+        source_timeframe=cfg["entry_tf"],
+        entry=entry_with_zone,
+        entry_frame=entry_df,
+        stop_loss=sl,
+        final_target=tp,
+        partial_close_fraction=PARTIAL_CLOSE_RATIO,
+        configuration_id=f"{symbol}:{cfg['entry_tf']}:phase3",
+        strategy_metadata={
+            "strategy": "SMC_COURTROOM_ORCHESTRATOR",
+            "setup_score": score.get("score"),
+            "setup_grade": score.get("grade"),
+        },
+    )
+    pending_state = PENDING_ENTRY_STATES.get(symbol)
+    if pending_state is None or pending_state.intent.signal_id != intent.signal_id:
+        pending_state = create_entry_state(intent)
+    tick_event = market_event_from_tick(
+        symbol,
+        tick,
+        observed_at=datetime.now(timezone.utc),
+    )
+    atr_val = float(calculate_atr(entry_df, period=14) or 0.0)
+    point = float(getattr(symbol_info, "point", 0.0) or 0.0)
+    tolerance = (
+        max(point * 50, atr_val * 0.05)
+        if intent.readiness_style is ReadinessStyle.PULLBACK
+        else 0.0
+    )
+    entry_decision = process_entry_event(pending_state, tick_event, tolerance=tolerance)
+    if not entry_decision.triggered:
+        if entry_decision.state.status.value in ("EXPIRED", "CANCELLED", "REJECTED"):
+            PENDING_ENTRY_STATES.pop(symbol, None)
+        else:
+            PENDING_ENTRY_STATES[symbol] = entry_decision.state
+        no_trade("entry_wait", entry_decision.reason)
+        return
+    PENDING_ENTRY_STATES.pop(symbol, None)
+    current_price = float(entry_decision.proposed_fill_price)
 
     rr = ACTIVE_RISK_ENGINE.rr_value(current_price, sl, tp)
     if rr < ACTIVE_RISK_ENGINE.min_rr:
@@ -967,19 +1044,29 @@ def _execute_orchestrator_live_body(
         no_trade("execution_guard_low_rr", f"fill_rr={actual_rr:.3f}", "yellow")
         return
 
+    lifecycle_position = record_fill(
+        entry_decision.state,
+        tick_event,
+        fill_price=actual_entry,
+        quantity=float(execution["lot"]),
+        fill_kind=FillKind.LIVE_MARKET,
+        executed_stop=actual_sl,
+        executed_target=actual_tp,
+        adapter_metadata={
+            "source": "live_mt5",
+            "configuration_id": intent.configuration_id,
+            "ticket": ticket,
+        },
+    )
+
     open_trades.setdefault(symbol, [])
     if not any(isinstance(t, dict) and str(t.get("ticket")) == str(ticket) for t in open_trades[symbol]):
-        open_trades[symbol].append(
+        trade_record = update_trade_record(
             {
                 "ticket": ticket,
                 "symbol": symbol,
                 "direction": direction,
-                "entry_price": actual_entry,
-                "sl": actual_sl,
-                "tp": actual_tp,
-                "risk": abs(actual_entry - actual_sl),
-                "lot": float(lot),
-                "opened_at": datetime.now(timezone.utc).isoformat(),
+                "opened_at": tick_event.timestamp.isoformat(),
                 "confidence": structure_context.get("confidence"),
                 "structure_dir": bias_resolution.get("direction"),
                 "structure_state": structure_context.get("state"),
@@ -991,8 +1078,10 @@ def _execute_orchestrator_live_body(
                 "engine": "orchestrator",
                 "score": score.get("score"),
                 "grade": score.get("grade"),
-            }
+            },
+            lifecycle_position,
         )
+        open_trades[symbol].append(trade_record)
         save_open_trades(open_trades)
 
     save_loop_snapshot(
@@ -1572,6 +1661,51 @@ def evaluate_symbol(symbol, open_trades, debug=True):
     }
 
     if trading_allowed:
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            no_trade("tick_missing", "cannot evaluate post-signal entry readiness", "red")
+            return
+        intent = intent_from_strategy_entry(
+            symbol=symbol,
+            source_timeframe=cfg["entry_tf"],
+            entry=entry,
+            entry_frame=df_entry,
+            stop_loss=sl,
+            final_target=tp,
+            partial_close_fraction=PARTIAL_CLOSE_RATIO,
+            configuration_id=f"{symbol}:{cfg['entry_tf']}:phase3-legacy",
+            strategy_metadata={
+                "strategy": "SMC_ENGINE",
+                "legacy_analysis_path": True,
+            },
+        )
+        pending_state = PENDING_ENTRY_STATES.get(symbol)
+        if pending_state is None or pending_state.intent.signal_id != intent.signal_id:
+            pending_state = create_entry_state(intent)
+        tick_event = market_event_from_tick(
+            symbol,
+            tick,
+            observed_at=datetime.now(timezone.utc),
+        )
+        tolerance = (
+            max(float(point) * 50.0, float(atr_val) * 0.05)
+            if intent.readiness_style is ReadinessStyle.PULLBACK
+            else 0.0
+        )
+        entry_decision = process_entry_event(
+            pending_state,
+            tick_event,
+            tolerance=tolerance,
+        )
+        if not entry_decision.triggered:
+            if entry_decision.state.status.value in ("EXPIRED", "CANCELLED", "REJECTED"):
+                PENDING_ENTRY_STATES.pop(symbol, None)
+            else:
+                PENDING_ENTRY_STATES[symbol] = entry_decision.state
+            no_trade("entry_wait", entry_decision.reason)
+            return
+        PENDING_ENTRY_STATES.pop(symbol, None)
+
         log(f"[] {symbol} MARKET {direction.upper()} | lot={full_lot}", "green")
         execution = execute_trade(
             symbol=symbol,
@@ -1636,13 +1770,28 @@ def evaluate_symbol(symbol, open_trades, debug=True):
                 return
 
             tickets.append(ticket)
+            lifecycle_position = record_fill(
+                entry_decision.state,
+                tick_event,
+                fill_price=actual_entry,
+                quantity=float(execution["lot"]),
+                fill_kind=FillKind.LIVE_MARKET,
+                executed_stop=actual_sl,
+                executed_target=actual_tp,
+                adapter_metadata={
+                    "source": "live_mt5",
+                    "configuration_id": intent.configuration_id,
+                    "ticket": ticket,
+                    "legacy_analysis_path": True,
+                },
+            )
             open_trades.setdefault(symbol, [])
             if not any(
                 isinstance(t, dict) and str(t.get("ticket")) == str(ticket)
                 for t in open_trades[symbol]
             ):
                 open_trades[symbol].append(
-                    {
+                    update_trade_record({
                         "ticket": int(ticket),
                         "symbol": symbol,
                         "direction": direction,
@@ -1660,7 +1809,8 @@ def evaluate_symbol(symbol, open_trades, debug=True):
                         "liquidity_type": liquidity_type,
                         "ob_breaker_type": ob_type,
                         "ob_breaker_reason": ob_reason,
-                    }
+                        "engine": "legacy_analysis",
+                    }, lifecycle_position)
                 )
                 save_open_trades(open_trades)
     else:
@@ -1711,337 +1861,254 @@ HTF_TF = "H1"
 KILL_SWITCH_MIN_BARS_AFTER_ENTRY = 4
 KILL_SWITCH_ATR_BREAK_MULT = 0.15
 
+def _live_structure_failed(trade, direction, entry_df) -> bool:
+    if entry_df is None or len(entry_df) < 7:
+        return False
+    # Preserve the Phase 2 runtime sampling convention. The causal fetch already
+    # excludes the active MT5 candle; this extra exclusion remains a conservative
+    # management delay and is not an execution-ordering decision.
+    closed_df = entry_df.iloc[:-1].copy()
+    if len(closed_df) < 4:
+        return False
+    opened_at = trade.get("opened_at")
+    if opened_at:
+        try:
+            opened_dt = datetime.fromisoformat(str(opened_at).replace("Z", "+00:00"))
+            if opened_dt.tzinfo is None:
+                opened_dt = opened_dt.replace(tzinfo=timezone.utc)
+            last_closed_time = closed_df["open_time"].iloc[-1]
+            if hasattr(last_closed_time, "to_pydatetime"):
+                last_closed_time = last_closed_time.to_pydatetime()
+            if last_closed_time.tzinfo is None:
+                last_closed_time = last_closed_time.replace(tzinfo=timezone.utc)
+            bars_since_entry = int(
+                max(0, (last_closed_time - opened_dt).total_seconds()) // (15 * 60)
+            )
+            if bars_since_entry < KILL_SWITCH_MIN_BARS_AFTER_ENTRY:
+                return False
+        except (TypeError, ValueError, KeyError):
+            return False
+
+    atr_val = calculate_atr(closed_df, period=14)
+    break_buffer = atr_val * KILL_SWITCH_ATR_BREAK_MULT if atr_val > 0 else 0.0
+    c1, c2, c3, c4 = (closed_df.iloc[-4], closed_df.iloc[-3], closed_df.iloc[-2], closed_df.iloc[-1])
+    if direction == "buy":
+        level1 = min(c1["low"], c2["low"])
+        level2 = min(c2["low"], c3["low"])
+        return bool(
+            c3["close"] < level1 - break_buffer
+            and c4["close"] < level2 - break_buffer
+        )
+    level1 = max(c1["high"], c2["high"])
+    level2 = max(c2["high"], c3["high"])
+    return bool(
+        c3["close"] > level1 + break_buffer
+        and c4["close"] > level2 + break_buffer
+    )
+
+
+def _live_structure_trail_level(sym, trade, direction, partial_taken):
+    if not partial_taken:
+        return None
+    htf_df = fetch_ohlcv(sym, HTF_TF, bars=5)
+    if htf_df is None or len(htf_df) < 3:
+        return None
+    confirmed = bool(trade.get("htf_bos_confirmed"))
+    if not confirmed:
+        if direction == "buy":
+            confirmed = bool(htf_df["high"].iloc[-1] > htf_df["high"].iloc[-2])
+        else:
+            confirmed = bool(htf_df["low"].iloc[-1] < htf_df["low"].iloc[-2])
+        if confirmed:
+            trade["htf_bos_confirmed"] = True
+    if not confirmed:
+        return None
+    return float(
+        htf_df["low"].iloc[-2]
+        if direction == "buy"
+        else htf_df["high"].iloc[-2]
+    )
+
+
 def monitor_trades(open_trades):
+    """Manage live positions through the shared Phase 3 lifecycle reducer."""
     updated = {}
-    positions = {p.ticket: p for p in (mt5.positions_get() or [])}
+    positions = {int(position.ticket): position for position in (mt5.positions_get() or [])}
+    constants = {
+        "TRADE_ACTION_DEAL": mt5.TRADE_ACTION_DEAL,
+        "TRADE_ACTION_SLTP": mt5.TRADE_ACTION_SLTP,
+        "ORDER_TYPE_BUY": mt5.ORDER_TYPE_BUY,
+        "ORDER_TYPE_SELL": mt5.ORDER_TYPE_SELL,
+    }
 
-    for sym, trades in open_trades.items():
-        apply_symbol_profile(sym)
-        trades = trades if isinstance(trades, list) else [trades]
+    for sym, records in open_trades.items():
+        profile = apply_symbol_profile(sym)
         keep = []
-
-        for trade in trades:
-            if not isinstance(trade, dict):
+        for raw_trade in records if isinstance(records, list) else [records]:
+            if not isinstance(raw_trade, dict) or raw_trade.get("ticket") is None:
                 continue
-
-            ticket = trade.get("ticket")
-            if ticket is None:
-                continue
-            ticket = int(ticket)
-            if ticket not in positions:
+            trade = dict(raw_trade)
+            ticket = int(trade["ticket"])
+            broker_position = positions.get(ticket)
+            if broker_position is None:
                 close_data = _find_recent_close_deal(ticket, sym)
-                if close_data:
-                    log_trade_close(
-                        ticket=ticket,
-                        symbol=sym,
-                        pnl=close_data.get("pnl"),
-                        exit_price=close_data.get("exit_price"),
-                        reason=close_data.get("comment") or "position_closed",
-                        source="monitor_trades_history",
-                        closed_at_utc=close_data.get("closed_at_utc"),
-                        details={"deal_id": close_data.get("deal_id")},
-                    )
-                else:
-                    log_trade_close(
-                        ticket=ticket,
-                        symbol=sym,
-                        reason="position_not_found",
-                        source="monitor_trades",
-                        details={"note": "position missing and no close deal found in lookback"},
-                    )
-                continue  # position already closed
+                log_trade_close(
+                    ticket=ticket,
+                    symbol=sym,
+                    pnl=None if close_data is None else close_data.get("pnl"),
+                    exit_price=None if close_data is None else close_data.get("exit_price"),
+                    reason=(
+                        "position_not_found"
+                        if close_data is None
+                        else close_data.get("comment") or "broker_position_closed"
+                    ),
+                    source="phase3_broker_reconciliation",
+                    closed_at_utc=None if close_data is None else close_data.get("closed_at_utc"),
+                    details={"signal_id": trade.get("signal_id"), "trade_id": trade.get("trade_id")},
+                )
+                continue
 
-            pos = positions[ticket]
             info = mt5.symbol_info(sym)
-            tick = mt5.symbol_info_tick(sym)
-
-            if not info or not tick:
+            tick_data = mt5.symbol_info_tick(sym)
+            if info is None or tick_data is None:
+                keep.append(trade)
+                continue
+            direction = str(trade.get("direction") or "").lower()
+            if direction not in ("buy", "sell"):
                 keep.append(trade)
                 continue
 
-            point = info.point
-            digits = info.digits
+            observed_at = datetime.now(timezone.utc)
+            initial_stop = float(getattr(broker_position, "sl", 0.0) or trade.get("sl") or 0.0)
+            final_target = float(getattr(broker_position, "tp", 0.0) or trade.get("tp") or 0.0)
+            if initial_stop <= 0 or final_target <= 0:
+                keep.append(trade)
+                continue
+            trade.setdefault("symbol", sym)
+            position = position_from_trade_record(
+                trade,
+                remaining_quantity=float(broker_position.volume),
+                current_stop=initial_stop,
+                final_target=final_target,
+                observed_at=observed_at,
+            )
 
-            direction = trade.get("direction")
-            entry = trade.get("entry_price")
-            risk = trade.get("risk")
-
-            if not direction or entry is None or risk is None:
+            identity_event = market_event_from_tick(
+                sym,
+                tick_data,
+                observed_at=observed_at,
+            )
+            if identity_event.event_id in position.processed_event_ids:
                 keep.append(trade)
                 continue
 
-            price = tick.bid if pos.type == mt5.ORDER_TYPE_BUY else tick.ask
+            m15_df = fetch_ohlcv(sym, "M15", bars=10)
+            emergency = (
+                "kill_switch_structure_failure"
+                if _live_structure_failed(trade, direction, m15_df)
+                else None
+            )
+            m5_df = fetch_ohlcv(sym, "M5", bars=20)
+            m5_atr = (
+                float(calculate_atr(m5_df, period=14) or 0.0)
+                if m5_df is not None and len(m5_df) >= 15
+                else None
+            )
+            structure_trail = _live_structure_trail_level(
+                sym,
+                trade,
+                direction,
+                position.partial_close_occurred,
+            )
+            market_event = market_event_from_tick(
+                sym,
+                tick_data,
+                observed_at=observed_at,
+                atr=m5_atr,
+                emergency_reason=emergency,
+                structure_trail_level=structure_trail,
+            )
+            management_config = management_config_from_live(
+                profile=profile,
+                symbol_info=info,
+                partial_close_fraction=position.partial_close_fraction,
+            )
+            lifecycle_result = manage_position(position, market_event, management_config)
 
-            #
-            # 1 PARTIAL TP AT 1R
-            #
-            if not trade.get("partial_taken"):
-                reached_1r = (
-                    price >= entry + risk
-                    if direction == "buy"
-                    else price <= entry - risk
+            def request_builder(action):
+                return order_request_for_action(
+                    action,
+                    symbol=sym,
+                    ticket=ticket,
+                    direction=LifecycleDirection(direction),
+                    current_tp=final_target,
+                    bid=float(tick_data.bid),
+                    ask=float(tick_data.ask),
+                    constants=constants,
+                    digits=int(getattr(info, "digits", 2) or 2),
                 )
 
-                if reached_1r:
-                    close_volume = round(pos.volume * PARTIAL_CLOSE_RATIO, 2)
+            try:
+                executed = dispatch_actions(
+                    lifecycle_result.actions,
+                    request_builder=request_builder,
+                    send_order=mt5.order_send,
+                    success_retcode=mt5.TRADE_RETCODE_DONE,
+                )
+            except RuntimeError as exc:
+                log(f"[LIFECYCLE] {sym} action dispatch failed: {exc}", "red")
+                keep.append(trade)
+                continue
 
-                    if close_volume >= pos.volume or close_volume < info.volume_min:
-                        # Can't split — let ATR-3x trailing manage the full position
-                        trade["partial_taken"] = True
-                        log(f" 1R reached on min-lot {sym} — ATR trailing manages exit", "cyan")
-                    elif close_volume >= info.volume_min:
-                        close_req = {
-                            "action": mt5.TRADE_ACTION_DEAL,
-                            "symbol": sym,
-                            "position": ticket,
-                            "volume": close_volume,
-                            "type": mt5.ORDER_TYPE_SELL if direction == "buy" else mt5.ORDER_TYPE_BUY,
-                            "price": price,
-                            "deviation": 20,
-                            "magic": 123456,
-                            "comment": "Partial TP 1R",
-                        }
+            managed = lifecycle_result.position
+            for action, broker_result in executed:
+                if (
+                    broker_result is not None
+                    and action.action_type in (ActionType.PARTIAL_CLOSE, ActionType.FINAL_CLOSE)
+                    and float(getattr(broker_result, "price", 0.0) or 0.0) > 0
+                ):
+                    managed = reconcile_action_fill(
+                        managed,
+                        action,
+                        float(broker_result.price),
+                        management_config,
+                    )
+                log_trade_event(
+                    ticket=ticket,
+                    symbol=sym,
+                    event_name=f"lifecycle_{action.action_type.value.lower()}",
+                    details={
+                        "signal_id": managed.signal_id,
+                        "trade_id": managed.trade_id,
+                        "event_id": action.event_id,
+                        "action_id": action.action_id,
+                        "quantity": action.quantity,
+                        "requested_price": action.requested_price,
+                        "new_stop": action.new_stop,
+                        "reason": action.reason.value if hasattr(action.reason, "value") else action.reason,
+                    },
+                )
 
-                        res = mt5.order_send(close_req)
-
-                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                            log(f" Partial TP hit (1R)  {sym}", "green")
-                            trade["partial_taken"] = True
-                            log_trade_event(
-                                ticket=ticket,
-                                symbol=sym,
-                                event_name="partial_tp_hit",
-                                details={
-                                    "close_volume": close_volume,
-                                    "remaining_volume": round(max(pos.volume - close_volume, 0.0), 2),
-                                    "price": float(price),
-                                    "trigger": "1R",
-                                },
-                            )
-                            # SL management handled by ATR-3x trailing below
-
-            # 
-            # 2 STRUCTURE FAILURE KILL-SWITCH (FIXED)
-            # 
-            entry_df = fetch_ohlcv(sym, "M15", bars=10)
-
-            structure_failed = False
-            if entry_df is not None and len(entry_df) >= 7:
-                # Exclude currently forming candle to avoid noisy intra-candle exits.
-                closed_df = entry_df.iloc[:-1].copy()
-
-                if len(closed_df) >= 4:
-                    skip_kill_switch = False
-
-                    # Ignore first few M15 bars after entry to let the trade breathe.
-                    opened_at = trade.get("opened_at")
-                    if opened_at:
-                        try:
-                            opened_dt = datetime.fromisoformat(str(opened_at).replace("Z", "+00:00"))
-                            if opened_dt.tzinfo is None:
-                                opened_dt = opened_dt.replace(tzinfo=timezone.utc)
-
-                            last_closed_time = closed_df["time"].iloc[-1]
-                            if hasattr(last_closed_time, "to_pydatetime"):
-                                last_closed_time = last_closed_time.to_pydatetime()
-                            if last_closed_time.tzinfo is None:
-                                last_closed_time = last_closed_time.replace(tzinfo=timezone.utc)
-
-                            bars_since_entry = int(
-                                max(0, (last_closed_time - opened_dt).total_seconds()) // (15 * 60)
-                            )
-                            if bars_since_entry < KILL_SWITCH_MIN_BARS_AFTER_ENTRY:
-                                skip_kill_switch = True
-                        except Exception:
-                            pass
-
-                    if not skip_kill_switch:
-                        # Require a meaningful break beyond structure level (ATR buffer).
-                        atr_val = calculate_atr(closed_df, period=14)
-                        break_buffer = atr_val * KILL_SWITCH_ATR_BREAK_MULT if atr_val > 0 else 0.0
-
-                        c1 = closed_df.iloc[-4]
-                        c2 = closed_df.iloc[-3]
-                        c3 = closed_df.iloc[-2]
-                        c4 = closed_df.iloc[-1]
-
-                        if direction == "buy":
-                            level1 = min(c1["low"], c2["low"])
-                            level2 = min(c2["low"], c3["low"])
-                            break1 = c3["close"] < (level1 - break_buffer)
-                            break2 = c4["close"] < (level2 - break_buffer)
-                            structure_failed = bool(break1 and break2)
-                        else:
-                            level1 = max(c1["high"], c2["high"])
-                            level2 = max(c2["high"], c3["high"])
-                            break1 = c3["close"] > (level1 + break_buffer)
-                            break2 = c4["close"] > (level2 + break_buffer)
-                            structure_failed = bool(break1 and break2)
-
-                if structure_failed:
-                    log(f" KILL-SWITCH  Structure failure {sym}", "red")
-
-                    close_req = {
-                        "action": mt5.TRADE_ACTION_DEAL,
-                        "symbol": sym,
-                        "position": ticket,
-                        "volume": pos.volume,
-                        "type": mt5.ORDER_TYPE_SELL if direction == "buy" else mt5.ORDER_TYPE_BUY,
-                        "price": tick.bid if direction == "buy" else tick.ask,
-                        "deviation": 20,
-                        "magic": 123456,
-                        "comment": "SMC Kill-switch",
-                    }
-
-                    close_res = mt5.order_send(close_req)
-                    if close_res and close_res.retcode == mt5.TRADE_RETCODE_DONE:
-                        log_trade_close(
-                            ticket=ticket,
-                            symbol=sym,
-                            pnl=float(getattr(pos, "profit", 0.0)),
-                            exit_price=float(close_req["price"]),
-                            reason="kill_switch_structure_failure",
-                            source="monitor_trades",
-                        )
-                        continue
-                    keep.append(trade)
-                    continue
-
-            #
-            # 3 ATR-3x TRAILING SL
-            #
-            trail_cfg = get_symbol_profile(sym).get("trailing", {})
-            trail_mode = trail_cfg.get("mode", "htf_bos")
-
-            if trail_mode == "atr_3x":
-                trail_atr_mult = float(trail_cfg.get("atr_mult", 3.0))
-                trail_min_pts = float(trail_cfg.get("min_distance_points", 100)) * point
-
-                m5_df = fetch_ohlcv(sym, "M5", bars=20)
-                if m5_df is not None and len(m5_df) >= 15:
-                    m5_atr = calculate_atr(m5_df, period=14)
-                    if m5_atr > 0:
-                        trail_dist = max(m5_atr * trail_atr_mult, trail_min_pts)
-                        mid = (tick.bid + tick.ask) / 2
-
-                        if direction == "buy":
-                            prev_peak = trade.get("peak_price")
-                            if prev_peak is None or mid > prev_peak:
-                                trade["peak_price"] = mid
-                            new_sl = trade["peak_price"] - trail_dist
-                            if (pos.sl is None or new_sl > pos.sl) and new_sl >= entry:
-                                mt5.order_send({
-                                    "action": mt5.TRADE_ACTION_SLTP,
-                                    "symbol": sym,
-                                    "position": ticket,
-                                    "sl": round(new_sl, digits),
-                                    "tp": pos.tp,
-                                })
-                                log_trade_event(
-                                    ticket=ticket,
-                                    symbol=sym,
-                                    event_name="trail_sl_update",
-                                    details={"new_sl": round(new_sl, digits), "mode": "atr_3x"},
-                                )
-                        else:  # sell
-                            prev_peak = trade.get("peak_price")
-                            if prev_peak is None or mid < prev_peak:
-                                trade["peak_price"] = mid
-                            new_sl = trade["peak_price"] + trail_dist
-                            if (pos.sl is None or new_sl < pos.sl) and new_sl <= entry:
-                                mt5.order_send({
-                                    "action": mt5.TRADE_ACTION_SLTP,
-                                    "symbol": sym,
-                                    "position": ticket,
-                                    "sl": round(new_sl, digits),
-                                    "tp": pos.tp,
-                                })
-                                log_trade_event(
-                                    ticket=ticket,
-                                    symbol=sym,
-                                    event_name="trail_sl_update",
-                                    details={"new_sl": round(new_sl, digits), "mode": "atr_3x"},
-                                )
-
-            #
-            # 4 HTF BOS CONFIRMATION
-            #
-            if trade.get("partial_taken") and not trade.get("htf_bos_confirmed"):
-                htf_df = fetch_ohlcv(sym, HTF_TF, bars=3)
-                if htf_df is not None and len(htf_df) >= 2:
-                    if (
-                        direction == "buy"
-                        and htf_df["high"].iloc[-1] > htf_df["high"].iloc[-2]
-                    ):
-                        trade["htf_bos_confirmed"] = True
-                        log(f" HTF BOS confirmed  {sym}", "blue")
-                        log_trade_event(
-                            ticket=ticket,
-                            symbol=sym,
-                            event_name="htf_bos_confirmed",
-                            details={"direction": direction, "tf": HTF_TF},
-                        )
-
-                    if (
-                        direction == "sell"
-                        and htf_df["low"].iloc[-1] < htf_df["low"].iloc[-2]
-                    ):
-                        trade["htf_bos_confirmed"] = True
-                        log(f" HTF BOS confirmed  {sym}", "blue")
-                        log_trade_event(
-                            ticket=ticket,
-                            symbol=sym,
-                            event_name="htf_bos_confirmed",
-                            details={"direction": direction, "tf": HTF_TF},
-                        )
-
-            #
-            # 5 HTF STRUCTURE TRAILING SL
-            # 
-            if trade.get("htf_bos_confirmed"):
-                htf_df = fetch_ohlcv(sym, HTF_TF, bars=5)
-                if htf_df is not None:
-                    if direction == "buy":
-                        new_sl = htf_df["low"].iloc[-2]
-                        if pos.sl is None or new_sl > pos.sl:
-                            mt5.order_send({
-                                "action": mt5.TRADE_ACTION_SLTP,
-                                "symbol": sym,
-                                "position": ticket,
-                                "sl": round(new_sl, digits),
-                                "tp": pos.tp,
-                            })
-                            log_trade_event(
-                                ticket=ticket,
-                                symbol=sym,
-                                event_name="trail_sl_update",
-                                details={"new_sl": round(new_sl, digits), "tf": HTF_TF},
-                            )
-                    else:
-                        new_sl = htf_df["high"].iloc[-2]
-                        if pos.sl is None or new_sl < pos.sl:
-                            mt5.order_send({
-                                "action": mt5.TRADE_ACTION_SLTP,
-                                "symbol": sym,
-                                "position": ticket,
-                                "sl": round(new_sl, digits),
-                                "tp": pos.tp,
-                            })
-                            log_trade_event(
-                                ticket=ticket,
-                                symbol=sym,
-                                event_name="trail_sl_update",
-                                details={"new_sl": round(new_sl, digits), "tf": HTF_TF},
-                            )
-
-            keep.append(trade)
+            if managed.status.value == "CLOSED":
+                closed_event = outcome_to_event(managed)
+                log_trade_close(
+                    ticket=ticket,
+                    symbol=sym,
+                    pnl=managed.realized_gross_pnl,
+                    exit_price=managed.exit_price,
+                    reason=str(closed_event["reason"]),
+                    source="phase3_lifecycle",
+                    closed_at_utc=str(closed_event["ts_utc"]),
+                    details=closed_event,
+                )
+                continue
+            keep.append(update_trade_record(trade, managed))
 
         if keep:
             updated[sym] = keep
 
     if updated != open_trades:
         save_open_trades(updated)
-
     return updated
 
 #  ENTRYPOINT 

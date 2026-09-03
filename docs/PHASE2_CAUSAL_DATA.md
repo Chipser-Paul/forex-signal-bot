@@ -164,8 +164,10 @@ and exposes structured diagnostics without account information.
 
 ## 13. Known limitations
 
-- Same-candle signal and fill sequencing remains open for Phase 3.
-- Market/limit execution, partial-close, and trailing parity remain Phase 3.
+- Same-candle signal/fill sequencing and market-on-trigger chronology were
+  repaired in Phase 3; see `docs/PHASE3_EXECUTION_PARITY.md`.
+- Shared partial-close, trailing and gross exit accounting were repaired in
+  Phase 3. Tick reconstruction and transaction-cost realism remain Phase 7.
 - Risk caps, floating drawdown, circuit-breaker outcomes, and persistence remain
   Phase 4.
 - Broker invalid-stop retries remain Phase 5.

@@ -167,8 +167,8 @@ reimplements many gates. Parity is therefore an observed goal, not an assumption
 | ID | Expected correct behavior | Evidence | Status | Repair phase |
 | --- | --- | --- | --- | --- |
 | KD-DATA-001 | Historical HTF analysis sees only candles completed by the simulated timestamp | Baseline found opening-time `ffill`; Phase 2 regression: `test_kd_data_001_m5_decision_during_h1_excludes_current_h1` | Repaired in Phase 2 | Phase 2 |
-| KD-BACKTEST-001 | Signal evaluation and entry fill cannot use the same candle's full range | Entry can be created/fill-tested on the current row | Documented | Phase 3 |
-| KD-EXIT-001 | Backtest models the live 50% partial close at 1R | Backtest has no live-equivalent partial close path | Documented | Phase 3 |
+| KD-BACKTEST-001 | Signal evaluation and entry fill cannot use the same candle's full range | Baseline found same-row fill evaluation; Phase 3 regression: `test_kd_backtest_001_source_candle_cannot_fill_its_own_signal` | Repaired in Phase 3 | Phase 3 |
+| KD-EXIT-001 | Backtest models the live 50% partial close at 1R | Baseline found no live-equivalent partial path; Phase 3 regressions: `test_kd_exit_001_partial_close_is_shared_and_one_shot`, `test_kd_exit_002_trailing_rule_checks_old_stop_then_activates_next_event`, `test_kd_exit_003_partial_and_final_gross_pnl_reconcile` | Repaired in Phase 3 | Phase 3 |
 | KD-RISK-001 | Central max risk caps all caller-derived percentages | `test_risk_engine_caps_caller_risk_at_the_central_maximum` | Strict xfail | Phase 4 |
 | KD-RISK-002 | Daily breaker includes floating P/L | API receives realized scalar only | Documented | Phase 4 |
 | KD-REGIME-001 | Regime compares current ATR with historical ATR distribution | `test_regime_classifier_detects_recent_volatility_expansion` | Strict xfail | Phase 6 |
@@ -186,9 +186,11 @@ fallback differences, realized-only drawdown, and zero-default historical costs.
 These issues invalidate parity and profitability conclusions until their assigned
 future phases are complete.
 
-Phase 2 repaired only the causal HTF and timestamp-alignment findings. The data
-contract and regression evidence are recorded in `docs/PHASE2_CAUSAL_DATA.md`;
-the remaining execution and strategy mismatches above are still open.
+Phase 2 repaired only the causal HTF and timestamp-alignment findings. Phase 3
+subsequently repaired same-source-candle fills, shared partial/trailing behavior,
+and gross exit accounting. Their contracts and regression evidence are recorded
+in `docs/PHASE2_CAUSAL_DATA.md` and `docs/PHASE3_EXECUTION_PARITY.md`. Risk,
+broker-safety, strategy-policy and cost-realism findings remain open.
 
 ## 11. Existing backtest evidence
 
