@@ -171,9 +171,9 @@ reimplements many gates. Parity is therefore an observed goal, not an assumption
 | KD-EXIT-001 | Backtest models the live 50% partial close at 1R | Baseline found no live-equivalent partial path; Phase 3 regressions: `test_kd_exit_001_partial_close_is_shared_and_one_shot`, `test_kd_exit_002_trailing_rule_checks_old_stop_then_activates_next_event`, `test_kd_exit_003_partial_and_final_gross_pnl_reconcile` | Repaired in Phase 3 | Phase 3 |
 | KD-RISK-001 | Central max risk caps all caller-derived percentages | Baseline strict xfail; Phase 4 regression: `test_risk_engine_caps_caller_risk_at_the_central_maximum` | Repaired in Phase 4 | Phase 4 |
 | KD-RISK-002 | Daily breaker includes floating P/L | Baseline received realized scalar only; Phase 4 regressions under `tests/phase4/test_drawdown_and_circuits.py` | Repaired in Phase 4 | Phase 4 |
-| KD-REGIME-001 | Regime compares current ATR with historical ATR distribution | `test_regime_classifier_detects_recent_volatility_expansion` | Strict xfail | Phase 6 |
-| KD-NEWS-001 | Missing required news data fails closed | `test_missing_news_source_fails_closed` | Strict xfail | Phase 6 |
-| KD-OB-001 | Mitigation means a valid revisit/consumption of the zone | `test_order_block_is_not_mitigated_without_a_zone_revisit` | Strict xfail | Phase 6 |
+| KD-REGIME-001 | Regime compares current normalized ATR with a causal trailing distribution | Known-defect regression and Phase 6 regime tests | Repaired in Phase 6 | Phase 6 |
+| KD-NEWS-001 | Missing required news data fails closed | Known-defect regression and Phase 6 news tests | Repaired in Phase 6 | Phase 6 |
+| KD-OB-001 | Mitigation means a valid post-confirmation revisit/consumption | Known-defect regression and Phase 6 lifecycle tests | Repaired in Phase 6 | Phase 6 |
 | KD-STOPS-001 | Retry converts stop distances into direction-aware absolute prices | `test_invalid_stop_retry_converts_distances_to_absolute_prices` and Phase 5 broker retry tests | Repaired in Phase 5; passing regression | Phase 5 |
 | KD-CIRCUIT-001 | Completed live outcomes update the authoritative loss-streak circuit once | Baseline found no live consumption; Phase 4 regression: `test_live_completed_outcome_is_consumed_once_across_store_reload` | Repaired for normal Phase 3 lifecycle closes in Phase 4; broker reconciliation remains Phase 5 | Phase 4/5 |
 | KD-PERSIST-001 | Risk/circuit protection survives atomic restart state | Baseline found no durable risk state; Phase 4 tests under `tests/phase4/test_risk_store.py` | Risk state repaired in Phase 4; unrelated runtime JSON/journal coordination remains deferred | Phase 4/later |
@@ -263,7 +263,8 @@ credentials. It is an environment record, not a cross-platform universal lock.
 - Phase 4: risk cap, floating drawdown, circuit-breaker outcome wiring and atomic
   risk restart state (completed; see `docs/PHASE4_RISK_PROTECTION.md`).
 - Phase 5: completed broker execution safety, ownership, reconciliation and invalid-stop handling; see `PHASE5_BROKER_SAFETY.md`.
-- Phase 6: regime/ATR behavior, order-block semantics and news policy.
+- Phase 6: regime/ATR, DXY, order-block, news, session, and confluence semantics;
+  repaired in `docs/PHASE6_STRATEGY_SEMANTICS.md`.
 - Later phase: symbol/global configuration isolation and operational hardening.
 
 ## 15. Interpretation warning

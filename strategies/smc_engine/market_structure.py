@@ -3,6 +3,8 @@
 # Continuous confidence + state + transition awareness
 
 import pandas as pd
+from bot.strategy import StrategyConfig
+from bot.strategy.regime import classify_regime
 from utils.log import log
 from utils.indicators import calculate_atr
 from strategies.smc_engine.displacement_engine import (
@@ -484,38 +486,15 @@ def combine_lead_bias(primary: dict, support: dict | None, structure: str | None
 # 4) MARKET CONDITION TAG
 # ------------------------------------------------------------------
 def detect_market_condition(df: pd.DataFrame, swings) -> str:
-    atr = calculate_atr(df, 14)
-    atr_val = atr.iloc[-1] if hasattr(atr, "iloc") else atr
-    if pd.isna(atr_val) or atr_val <= 0:
-        return "unknown"
-
-    atr_series = atr if hasattr(atr, "rolling") else None
-    atr_mean = (
-        atr_series.rolling(CONDITION_ATR_WINDOW).mean().iloc[-1]
-        if atr_series is not None and len(atr_series) >= CONDITION_ATR_WINDOW
-        else atr_val
-    )
-    vol_ratio = atr_val / max(atr_mean, 1e-6)
-
-    recent = swings[-6:] if len(swings) >= 6 else swings
-    highs = [s["price"] for s in recent if s["type"] == "high"]
-    lows = [s["price"] for s in recent if s["type"] == "low"]
-    if len(highs) < 2 or len(lows) < 2:
-        return "unknown"
-
-    # Trend vs range via normalized slope
-    slope = (
-        abs(highs[-1] - highs[0]) +
-        abs(lows[-1] - lows[0])
-    ) / (2 * atr_val)
-
-    if vol_ratio >= HIGH_VOL_RATIO:
+    del swings
+    state = classify_regime(df, StrategyConfig()).state.value
+    if state == "HIGH_VOLATILITY":
         return "vol_expansion"
-    if vol_ratio <= LOW_VOL_RATIO:
-        return "low_vol"
-    if slope >= 0.9:
+    if state in ("TRENDING_UP", "TRENDING_DOWN"):
         return "trend"
-    return "range"
+    if state == "RANGING":
+        return "range"
+    return "unknown"
 
 
 # ------------------------------------------------------------------

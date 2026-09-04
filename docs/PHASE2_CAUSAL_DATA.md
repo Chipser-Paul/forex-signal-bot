@@ -172,11 +172,12 @@ and exposes structured diagnostics without account information.
   were repaired in Phase 4; see `docs/PHASE4_RISK_PROTECTION.md`. Broader runtime
   persistence remains deferred.
 - Broker invalid-stop retries remain Phase 5.
-- ATR/regime, order-block mitigation, and news policy remain Phase 6.
+- ATR/regime, order-block mitigation, DXY semantics, and news policy were repaired
+  in Phase 6 without weakening this causal data contract.
 - Nominal final boundaries cannot model exchange-specific early closes; uncertain
   historical finals therefore remain excluded by default.
-- The DXY basket still permits unavailable components and redistributes their
-  weights exactly as before; Phase 2 changes alignment only.
+- Phase 6 retained this alignment and replaced the permissive linear proxy with
+  the required six-constituent geometric DXY basket.
 
 ## 14. Reproduction
 

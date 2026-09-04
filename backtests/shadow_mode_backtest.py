@@ -39,6 +39,8 @@ from bot.analysis.fvg_engine import get_unfilled_fvgs
 from bot.analysis.liquidity_map import get_asian_session_range, get_previous_day_levels, get_previous_week_levels
 from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
+from bot.strategy.legacy_adapter import evaluate_legacy_context
+from bot.strategy.models import SetupEvidence
 from bot.execution.risk_engine import RiskEngine
 from bot.execution.risk import (
     AccountSnapshot,
@@ -1037,22 +1039,14 @@ def run_backtest(
             raise RuntimeError("Causal HTF snapshot contains future candles")
 
         session_context = get_session_context(now_ts.to_pydatetime())
-        session_context["session_allowed"] = True
         state.update_session(session_context)
-        # Sunday filter: skip trading on Sunday (0% WR over baseline)
-        if now_ts.weekday() == 6:  # Sunday = 6
+        if not session_context.get("session_allowed", False):
             action_counts["skip"] += 1
-            no_trade_counts["sunday_filter_skipped"] += 1
-            continue
-        # Bad hour filter: 00, 02, 11, 13 UTC (combined 7% WR over 15 trades)
-        hour_utc = now_ts.hour
-        if hour_utc in (0, 11):  # Match live orchestrator: block only hours 0 and 11
-            action_counts["skip"] += 1
-            no_trade_counts["bad_hour_filter_skipped"] += 1
+            no_trade_counts["session_closed"] += 1
             continue
         news_status = get_news_status(symbol, now_ts.to_pydatetime())
         state.update_news(news_status)
-        if not news_status.get("news_clear", True):
+        if not news_status.get("news_clear", False):
             action_counts["pause"] += 1
             no_trade_counts["news_blackout"] += 1
             continue
@@ -1065,10 +1059,10 @@ def run_backtest(
         # Gate 1: Session/killzone check
         session_context = get_session_context(now_ts.to_pydatetime())
         gate_results["gate_1_session"] = {
-            "pass": session_context.get("in_priority_session", True),
+            "pass": session_context.get("session_allowed", False),
             "raw": session_context
         }
-        if not session_context.get("in_priority_session", True):
+        if not session_context.get("session_allowed", False):
             action_counts["skip"] += 1
             no_trade_counts["bad_hour_filter_skipped"] += 1
             log_setup_evaluation(
@@ -1270,9 +1264,6 @@ def run_backtest(
                 internal_structure.get("event") in ("BOS", "CHOCH") or
                 internal_structure.get("early_event", {}).get("event") in ("BOS", "CHOCH")
             ),
-            "session_allowed": True,
-            "dxy_confirms_bias": bool(dxy_context.get("confirms_bias")),
-            "no_news_in_30min": bool(news_status.get("news_clear")),
             "min_score_to_trade": 8,  # Explicitly set threshold
         })
         
@@ -1298,9 +1289,31 @@ def run_backtest(
             )
             continue
 
-        # DIRECTION-BASED SCORE FILTER REMOVED — Match live orchestrator (line 365-368)
-        # The old filter required bullish ≥10 vs bearish ≥8, creating an unjustified
-        # anti-buy bias. Live removed this filter, so backtest must match.
+        canonical = evaluate_legacy_context(
+            adapter="replay",
+            symbol=symbol,
+            decision_at=now_ts.to_pydatetime(),
+            side=htf_bias,
+            entry_frame=entry_slice,
+            htf_bias=htf_bias,
+            dxy_context=dxy_context,
+            news_context=news_status,
+            session_context=session_context,
+            evidence=SetupEvidence(
+                bool(structure_context.get("discount_zone") if htf_bias == "bullish" else structure_context.get("premium_zone")),
+                bool(ob_result.get("valid")),
+                fvg_in_ob_zone,
+                bool(liquidity_signal),
+            ),
+        )
+        gate_results["canonical_strategy"] = {
+            "pass": canonical.entry_eligible,
+            "raw": canonical.to_dict(),
+        }
+        if not canonical.entry_eligible:
+            action_counts["skip"] += 1
+            no_trade_counts[f"strategy:{canonical.reasons[0].value}"] += 1
+            continue
 
         entry = determine_entry(symbol, state, close, score_result=score_result, context={
             "ob_zone": ob_zone,

@@ -12,7 +12,6 @@ from bot.data.candles import (
     get_timeframe_spec,
 )
 from bot.data.market_data import fetch_ohlcv
-from strategies.smc_engine.market_structure import analyze_market_structure
 
 
 DXY_SYMBOL_CANDIDATES = (
@@ -31,6 +30,7 @@ DXY_BASKET = (
     ("USDSEKm", 0.042, False),
     ("USDCHFm", 0.036, False),
 )
+DXY_SCALE = 50.14348112
 
 def _resolve_dxy_symbol(symbol_candidates: tuple[str, ...] = DXY_SYMBOL_CANDIDATES) -> str | None:
     """Try to find a working DXY symbol from MT5"""
@@ -47,14 +47,12 @@ def build_synthetic_dxy_from_frames(
     bars: int,
     decision_timestamp: object,
 ) -> tuple[np.ndarray | None, int, dict[str, object]]:
-    """Build the existing weighted basket from causally aligned closes."""
+    """Build the official-style geometric DXY basket from causal closes."""
     spec = get_timeframe_spec(timeframe)
     decision = as_utc_timestamp(decision_timestamp, field="decision_timestamp")
-    min_bars = max(1, int(bars * 0.8))
+    min_bars = max(2, int(bars * 0.8))
     usable: dict[str, pd.DataFrame] = {}
-    metadata: dict[str, tuple[float, bool]] = {}
-    total_available_weight = 0.0
-    missing_weight = 0.0
+    missing: list[str] = []
 
     for symbol, weight, invert in DXY_BASKET:
         frame = frames.get(symbol)
@@ -65,13 +63,15 @@ def build_synthetic_dxy_from_frames(
         )
         if len(snapshot) >= min_bars:
             usable[symbol] = snapshot
-            metadata[symbol] = (weight, invert)
-            total_available_weight += weight
         else:
-            missing_weight += weight
+            missing.append(symbol)
 
-    if not usable or total_available_weight <= 0:
-        return None, 0, {"reason": "no_usable_components", "components": {}}
+    if missing:
+        return None, len(usable), {
+            "reason": "missing_required_components",
+            "missing": tuple(sorted(missing)),
+            "components": {},
+        }
 
     alignment = align_causal_observations(
         usable,
@@ -85,21 +85,19 @@ def build_synthetic_dxy_from_frames(
             "components": alignment.diagnostics,
         }
 
-    weighted_closes = np.zeros(len(aligned), dtype=float)
-    for symbol in sorted(usable):
-        weight, invert = metadata[symbol]
-        adjusted_weight = weight + (weight / total_available_weight) * missing_weight
+    values = np.full(len(aligned), DXY_SCALE, dtype=float)
+    for symbol, weight, invert in DXY_BASKET:
         closes = aligned[symbol].astype(float).to_numpy()
-        if invert:
-            if np.any(closes <= 0):
-                return None, len(usable), {
-                    "reason": f"non_positive_inverted_component:{symbol}",
-                    "components": alignment.diagnostics,
-                }
-            closes = 1.0 / closes
-        weighted_closes += closes * adjusted_weight
+        if not np.isfinite(closes).all() or np.any(closes <= 0):
+            return None, len(usable), {
+                "reason": f"invalid_component:{symbol}",
+                "components": alignment.diagnostics,
+            }
+        exponent = -weight if invert else weight
+        values *= np.power(closes, exponent)
 
-    return weighted_closes, len(usable), {
+    return values, len(usable), {
+        "formula": "official_style_geometric",
         "reason": None,
         "rows": len(aligned),
         "latest_available_at": aligned.index[-1].isoformat(),
@@ -109,7 +107,7 @@ def build_synthetic_dxy_from_frames(
 
 def get_synthetic_dxy(timeframe="H1", bars=100, decision_timestamp=None):
     """
-    Build synthetic DXY from 6 major pairs using ICE basket weights.
+    Build synthetic DXY from all 6 required pairs using geometric weights.
     Returns array of synthetic DXY values or None if insufficient data.
     """
     decision = as_utc_timestamp(
@@ -170,7 +168,9 @@ def get_dxy_bias_from_array(dxy_values, lookback=20):
     """Accept pre-computed DXY array instead of re-fetching."""
     if dxy_values is None or len(dxy_values) < lookback:
         return "unavailable"
-    recent = dxy_values[-lookback:]
+    recent = np.asarray(dxy_values[-lookback:], dtype=float)
+    if not np.isfinite(recent).all() or np.any(recent <= 0):
+        return "unavailable"
     try:
         slope = np.polyfit(range(len(recent)), recent, 1)[0]
     except Exception:
@@ -196,6 +196,8 @@ def _gold_direction_snapshot(
     decision_timestamp: object | None = None,
 ) -> dict[str, object]:
     """Get gold direction from market structure analysis"""
+    from strategies.smc_engine.market_structure import analyze_market_structure
+
     df = fetch_ohlcv(
         symbol,
         "H1",

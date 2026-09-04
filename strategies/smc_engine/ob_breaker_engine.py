@@ -56,13 +56,14 @@ def _zone_mitigated_age(df: pd.DataFrame, ob_index: int, zone_low: float, zone_h
     if later.empty:
         return False, -1
 
-    close = later["close"].values
-    through = np.where((close > zone_high) | (close < zone_low))[0]
-    if len(through) == 0:
+    overlaps = (later["low"].astype(float) <= zone_high) & (
+        later["high"].astype(float) >= zone_low
+    )
+    touched = np.flatnonzero(overlaps.to_numpy())
+    if len(touched) == 0:
         return False, -1
 
-    # Most recent mitigation is at the largest index in through
-    most_recent_absolute = ob_index + 1 + through[-1]
+    most_recent_absolute = ob_index + 1 + touched[-1]
     bars_ago = len(df) - 1 - most_recent_absolute
     return True, int(bars_ago)
 

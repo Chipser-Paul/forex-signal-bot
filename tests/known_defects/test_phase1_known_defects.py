@@ -18,10 +18,6 @@ def test_risk_engine_caps_caller_risk_at_the_central_maximum(fake_mt5):
 
 
 @pytest.mark.known_defect
-@pytest.mark.xfail(
-    reason="KD-REGIME-001 (Phase 6): scalar ATR makes the volatility ratio effectively one",
-    strict=True,
-)
 def test_regime_classifier_detects_recent_volatility_expansion():
     from strategies.smc_engine.market_structure import detect_market_condition
 
@@ -49,10 +45,6 @@ def test_regime_classifier_detects_recent_volatility_expansion():
 
 
 @pytest.mark.known_defect
-@pytest.mark.xfail(
-    reason="KD-NEWS-001 (Phase 6): missing news source currently fails open",
-    strict=True,
-)
 def test_missing_news_source_fails_closed(monkeypatch):
     from bot.execution.news_filter import get_news_status
 
@@ -62,10 +54,6 @@ def test_missing_news_source_fails_closed(monkeypatch):
 
 
 @pytest.mark.known_defect
-@pytest.mark.xfail(
-    reason="KD-OB-001 (Phase 6): mitigation is inferred from closing outside rather than a zone revisit",
-    strict=True,
-)
 def test_order_block_is_not_mitigated_without_a_zone_revisit():
     from strategies.smc_engine.ob_breaker_engine import _zone_mitigated
 

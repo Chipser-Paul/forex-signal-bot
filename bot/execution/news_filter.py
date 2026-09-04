@@ -2,116 +2,74 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+from bot.strategy.config import StrategyConfig
+from bot.strategy.models import SafetyState
+from bot.strategy.news import NewsSnapshot, evaluate_news, parse_news_events
 
 
 UTC = timezone.utc
-BLOCK_BEFORE_MINUTES = 30
-BLOCK_AFTER_MINUTES = 30
-HIGH_IMPACT_KEYWORDS = ("nfp", "cpi", "fomc", "powell", "gdp")
-TARGET_CURRENCIES = ("USD", "XAU", "GOLD")
 
 
-def _coerce_utc(value) -> datetime | None:
+def _coerce_decision_time(value: datetime | str | None) -> datetime | None:
     if value is None:
-        return None
+        return datetime.now(UTC)
     if isinstance(value, datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value.astimezone(UTC)
+        return value.astimezone(UTC) if value.tzinfo is not None else None
     try:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=UTC)
-        return parsed.astimezone(UTC)
-    except Exception:
+    except (TypeError, ValueError):
         return None
+    return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
 
 
-def _load_local_news_events() -> list[dict]:
-    path = os.getenv("NEWS_EVENTS_PATH", "").strip()
-    if not path:
-        return []
-    file_path = Path(path)
-    if not file_path.exists():
-        return []
-    try:
-        payload = json.loads(file_path.read_text(encoding="utf-8"))
-        return payload if isinstance(payload, list) else []
-    except Exception:
-        return []
+def _load_snapshot(path: str) -> NewsSnapshot:
+    payload: Any = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("news snapshot must be an object")
+    provider = str(payload.get("provider", "")).strip()
+    retrieved = _coerce_decision_time(payload.get("retrieved_at"))
+    if not provider or retrieved is None or not isinstance(payload.get("events"), list):
+        raise ValueError("news snapshot requires provider, retrieved_at, and events")
+    successful = payload.get("successful") is True
+    events = parse_news_events(payload["events"], provider=provider, retrieved_at=retrieved)
+    return NewsSnapshot(provider, retrieved, successful, events, payload.get("failure_reason"))
 
 
-def _event_matches(event: dict, symbol: str) -> bool:
-    title = str(event.get("title", "") or "").lower()
-    impact = str(event.get("impact", "") or "").lower()
-    currency = str(event.get("currency", "") or "").upper()
-
-    if impact not in ("high", "red", "3", "3.0"):
-        return False
-
-    title_match = any(keyword in title for keyword in HIGH_IMPACT_KEYWORDS)
-    currency_match = currency in TARGET_CURRENCIES or (
-        symbol.startswith("XAU") and currency == "USD"
-    )
-    return title_match or currency_match
-
-
-def get_news_status(symbol: str, now: datetime | None = None) -> dict[str, object]:
-    """
-    Safe first implementation:
-    - reads optional local JSON event feed from NEWS_EVENTS_PATH
-    - if unavailable, returns news_clear=True with source='fallback'
-    """
-    now_utc = _coerce_utc(now) or datetime.now(UTC)
-    events = _load_local_news_events()
-    matching = []
-
-    for event in events:
-        event_time = _coerce_utc(event.get("time"))
-        if event_time is None or not _event_matches(event, symbol):
-            continue
-        matching.append(
-            {
-                **event,
-                "time_utc": event_time,
-            }
-        )
-
-    matching.sort(key=lambda item: item["time_utc"])
-    active_event = None
-    next_event_minutes = None
-    news_clear = True
-
-    for event in matching:
-        event_time = event["time_utc"]
-        delta_minutes = int((event_time - now_utc).total_seconds() // 60)
-        if next_event_minutes is None and delta_minutes >= 0:
-            next_event_minutes = delta_minutes
-
-        blackout_start = event_time - timedelta(minutes=BLOCK_BEFORE_MINUTES)
-        blackout_end = event_time + timedelta(minutes=BLOCK_AFTER_MINUTES)
-        if blackout_start <= now_utc <= blackout_end:
-            active_event = event
-            news_clear = False
-            break
-
+def get_news_status(
+    symbol: str,
+    now: datetime | str | None = None,
+    *,
+    snapshot: NewsSnapshot | None = None,
+    config: StrategyConfig | None = None,
+) -> dict[str, object]:
+    """Return a fail-closed compatibility view of the typed news boundary."""
+    decision_at = _coerce_decision_time(now)
+    policy = config or StrategyConfig()
+    load_reason = None
+    if decision_at is None:
+        decision_at = datetime.now(UTC)
+        load_reason = "invalid_or_naive_decision_time"
+    elif snapshot is None:
+        path = os.getenv("NEWS_EVENTS_PATH", "").strip()
+        if path:
+            try:
+                snapshot = _load_snapshot(path)
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                load_reason = "malformed_or_unavailable_news_snapshot"
+    result = evaluate_news(snapshot, decision_at, policy)
     return {
-        "news_clear": news_clear,
-        "source": "local_json" if events else "fallback",
-        "next_event_in_minutes": next_event_minutes,
-        "active_event": {
-            "title": active_event.get("title"),
-            "currency": active_event.get("currency"),
-            "impact": active_event.get("impact"),
-            "time_utc": active_event["time_utc"].isoformat(),
-        }
-        if active_event
-        else None,
+        "symbol": symbol,
+        "news_clear": result.state is SafetyState.CLEAR,
+        "state": result.state.value,
+        "reason": load_reason or result.reason,
+        "source": result.provenance or "unavailable",
+        "active_event_ids": list(result.event_ids),
         "block_window_minutes": {
-            "before": BLOCK_BEFORE_MINUTES,
-            "after": BLOCK_AFTER_MINUTES,
+            "before": int(policy.news_block_before.total_seconds() // 60),
+            "after": int(policy.news_block_after.total_seconds() // 60),
         },
     }
-

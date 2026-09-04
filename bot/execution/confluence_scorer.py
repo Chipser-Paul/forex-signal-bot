@@ -29,9 +29,6 @@ def score_setup(context) -> dict[str, object]:
     fvg_in_ob = bool(context.get("fvg_in_ob_zone"))
     liquidity_swept = bool(context.get("liquidity_swept_before_entry"))
     # NOTE: internal_bos moved to Gate 10 (hard boolean gate), not scored here
-    session_allowed = bool(context.get("session_allowed", True))
-    dxy_confirms = bool(context.get("dxy_confirms_bias"))
-    news_clear = bool(context.get("no_news_in_30min"))
 
     add(htf_bias == trade_direction, 2, "HTF bias aligns with trade direction")
     add(price_in_pd, 1, "Price located in premium/discount zone")
@@ -39,13 +36,11 @@ def score_setup(context) -> dict[str, object]:
     add(fvg_in_ob, 1, "FVG overlaps the order block zone")
     add(liquidity_swept, 2, "Liquidity sweep occurred before entry")
     # Internal M15 BOS/CHoCH removed from scoring - now Gate 10 hard check
-    add(session_allowed, 1, "All-session trading enabled")
-    add(dxy_confirms, 1, "DXY confirms or supports the setup")
-    add(news_clear, 1, "No nearby high-impact news blackout")
 
     min_score_to_trade = int(context.get("min_score_to_trade", 8) or 8)
 
-    if score >= 10:
+    maximum = sum(int(check["max_points"]) for check in checks)
+    if score == maximum and score >= min_score_to_trade:
         grade = "A+"
     elif score >= min_score_to_trade:
         grade = "B"
@@ -54,7 +49,7 @@ def score_setup(context) -> dict[str, object]:
 
     return {
         "score": score,
-        "max_score": sum(int(check["max_points"]) for check in checks),
+        "max_score": maximum,
         "grade": grade,
         "risk_authority": "central_phase4_policy",
         "passes_threshold": score >= min_score_to_trade,

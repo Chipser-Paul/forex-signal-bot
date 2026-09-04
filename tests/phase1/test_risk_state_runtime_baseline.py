@@ -131,7 +131,11 @@ def test_orchestrator_delegates_daily_limit_to_phase4_authority(monkeypatch):
         "fetch_ohlcv",
         lambda *args, **kwargs: pd.DataFrame({"close": [100.0]}),
     )
-    monkeypatch.setattr(orchestrator_module, "get_session_context", lambda: {"active_session": "new_york"})
+    monkeypatch.setattr(
+        orchestrator_module,
+        "get_session_context",
+        lambda: {"active_session": "new_york", "session_allowed": True},
+    )
     monkeypatch.setattr(orchestrator_module, "get_news_status", lambda symbol: {"news_clear": True})
     logged: dict = {}
     monkeypatch.setattr(orchestrator_module, "log_setup_evaluation", lambda **kwargs: logged.update(kwargs))

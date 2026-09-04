@@ -106,14 +106,33 @@ def test_maximum_staleness_boundary_is_inclusive():
 def test_synthetic_dxy_preserves_formula_after_timestamp_alignment():
     eur = normalized_candles("2026-01-01T09:00:00Z", 3, "1h", "H1", base=2.0)
     jpy = normalized_candles("2026-01-01T10:00:00Z", 2, "1h", "H1", base=100.0)
+    gbp = normalized_candles("2026-01-01T10:00:00Z", 2, "1h", "H1", base=1.2)
+    cad = normalized_candles("2026-01-01T10:00:00Z", 2, "1h", "H1", base=1.3)
+    sek = normalized_candles("2026-01-01T10:00:00Z", 2, "1h", "H1", base=10.0)
+    chf = normalized_candles("2026-01-01T10:00:00Z", 2, "1h", "H1", base=0.9)
     values, count, diagnostics = build_synthetic_dxy_from_frames(
-        {"EURUSDm": eur, "USDJPYm": jpy},
+        {
+            "EURUSDm": eur,
+            "USDJPYm": jpy,
+            "GBPUSDm": gbp,
+            "USDCADm": cad,
+            "USDSEKm": sek,
+            "USDCHFm": chf,
+        },
         "H1",
         3,
         "2026-01-01T12:00:00Z",
     )
-    expected_latest = (1.0 / 4.0) * (0.576 / 0.712) + 101.0 * (0.136 / 0.712)
-    assert count == 2
+    expected_latest = (
+        50.14348112
+        * 4.0 ** -0.576
+        * 101.0 ** 0.136
+        * 2.2 ** -0.119
+        * 2.3 ** 0.091
+        * 11.0 ** 0.042
+        * 1.9 ** 0.036
+    )
+    assert count == 6
     assert values is not None
     assert np.isclose(values[-1], expected_latest)
     assert diagnostics["latest_available_at"] == "2026-01-01T12:00:00+00:00"

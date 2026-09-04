@@ -100,6 +100,7 @@ from bot.execution.lifecycle.serialization import (
     update_trade_record,
 )
 from bot.state.orchestrator import StrategyOrchestrator
+from bot.strategy.config import PRODUCTION_EXECUTABLE_SYMBOLS
 
 # 
 # SMC STRATEGY ENGINE IMPORTS
@@ -123,10 +124,10 @@ from runtime.context import RuntimeContext
 from runtime.loop import main_loop_once
 
 #  CONFIG 
-SYMBOLS = ["XAUUSDm", "BTCUSDm"]
+SYMBOLS = ["XAUUSDm"]
 
 TIMEFRAME = "H1"  # main timeframe for the bot loop (we fetch others as needed)
-PAIR_LIMITS = {"XAUUSDm": 1, "BTCUSDm": 1}  # max open trades per symbol
+PAIR_LIMITS = {"XAUUSDm": 1}  # production execution is intentionally XAUUSDm-only
 LOOP_DELAY = 60
 OPEN_JSON = Path("open_trades.json")
 SESSION_JSON = Path("frontend") / "utils" / ".session.json"
@@ -139,7 +140,9 @@ SHADOW_ORCHESTRATOR = StrategyOrchestrator()
 ACTIVE_ORCHESTRATOR = StrategyOrchestrator()
 ACTIVE_RISK_ENGINE: RiskEngine = ACTIVE_ORCHESTRATOR.risk_engine
 _last_session_mtime: float | None = None
-BTC_TRADING_ENABLED = True
+# Retained for session-file compatibility only; it cannot expand SYMBOLS or the
+# immutable production execution allowlist.
+BTC_TRADING_ENABLED = False
 ACTIVE_ENGINE = os.environ.get("BOT_ACTIVE_ENGINE", "orchestrator").strip().lower()
 USE_ORCHESTRATOR_LIVE = ACTIVE_ENGINE not in ("legacy", "old", "classic")
 
@@ -376,6 +379,9 @@ def _submit_live_entry(
         tick_event.event_id,
         FillKind.LIVE_MARKET.value,
     )
+    if symbol not in PRODUCTION_EXECUTABLE_SYMBOLS:
+        log(f"[EXECUTION] {symbol} rejected: symbol is not executable", "red")
+        return None, trade_id
     try:
         executor = _live_broker_executor((symbol,))
         execution = execute_trade(
@@ -455,7 +461,7 @@ def close_position_immediately(
 
 def refresh_runtime_capital() -> None:
     """Reload capital from frontend session file so runtime settings update without bot restart."""
-    global CAPITAL, DAILY_TARGET_PCT, TARGET_PROFIT, _last_session_mtime, daily_target_notified, BTC_TRADING_ENABLED
+    global CAPITAL, DAILY_TARGET_PCT, TARGET_PROFIT, _last_session_mtime, daily_target_notified
 
     if not SESSION_JSON.exists():
         return
@@ -468,7 +474,6 @@ def refresh_runtime_capital() -> None:
         session = json.loads(SESSION_JSON.read_text(encoding="utf-8"))
         new_capital = float(session.get("capital", CAPITAL))
         new_daily_target_pct = float(session.get("daily_target_pct", DAILY_TARGET_PCT))
-        new_btc_enabled = bool(session.get("btc_enabled", BTC_TRADING_ENABLED))
 
         if new_capital <= 0:
             new_capital = CAPITAL
@@ -488,24 +493,13 @@ def refresh_runtime_capital() -> None:
                 "cyan",
             )
 
-        if new_btc_enabled != BTC_TRADING_ENABLED:
-            BTC_TRADING_ENABLED = new_btc_enabled
-            log(
-                " BTCUSDm trading enabled at runtime"
-                if BTC_TRADING_ENABLED
-                else " BTCUSDm trading disabled at runtime",
-                "cyan" if BTC_TRADING_ENABLED else "yellow",
-            )
-
         _last_session_mtime = mtime
     except Exception as exc:
         log(f"[WARN] Could not refresh runtime capital: {exc}", "yellow")
 
 
 def is_symbol_trading_enabled(symbol: str) -> bool:
-    if symbol == "BTCUSDm":
-        return BTC_TRADING_ENABLED
-    return True
+    return symbol in PRODUCTION_EXECUTABLE_SYMBOLS
 
 def initialize_today_profit():
     global last_profit_check, profit_initialized
@@ -1382,6 +1376,10 @@ def _execute_orchestrator_live_body(
 #  EVALUATE SYMBOL (SMC ENGINE) 
 def evaluate_symbol(symbol, open_trades, debug=True):
     """Evaluate a single symbol with SMC strategy and generate a structured console report."""
+
+    if symbol not in PRODUCTION_EXECUTABLE_SYMBOLS:
+        log(f"[STRATEGY] {symbol}: rejected non-executable symbol", "yellow")
+        return
 
     #  DAILY TARGET CHECK 
     account_profit_today = total_profit_today()

@@ -20,8 +20,9 @@ Live execution requires all of the following:
 - `BOT_MAGIC_NUMBER`: stable non-zero integer selected and retained by the owner.
 - `BOT_MAX_SPREAD_POINTS_XAUUSDM`: observed broker-specific XAU spread ceiling.
 - `BOT_MAX_DEVIATION_POINTS_XAUUSDM`: observed broker-specific XAU deviation.
-- `BOT_MAX_SPREAD_POINTS_BTCUSDM`: observed broker-specific BTC spread ceiling.
-- `BOT_MAX_DEVIATION_POINTS_BTCUSDM`: observed broker-specific BTC deviation.
+
+Phase 6 locks production execution to `XAUUSDm`; BTC execution settings are not
+mandatory production configuration.
 
 The repository deliberately supplies empty placeholders, not invented production
 values. The owner should collect representative broker ticks under intended
@@ -180,7 +181,7 @@ remain authoritative for lifecycle/risk parity.
 
 ## 21. Remaining Phase 6 and 7 limitations
 
-Phase 6 retains DXY arithmetic/weights, ATR regime behavior, order-block
+Phase 6 repairs DXY arithmetic/weights, ATR regime behavior, order-block
 mitigation, news fail-closed policy, and any strategy interpretation redesign.
 Phase 7 retains historical spread/slippage, commission, swap, gap/tick-path
 reconstruction, transaction-cost parity, and performance validation.

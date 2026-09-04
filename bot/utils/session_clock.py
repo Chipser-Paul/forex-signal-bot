@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, time, timezone
 
+from bot.strategy.config import StrategyConfig
+from bot.strategy.models import SafetyState
+from bot.strategy.sessions import evaluate_session
+
 
 UTC = timezone.utc
 
@@ -51,7 +55,7 @@ def _utc_now(now: datetime | None = None) -> datetime:
     if now is None:
         return datetime.now(UTC)
     if now.tzinfo is None:
-        return now.replace(tzinfo=UTC)
+        raise ValueError("session clock requires a timezone-aware datetime")
     return now.astimezone(UTC)
 
 
@@ -82,13 +86,24 @@ def get_session_role(now: datetime | None = None) -> str:
 
 
 def get_session_context(now: datetime | None = None) -> dict[str, object]:
-    now_utc = _utc_now(now)
-    active = get_active_session(now_utc)
+    try:
+        now_utc = _utc_now(now)
+    except (TypeError, ValueError):
+        return {
+            "active_session": "unknown",
+            "session_allowed": False,
+            "is_priority_session": False,
+            "session_role": "unsafe",
+            "reason": "naive_or_invalid_clock",
+            "timestamp_utc": None,
+        }
+    result = evaluate_session(now_utc, StrategyConfig())
     return {
-        "active_session": active,
-        "session_allowed": True,
-        "is_priority_session": in_priority_session(now_utc),
+        "active_session": result.session_name,
+        "session_allowed": result.state is SafetyState.CLEAR,
+        "is_priority_session": result.priority,
         "session_role": get_session_role(now_utc),
+        "reason": result.reason,
         "timestamp_utc": now_utc.isoformat(),
     }
 

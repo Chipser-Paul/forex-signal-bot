@@ -15,6 +15,9 @@ from bot.data.market_data import fetch_ohlcv
 from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
 from bot.execution.risk_engine import RiskEngine
+from bot.strategy.config import PRODUCTION_EXECUTABLE_SYMBOLS
+from bot.strategy.legacy_adapter import evaluate_legacy_context
+from bot.strategy.models import SetupEvidence
 from bot.utils.session_clock import get_session_context
 from strategies.smc_engine.displacement_engine import detect_displacement
 from strategies.smc_engine.entry_model import determine_entry
@@ -91,14 +94,14 @@ class StrategyOrchestrator:
         context: dict[str, object] = {"symbol": symbol, "setup_id": setup_id}
         current_price = 0.0
 
+        if symbol not in PRODUCTION_EXECUTABLE_SYMBOLS:
+            return OrchestratorResult("skip", state.state_name, "symbol_not_executable", context)
+
         try:
-            # Load symbol profile and override min_rr if specified
+            # Profiles are evaluation inputs and must not mutate shared risk policy.
             profile = get_symbol_profile(symbol)
             if profile and "min_rr" in profile:
-                original_min_rr = self.risk_engine.min_rr
-                self.risk_engine.min_rr = float(profile["min_rr"])
-                context["profile_min_rr"] = self.risk_engine.min_rr
-                context["original_min_rr"] = original_min_rr
+                context["profile_min_rr"] = float(profile["min_rr"])
 
             # Get current market price for metadata
             try:
@@ -117,62 +120,27 @@ class StrategyOrchestrator:
                 "raw": {"weekday": _now_utc.weekday(), "hour_utc": _now_utc.hour}
             }
             
-            if _now_utc.weekday() == 6:  # Sunday = 6
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="skip",
-                    reason="sunday_filter",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="sunday_filter"
-                )
-                return OrchestratorResult(
-                    action="skip",
-                    state_name=state.state_name,
-                    reason="sunday_filter",
-                    context=context,
-                )
-            
             hour_utc = _now_utc.hour
-            if hour_utc in (0, 11):  # Bad hours — 00:00 and 11:00 UTC historically unprofitable
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="skip",
-                    reason=f"bad_hour_{hour_utc}",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail=f"bad_hour_{hour_utc}"
-                )
-                return OrchestratorResult(
-                    action="skip",
-                    state_name=state.state_name,
-                    reason=f"bad_hour_{hour_utc}",
-                    context=context,
-                )
-            
-            gate_results["gate_1_session"]["pass"] = True
             session_context = get_session_context()
+            gate_results["gate_1_session"]["pass"] = bool(session_context.get("session_allowed", False))
+            gate_results["gate_1_session"]["raw"] = session_context
             state.update_session(session_context)
             context["session"] = session_context
+            if not session_context.get("session_allowed", False):
+                return OrchestratorResult("skip", state.state_name, "session_closed", context)
 
             # GATE 2: NEWS BLACKOUT CHECK
             news_status_raw = get_news_status(symbol)
-            news_status = self._ensure_dict(news_status_raw, "news_status", {"news_clear": True})
+            news_status = self._ensure_dict(news_status_raw, "news_status", {"news_clear": False})
             state.update_news(news_status)
             context["news"] = news_status
             
             gate_results["gate_2_news"] = {
-                "pass": news_status.get("news_clear", True),
+                "pass": news_status.get("news_clear", False),
                 "raw": news_status
             }
 
-            if not news_status.get("news_clear", True):
+            if not news_status.get("news_clear", False):
                 log_setup_evaluation(
                     setup_id=setup_id,
                     symbol=symbol,
@@ -297,9 +265,11 @@ class StrategyOrchestrator:
             context["dxy"] = dxy_context
             
             gate_results["gate_7_dxy"] = {
-                "pass": True,  # DXY is informational, not a hard gate
+                "pass": bool(dxy_context.get("available")) and not bool(dxy_context.get("reduce_size")),
                 "raw": dxy_context
             }
+            if not gate_results["gate_7_dxy"]["pass"]:
+                return OrchestratorResult("skip", state.state_name, "dxy_unsafe_or_conflicting", context)
 
             # GATE 8: LIQUIDITY SWEEP CONFIRMATION
             liquidity_context_raw = build_liquidity_map(symbol, silent=True)
@@ -643,7 +613,7 @@ class StrategyOrchestrator:
                 "distance_to_daily_open": 0.0,  # Placeholder - would need calculation
             })
 
-            # GATE 11: CONFLUENCE SCORE (min 8/12 to trade, 10+ = A+)
+            # GATE 11: setup-only confluence; safety filters are earlier vetoes.
             first_fvg = fvgs[0] if fvgs else None
             ob_zone = ob_result.get("zone") if ob_result.get("valid") else None
             fvg_in_ob_zone = False
@@ -681,9 +651,6 @@ class StrategyOrchestrator:
                         (internal_structure or {}).get("event") not in ("BOS", "CHOCH") and
                         (internal_structure or {}).get("early_event", {}).get("event") in ("BOS", "CHOCH")
                     ),
-                    "session_allowed": True,
-                    "dxy_confirms_bias": bool((dxy_context or {}).get("confirms_bias")),
-                    "no_news_in_30min": bool((news_status or {}).get("news_clear")),
                 }
             )
             score_result = self._ensure_dict(
@@ -716,10 +683,35 @@ class StrategyOrchestrator:
                     context=context,
                 )
 
-            # SCORE DIRECTION FILTER REMOVED — Gate 11 already enforces ≥8 for all directions.
-            # The old filter required bullish ≥10 vs bearish ≥8, creating an unjustified
-            # anti-buy bias. 58-trade analysis showed buys outperformed sells (25% WR, +$146.95
-            # vs 21.1% WR, +$132.21), so there was no data basis for the higher bar.
+            canonical = evaluate_legacy_context(
+                adapter="live",
+                symbol=symbol,
+                decision_at=_now_utc,
+                side=htf_bias,
+                entry_frame=entry_df,
+                htf_bias=htf_bias,
+                dxy_context=dxy_context,
+                news_context=news_status,
+                session_context=session_context,
+                evidence=SetupEvidence(
+                    bool(structure_context.get("discount_zone") if htf_bias == "bullish" else structure_context.get("premium_zone")),
+                    bool((ob_result or {}).get("valid")),
+                    fvg_in_ob_zone,
+                    bool(liquidity_signal),
+                ),
+            )
+            context["strategy_decision"] = canonical.to_dict()
+            gate_results["canonical_strategy"] = {
+                "pass": canonical.entry_eligible,
+                "raw": canonical.to_dict(),
+            }
+            if not canonical.entry_eligible:
+                return OrchestratorResult(
+                    "skip",
+                    state.state_name,
+                    canonical.reasons[0].value.lower(),
+                    context,
+                )
 
             # GATE 12-13: RR VALIDATION (min 1:3), POSITION SIZE, and ENTRY DETERMINATION
             # Note: In the 13-gate system, gates 12-13 represent final RR/position/entry checks before trade signal
