@@ -41,6 +41,7 @@ backtests/trace_run_*/
 backtests/warmup_*/
 backtests/shadow_*/
 backtests/shadow_mode_*/
+backtests/phase7_results/
 frontend/utils/.bot_process.json
 frontend/utils/.ui_process.json
 runtime/risk_state/

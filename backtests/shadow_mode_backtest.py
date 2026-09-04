@@ -119,7 +119,7 @@ class PendingEntry:
 
 @dataclass
 class CostModel:
-    """First-order live trading-cost model applied to every round trip."""
+    """Legacy diagnostic round-trip approximation; never validation evidence."""
     spread_price: float = 0.0
     slippage_price: float = 0.0
     commission_per_lot: float = 0.0
@@ -650,13 +650,12 @@ def run_backtest(
             "Phase 3 supports only the shared live_atr_3x management policy; "
             "legacy backtest-only trailing modes were retired"
         )
+    if min_rr is not None:
+        raise ValueError(
+            "Phase 7 freezes Phase 6 strategy parameters; min_rr overrides are prohibited"
+        )
     profile = _apply_symbol_profile(symbol)
     risk_engine = RiskEngine()
-    if min_rr is not None:
-        # Single source of truth: drive both the local RR validation and the
-        # TP placement inside main._build_orchestrator_trade_levels.
-        risk_engine.min_rr = float(min_rr)
-        main_module.ACTIVE_RISK_ENGINE.min_rr = float(min_rr)
     pair_limit = int(profile.get("pair_limit", 1))
     structure_tf = str(profile.get("structure_tf", "H1"))
     entry_tf = str(profile.get("entry_tf", "M5"))
@@ -1475,12 +1474,17 @@ def run_backtest(
         )
         _consume_backtest_outcome(risk_authority, closed)
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    trades_df = pd.DataFrame(trades)
-    equity_df = pd.DataFrame(equity_rows)
     trades_path = out_dir / "shadow_mode_trades.csv"
     equity_path = out_dir / "shadow_mode_equity_curve.csv"
     summary_path = out_dir / "shadow_mode_summary.json"
+    existing_outputs = [path for path in (trades_path, equity_path, summary_path) if path.exists()]
+    if existing_outputs:
+        raise FileExistsError(
+            "legacy shadow results are immutable; choose a new output directory"
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    trades_df = pd.DataFrame(trades)
+    equity_df = pd.DataFrame(equity_rows)
     trades_df.to_csv(trades_path, index=False)
     equity_df.to_csv(equity_path, index=False)
 
@@ -1495,6 +1499,15 @@ def run_backtest(
     equity_series = capital + pnl_series.cumsum() if not pnl_series.empty else pd.Series([capital])
     max_dd = float((equity_series.cummax() - equity_series).max()) if not equity_series.empty else 0.0
     summary = {
+        "result_label": "DIAGNOSTIC \u2014 NOT VALIDATED",
+        "fidelity_class": (
+            "MID_BAR_WITH_ASSUMED_COSTS"
+            if any(value > 0 for value in (spread_points, slippage_points, commission_per_lot))
+            else "INSUFFICIENT_FOR_VALIDATION"
+        ),
+        "validation_eligible": False,
+        "profitability_evidence": False,
+        "execution_model_version": "legacy-shadow-bar-v1",
         "symbol": symbol,
         "mode": "shadow_orchestrator_all_sessions_live_synced",
         "start": start.isoformat(),
@@ -1530,13 +1543,16 @@ def run_backtest(
         "shadow_action_counts": dict(action_counts),
         "no_trade_counts": dict(no_trade_counts),
         "assumptions": [
+            "This compatibility runner is diagnostic and cannot create Phase 7 validation evidence.",
+            "Its neutral OHLC bars are not bid/ask quotes and have no observed intrabar path.",
             "All-session trading is enabled; session is context only, not a trade gate.",
             "Synthetic DXY uses the repaired DataFrame-safe basket logic and contributes to confluence scoring.",
             "Liquidity/FVG/OB payloads are normalized defensively like the live orchestrator.",
             "Confluence grades are strategy metadata and have no monetary-risk authority.",
             "Entries use the shared Phase 4 equity, exposure, sizing, and circuit policy.",
             "Floating equity is sampled at completed-bar close; tick-level path realism remains deferred.",
-            "Configured costs are applied when non-zero; complete transaction-cost realism remains deferred.",
+            "Configured costs are assumed and applied as a legacy round-trip aggregate after closure.",
+            "Commission currency conversion and broker rollover swap are not represented here.",
         ],
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
@@ -1561,7 +1577,7 @@ def main() -> None:
         help="Shared Phase 3 lifecycle trailing policy.",
     )
     parser.add_argument("--min-rr", type=float, default=None,
-                        help="Override the reward-target RR; sweep to find the best target.")
+                        help="Retained for compatibility but rejected because Phase 6 strategy is frozen.")
     parser.add_argument("--spread-points", type=float, default=0.0,
                         help="Round-trip spread in broker points (e.g. XAU 20 = $0.20).")
     parser.add_argument("--slippage-points", type=float, default=0.0,
@@ -1569,8 +1585,18 @@ def main() -> None:
     parser.add_argument("--commission-per-lot", type=float, default=0.0,
                         help="Round-turn commission per lot in account currency.")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument(
+        "--diagnostic",
+        action="store_true",
+        help="Acknowledge that this legacy mid-bar run is diagnostic and not validated.",
+    )
     args = parser.parse_args()
 
+    if not args.diagnostic:
+        raise SystemExit(
+            "Phase 7 requires --diagnostic for the legacy mid-bar runner; "
+            "validation requires offline bid/ask data and broker metadata"
+        )
     if not connect_mt5():
         raise SystemExit(1)
     if not args.verbose:

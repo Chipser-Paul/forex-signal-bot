@@ -224,6 +224,11 @@ with summary/trades/equity artifacts. The cached-data Git tree identifier is
 recorded in `baseline/phase1_manifest.json`; this is inventory provenance, not a
 claim that the datasets or result methodology are valid.
 
+Phase 7 formally classifies all of these artifacts as
+`INSUFFICIENT_FOR_VALIDATION` without modifying them. See
+`baseline/phase7_legacy_inventory.json` and
+`docs/PHASE7_REALISTIC_BACKTESTING.md`.
+
 ## 12. Dependency reproduction
 
 Human-maintained direct dependencies remain separate:

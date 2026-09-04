@@ -1,5 +1,8 @@
 # Phase 6 Strategy Semantics
 
+Phase 7 preserves this strategy contract unchanged and adds the historical
+execution/data-fidelity contract in `docs/PHASE7_REALISTIC_BACKTESTING.md`.
+
 Parent commit: `657a377cb239e533ccd15436ba91d28a9cfe4c85`
 
 Phase 6 defines a deterministic, causal strategy interpretation. It does not tune

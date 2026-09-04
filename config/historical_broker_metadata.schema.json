@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/forex-signal-bot/historical-broker-metadata.schema.json",
+  "title": "Offline XAUUSDm broker metadata segment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "symbol",
+    "version",
+    "broker_source",
+    "effective_from",
+    "digits",
+    "point_size",
+    "tick_size",
+    "tick_value",
+    "contract_size",
+    "volume_min",
+    "volume_max",
+    "volume_step",
+    "account_currency",
+    "profit_currency",
+    "margin_currency",
+    "margin_rate",
+    "commission",
+    "swap",
+    "provenance"
+  ],
+  "properties": {
+    "symbol": {"const": "XAUUSDm"},
+    "version": {"type": "string", "minLength": 1},
+    "broker_source": {"type": "string", "minLength": 1},
+    "effective_from": {"type": "string", "format": "date-time"},
+    "effective_to": {"type": ["string", "null"], "format": "date-time"},
+    "digits": {"type": "integer", "minimum": 0},
+    "point_size": {"type": "number", "exclusiveMinimum": 0},
+    "tick_size": {"type": "number", "exclusiveMinimum": 0},
+    "tick_value": {"type": "number", "exclusiveMinimum": 0},
+    "contract_size": {"type": "number", "exclusiveMinimum": 0},
+    "volume_min": {"type": "number", "exclusiveMinimum": 0},
+    "volume_max": {"type": "number", "exclusiveMinimum": 0},
+    "volume_step": {"type": "number", "exclusiveMinimum": 0},
+    "account_currency": {"type": "string", "minLength": 3},
+    "profit_currency": {"type": "string", "minLength": 3},
+    "margin_currency": {"type": "string", "minLength": 3},
+    "margin_rate": {"type": "number", "exclusiveMinimum": 0},
+    "commission": {
+      "type": "object",
+      "required": ["kind", "amount", "currency", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["PER_LOT_PER_SIDE", "PER_LOT_ROUND_TURN", "FIXED_PER_ORDER", "PERCENT_NOTIONAL"]},
+        "amount": {"type": "number", "minimum": 0},
+        "currency": {"type": "string", "minLength": 3},
+        "source": {"enum": ["OBSERVED", "ASSUMED"]}
+      }
+    },
+    "swap": {
+      "type": "object",
+      "required": ["calculation", "long_rate", "short_rate", "rollover_time", "rollover_timezone", "triple_swap_weekday", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "calculation": {"enum": ["ACCOUNT_CURRENCY_PER_LOT", "POINTS_PER_LOT"]},
+        "long_rate": {"type": "number"},
+        "short_rate": {"type": "number"},
+        "rollover_time": {"type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?$"},
+        "rollover_timezone": {"type": "string", "minLength": 1},
+        "triple_swap_weekday": {"type": "integer", "minimum": 0, "maximum": 6},
+        "source": {"enum": ["OBSERVED", "ASSUMED"]}
+      }
+    },
+    "provenance": {"type": "string", "minLength": 1}
+  }
+}
