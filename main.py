@@ -101,6 +101,7 @@ from bot.execution.lifecycle.serialization import (
 )
 from bot.state.orchestrator import StrategyOrchestrator
 from bot.strategy.config import PRODUCTION_EXECUTABLE_SYMBOLS
+from bot.strategy.trade_levels import LevelInputs, build_trade_levels
 
 # 
 # SMC STRATEGY ENGINE IMPORTS
@@ -732,63 +733,6 @@ def run_shadow_orchestrator(symbol: str, open_trades) -> None:
         log(f"[SHADOW] {symbol}: orchestrator error -> {exc}", "yellow")
 
 
-def _nearest_internal_anchor(
-    direction: str,
-    entry_price: float,
-    internal_structure: dict | None,
-    entry_df,
-) -> float | None:
-    candidates: list[float] = []
-    internal_structure = internal_structure or {}
-
-    for key in ("last_choch_level", "last_bos_level"):
-        value = internal_structure.get(key)
-        if value is not None:
-            candidates.append(float(value))
-
-    swing_lows = internal_structure.get("swing_lows") or []
-    swing_highs = internal_structure.get("swing_highs") or []
-    if direction == "buy":
-        candidates.extend(float(s["price"]) for s in swing_lows[-6:] if "price" in s)
-        if entry_df is not None and not entry_df.empty:
-            candidates.append(float(entry_df["low"].tail(10).min()))
-        below = [level for level in candidates if level < entry_price]
-        return max(below) if below else None
-
-    candidates.extend(float(s["price"]) for s in swing_highs[-6:] if "price" in s)
-    if entry_df is not None and not entry_df.empty:
-        candidates.append(float(entry_df["high"].tail(10).max()))
-    above = [level for level in candidates if level > entry_price]
-    return min(above) if above else None
-
-
-def _pick_orchestrator_tp(
-    direction: str,
-    entry_price: float,
-    sl: float,
-    liquidity_pools: list[dict],
-) -> float:
-    risk_distance = abs(entry_price - sl)
-    fallback = (
-        entry_price + risk_distance * ACTIVE_RISK_ENGINE.min_rr
-        if direction == "buy"
-        else entry_price - risk_distance * ACTIVE_RISK_ENGINE.min_rr
-    )
-    targets = ACTIVE_RISK_ENGINE.build_tp_targets(direction, entry_price, liquidity_pools)
-    if not targets:
-        return fallback
-
-    ordered_targets = [
-        float(targets[key])
-        for key in ("tp3", "tp2", "tp1")
-        if key in targets and targets[key] is not None
-    ]
-    for target in ordered_targets:
-        if ACTIVE_RISK_ENGINE.validate_rr(entry_price, sl, target):
-            return target
-    return fallback
-
-
 def _execution_level_config(symbol_info) -> dict:
     symbol_name = str(getattr(symbol_info, "name", "") or "")
     profile = get_symbol_profile(symbol_name) if symbol_name else {}
@@ -806,87 +750,25 @@ def _build_orchestrator_trade_levels(
     liquidity_pools: list[dict],
     min_rr_buffer: float = 0.0,
 ) -> tuple[float | None, float | None, str]:
-    sl: float | None = None
-    reason = "unresolved"
-    ob_zone = entry.get("ob_zone")
-    level_cfg = _execution_level_config(symbol_info)
-    atr_val = float(calculate_atr(entry_df, period=14) or 0.0)
-    anchor_buffer = max(
-        atr_val * float(level_cfg.get("anchor_buffer_atr_mult", 0.0) or 0.0),
-        float(level_cfg.get("anchor_buffer_price", 0.0) or 0.0),
-    )
-
-    if entry.get("entry_mode") == "aggressive" and ob_zone:
-        low, high = sorted([float(ob_zone[0]), float(ob_zone[1])])
-        if direction == "buy":
-            sl = low - anchor_buffer
-        else:
-            sl = high + anchor_buffer
-        reason = "aggressive_ob_boundary"
-
-    if sl is None:
-        anchor = _nearest_internal_anchor(direction, entry_price, internal_structure, entry_df)
-        if anchor is not None:
-            sl = anchor - anchor_buffer if direction == "buy" else anchor + anchor_buffer
-            reason = "internal_structure_anchor"
-
-    if sl is None:
-        if direction == "buy":
-            discount_zone = structure_context.get("discount_zone")
-            if discount_zone:
-                sl = float(discount_zone[0]) - anchor_buffer
-                reason = "discount_zone_floor"
-        else:
-            premium_zone = structure_context.get("premium_zone")
-            if premium_zone:
-                sl = float(premium_zone[1]) + anchor_buffer
-                reason = "premium_zone_ceiling"
-
-    if sl is None or sl <= 0:
-        return None, None, "no_smc_stop_anchor"
-
-    if direction == "buy" and sl >= entry_price:
-        return None, None, f"invalid_buy_sl:{reason}"
-    if direction == "sell" and sl <= entry_price:
-        return None, None, f"invalid_sell_sl:{reason}"
-
-    point = float(getattr(symbol_info, "point", 0.0) or 0.0)
-    broker_min_stop = float(getattr(symbol_info, "stops_level", 0) or 10) * point
-    atr_floor = atr_val * float(level_cfg.get("min_stop_atr_mult", 0.35) or 0.0) if atr_val > 0 else 0.0
-    point_floor = point * float(level_cfg.get("min_stop_points", 500) or 0.0) if point > 0 else 0.0
-    price_floor = float(level_cfg.get("min_stop_price", 0.0) or 0.0)
-    min_stop_distance = max(broker_min_stop, atr_floor, point_floor, price_floor)
-    stop_distance = abs(entry_price - sl)
-
-    if min_stop_distance > 0 and stop_distance < min_stop_distance:
-        return None, None, f"smc_stop_too_tight({stop_distance:.3f}<{min_stop_distance:.3f})"
-
-    max_atr_ceil = atr_val * float(level_cfg.get("max_stop_atr_mult", 0.0) or 0.0) if atr_val > 0 else 0.0
-    max_price_ceil = float(level_cfg.get("max_stop_price", 0.0) or 0.0)
-    candidates = [v for v in (max_atr_ceil, max_price_ceil) if v > 0]
-    max_stop_distance = min(candidates) if candidates else 0.0
-
-    if max_stop_distance > 0 and stop_distance > max_stop_distance:
-        return None, None, f"exceeds_max_stop({stop_distance:.1f}>{max_stop_distance:.1f})"
-
-    if stop_distance <= 0:
-        return None, None, "invalid_stop_distance"
-
-    tp = _pick_orchestrator_tp(direction, entry_price, sl, liquidity_pools)
-    if min_rr_buffer > 0:
-        risk_distance = abs(entry_price - sl)
-        buffered_rr = ACTIVE_RISK_ENGINE.min_rr + float(min_rr_buffer)
-        if ACTIVE_RISK_ENGINE.rr_value(entry_price, sl, tp) < buffered_rr:
-            tp = (
-                entry_price + risk_distance * buffered_rr
-                if direction == "buy"
-                else entry_price - risk_distance * buffered_rr
-            )
-    if not ACTIVE_RISK_ENGINE.validate_rr(entry_price, sl, tp):
-        return None, None, "rr_below_orchestrator_minimum"
-
-    digits = int(getattr(symbol_info, "digits", 2) or 2)
-    return round(float(sl), digits), round(float(tp), digits), reason
+    result = build_trade_levels(LevelInputs(
+        direction=direction,
+        entry_price=entry_price,
+        entry_mode=entry.get("entry_mode"),
+        ob_zone=entry.get("ob_zone"),
+        internal_structure=internal_structure or {},
+        recent_lows=tuple(float(value) for value in entry_df["low"].tail(10)) if entry_df is not None and not entry_df.empty else (),
+        recent_highs=tuple(float(value) for value in entry_df["high"].tail(10)) if entry_df is not None and not entry_df.empty else (),
+        structure_context=structure_context,
+        liquidity_pools=tuple(liquidity_pools),
+        atr=float(calculate_atr(entry_df, period=14) or 0.0),
+        point=float(getattr(symbol_info, "point", 0.0) or 0.0),
+        stops_level=int(getattr(symbol_info, "stops_level", 0) or 0),
+        digits=int(getattr(symbol_info, "digits", 2) or 2),
+        level_config=_execution_level_config(symbol_info),
+        min_rr=ACTIVE_RISK_ENGINE.min_rr,
+        min_rr_buffer=min_rr_buffer,
+    ))
+    return result.stop, result.target, result.reason
 
 
 def _entry_price_ready_for_live_market(
@@ -1013,20 +895,51 @@ def _execute_orchestrator_live_body(
         )
         return
 
-    state = STRATEGY_STATES.get(symbol)
-    if state is None or state.is_expired():
-        state = StrategyState()
-        state.reset()
+    from bot.strategy.setup_recovery import SetupRecoveryCoordinator
+    from bot.strategy.setup_state import SetupStateError, record_from_state, restore_setup_for_evaluation
+    from bot.strategy.setup_store import SetupReplayStore
+
+    decision_at = datetime.now(timezone.utc)
+    try:
+        setup_executor = _live_broker_executor((symbol,))
+        setup_store = SetupReplayStore(
+            EXECUTION_STATE_DIR / f"setup-{setup_executor.policy.magic_number}-{symbol}.json",
+            identity=f"{symbol}:{setup_executor.policy.magic_number}:phase8n",
+        )
+        prior_runtime_state = STRATEGY_STATES.get(symbol)
+        if not setup_store.path.exists() and not setup_store.backup.exists():
+            if (open_trades.get(symbol) or setup_executor.registry.snapshot()
+                    or (prior_runtime_state is not None and prior_runtime_state.state_name in
+                        ("TRADE_ACTIVE", "SETUP_FOUND_PENDING_CONFIRMATION"))):
+                raise SetupStateError("legacy active state requires setup reconciliation")
+            setup_store.initialize(record_from_state(StrategyState(event_time=decision_at), event_at=decision_at))
+        setup_recovery = SetupRecoveryCoordinator(setup_store, setup_executor.registry.snapshot)
+        restored = setup_recovery.reconcile()
+        if restored.outcome in ("UNCERTAIN_BLOCKED", "IDENTITY_MISMATCH_BLOCKED", "STATE_CORRUPT"):
+            no_trade("setup_reconciliation_required", restored.outcome, "red")
+            return
+        durable_prior = restored.state_record
+        state = restore_setup_for_evaluation(durable_prior, decision_at)
         STRATEGY_STATES[symbol] = state
-        dbg("Strategy state initialized/reset", "")
+    except (SetupStateError, BrokerExecutionError, OSError, ValueError):
+        no_trade("setup_state_unsafe", "setup state cannot be safely recovered", "red")
+        return
 
     result = ACTIVE_ORCHESTRATOR.evaluate_symbol(
         symbol,
         state,
+        event_at=decision_at,
         account_balance=CAPITAL,
         daily_pnl=account_profit_today,
         active_trade_count=active_trade_count,
     )
+    try:
+        evaluated_record = getattr(state, "_gate_record", None)
+        if evaluated_record is not None:
+            setup_recovery.publish_decision(durable_prior, evaluated_record)
+    except (SetupStateError, OSError, ValueError):
+        no_trade("setup_checkpoint_failed", "decision state was not durably checkpointed", "red")
+        return
     context = result.context or {}
     entry = _safe_dict(context.get("entry"), "entry")
     score = _safe_dict(context.get("score"), "score")
@@ -1258,6 +1171,17 @@ def _execute_orchestrator_live_body(
         f"SL={sl:.2f} TP={tp:.2f} RR={rr:.2f}",
         "green",
     )
+    expected_trade_id = lifecycle_stable_id(intent.signal_id, tick_event.event_id, FillKind.LIVE_MARKET.value)
+    try:
+        setup_binding = setup_recovery.prepare(
+            evaluated_record, intent,
+            action_id=stable_execution_id(expected_trade_id, "entry"), trade_id=expected_trade_id,
+            entry_event=tick_event,
+            tolerance=tolerance,
+        )
+    except (SetupStateError, OSError, ValueError):
+        no_trade("setup_binding_unsafe", "entry identity was not durably bound", "red")
+        return
     execution, broker_trade_id = _submit_live_entry(
         symbol=symbol,
         direction=direction,
@@ -1271,6 +1195,18 @@ def _execute_orchestrator_live_body(
         comment="SMC-Orchestrator",
         context=strategy_context,
     )
+    # The secured executor fsyncs registry confirmation before this replay.
+    # Positive partial fills consume once even if a later execution guard closes.
+    try:
+        consumed = setup_recovery.confirm(setup_binding)
+        state._setup_consumption = consumed.state_record.data()["consumption"]
+        state._gate_record = consumed.state_record
+        if consumed.outcome in ("UNCERTAIN_BLOCKED", "IDENTITY_MISMATCH_BLOCKED", "STATE_CORRUPT"):
+            no_trade("setup_reconciliation_required", consumed.outcome, "red")
+            return
+    except (SetupStateError, OSError, ValueError):
+        no_trade("setup_consumption_checkpoint_failed", "durable fill will be replayed on recovery", "red")
+        return
     if not execution:
         no_trade("order_send_failed", "MT5 rejected or did not fill the order", "red")
         return

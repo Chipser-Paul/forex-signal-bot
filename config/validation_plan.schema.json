@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/forex-signal-bot/phase8/validation-plan.schema.json",
+  "title": "Phase 8 Preregistered Validation Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "research_hypothesis", "strategy_fingerprint", "execution_fingerprint", "risk_policy_version", "initial_capital", "dataset_hash", "development_period", "validation_period", "final_holdout", "walk_forward_mode", "fold_count", "purge_seconds", "embargo_seconds", "warmup_seconds", "primary_metrics", "secondary_metrics", "acceptance_policy_version", "stress_scenarios", "sensitivity_spec", "statistical_procedures", "random_seeds", "permitted_candidate_ids", "maximum_trials", "invalidation_conditions", "finalized_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_id": {"type": "string", "minLength": 1},
+    "research_hypothesis": {"type": "string", "minLength": 1},
+    "strategy_fingerprint": {"type": "string", "minLength": 1},
+    "execution_fingerprint": {"type": "string", "minLength": 1},
+    "risk_policy_version": {"const": "phase4-validation-v1"},
+    "initial_capital": {"type": "number", "exclusiveMinimum": 0},
+    "dataset_hash": {"type": "string", "minLength": 1},
+    "development_period": {"$ref": "#/$defs/period"},
+    "validation_period": {"$ref": "#/$defs/period"},
+    "final_holdout": {"$ref": "#/$defs/period"},
+    "walk_forward_mode": {"enum": ["ANCHORED", "ROLLING"]},
+    "fold_count": {"type": "integer", "minimum": 1},
+    "purge_seconds": {"type": "integer", "minimum": 0},
+    "embargo_seconds": {"type": "integer", "minimum": 0},
+    "warmup_seconds": {"type": "integer", "minimum": 1},
+    "primary_metrics": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "secondary_metrics": {"type": "array", "items": {"type": "string"}},
+    "acceptance_policy_version": {"const": "phase8a-acceptance-v1"},
+    "stress_scenarios": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "sensitivity_spec": {"type": "object"},
+    "statistical_procedures": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "random_seeds": {"type": "array", "minItems": 1, "items": {"type": "integer"}},
+    "permitted_candidate_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "maximum_trials": {"type": "integer", "minimum": 1},
+    "invalidation_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "finalized_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "start", "end"],
+      "properties": {"name": {"type": "string"}, "start": {"type": "string", "format": "date-time"}, "end": {"type": "string", "format": "date-time"}}
+    }
+  }
+}

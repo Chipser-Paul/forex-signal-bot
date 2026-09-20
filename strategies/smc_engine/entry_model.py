@@ -1,6 +1,6 @@
 # strategies/smc_engine/entry_model.py
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable
 from strategies.smc_engine.strategy_state import StrategyState
 from utils.log import log
 
@@ -65,20 +65,25 @@ def determine_entry(
     current_price: float,
     score_result: dict | None = None,
     context: dict | None = None,
+    emit_log: Callable[[str, str], None] | None = log,
 ) -> Optional[Dict]:
 
+    def report(message: str, color: str) -> None:
+        if emit_log is not None:
+            emit_log(message, color)
+
     if state.is_expired():
-        log("Entry Model : State expired -> reset", "yellow")
+        report("Entry Model : State expired -> reset", "yellow")
         state.reset()
         return None
 
     state_ready = state.ready_for_entry()
     early_entry_ok = _can_use_early_entry(state, score_value=int((score_result or {}).get("score", 0) or 0), context=context)
     if not state_ready and not early_entry_ok:
-        log("Entry Model : WAIT (conditions incomplete)", "yellow")
+        report("Entry Model : WAIT (conditions incomplete)", "yellow")
         return None
     if not state_ready and early_entry_ok:
-        log("Entry Model : EARLY ENTRY ALLOWED (strong transitional setup)", "cyan")
+        report("Entry Model : EARLY ENTRY ALLOWED (strong transitional setup)", "cyan")
 
     structure = state.structure_dir
     liquidity_side = state.liquidity_side
@@ -89,7 +94,7 @@ def determine_entry(
     score_grade = (score_result or {}).get("grade")
     entry_mode = "aggressive" if score_value >= 10 else "conservative" if score_value >= 8 else None
 
-    log(f"DEBUG -> side={liquidity_side}, type={liquidity_type}", "cyan")
+    report(f"DEBUG -> side={liquidity_side}, type={liquidity_type}", "cyan")
 
     pullback_price = None
     if fvg and isinstance(fvg, tuple):
@@ -119,7 +124,7 @@ def determine_entry(
             setup_label = "Internal continuation (bullish)"
 
         if not valid_setup:
-            log("Entry Model : No valid bullish liquidity alignment", "yellow")
+            report("Entry Model : No valid bullish liquidity alignment", "yellow")
             return None
 
         if entry_mode == "aggressive" and ob_mid is not None:
@@ -132,7 +137,7 @@ def determine_entry(
                 fvg_zone=fvg,
                 asian_sweep=asian_sweep,
             )
-            log(f"Entry Model : BUY -> AGGRESSIVE LIMIT | {setup_label}", "green")
+            report(f"Entry Model : BUY -> AGGRESSIVE LIMIT | {setup_label}", "green")
             return {
                 "direction": "buy",
                 "entry_type": "limit",
@@ -159,7 +164,7 @@ def determine_entry(
                 fvg_zone=fvg,
                 asian_sweep=asian_sweep,
             )
-            log(f"Entry Model : BUY -> AGGRESSIVE MARKET | {setup_label}", "green")
+            report(f"Entry Model : BUY -> AGGRESSIVE MARKET | {setup_label}", "green")
             return {
                 "direction": "buy",
                 "entry_type": "market",
@@ -181,7 +186,7 @@ def determine_entry(
             fvg_zone=fvg,
             asian_sweep=asian_sweep,
         )
-        log(f"Entry Model : BUY -> PARTIAL | {setup_label}", "green")
+        report(f"Entry Model : BUY -> PARTIAL | {setup_label}", "green")
 
         return {
             "direction": "buy",
@@ -214,7 +219,7 @@ def determine_entry(
             setup_label = "Internal continuation (bearish)"
 
         if not valid_setup:
-            log("Entry Model : No valid bearish liquidity alignment", "yellow")
+            report("Entry Model : No valid bearish liquidity alignment", "yellow")
             return None
 
         if entry_mode == "aggressive" and ob_mid is not None:
@@ -227,7 +232,7 @@ def determine_entry(
                 fvg_zone=fvg,
                 asian_sweep=asian_sweep,
             )
-            log(f"Entry Model : SELL -> AGGRESSIVE LIMIT | {setup_label}", "green")
+            report(f"Entry Model : SELL -> AGGRESSIVE LIMIT | {setup_label}", "green")
             return {
                 "direction": "sell",
                 "entry_type": "limit",
@@ -252,7 +257,7 @@ def determine_entry(
                 fvg_zone=fvg,
                 asian_sweep=asian_sweep,
             )
-            log(f"Entry Model : SELL -> AGGRESSIVE MARKET | {setup_label}", "green")
+            report(f"Entry Model : SELL -> AGGRESSIVE MARKET | {setup_label}", "green")
             return {
                 "direction": "sell",
                 "entry_type": "market",
@@ -274,7 +279,7 @@ def determine_entry(
             fvg_zone=fvg,
             asian_sweep=asian_sweep,
         )
-        log(f"Entry Model : SELL -> PARTIAL | {setup_label}", "green")
+        report(f"Entry Model : SELL -> PARTIAL | {setup_label}", "green")
 
         return {
             "direction": "sell",
@@ -288,5 +293,5 @@ def determine_entry(
             "asian_sweep_setup": asian_sweep,
         }
 
-    log("Entry Model : WAIT", "yellow")
+    report("Entry Model : WAIT", "yellow")
     return None

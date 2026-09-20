@@ -1,34 +1,44 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
-import os
+from datetime import datetime, timezone
+import hashlib
+from typing import Callable, TYPE_CHECKING
 
-from bot.analysis import build_liquidity_map, get_bias_snapshot, get_unfilled_fvgs, resolve_trade_bias
+from bot.analysis import build_liquidity_map, get_bias_snapshot, resolve_trade_bias
 from bot.analysis.dxy_filter import analyze_dxy_correlation
-from bot.analysis.structural_shift_variants import (
-    calculate_variant_a_strength,
-    check_variant_b_sequence,
-    check_freshness_window,
-)
-from bot.data.market_data import fetch_ohlcv
-from bot.execution.confluence_scorer import score_setup
 from bot.execution.news_filter import get_news_status
-from bot.execution.risk_engine import RiskEngine
 from bot.strategy.config import PRODUCTION_EXECUTABLE_SYMBOLS
-from bot.strategy.legacy_adapter import evaluate_legacy_context
-from bot.strategy.models import SetupEvidence
+from bot.strategy.config import StrategyConfig
+from bot.strategy.setup_state import STATE_FIELDS, record_from_state, state_from_record
+from bot.state.gate_inputs import GateInputError, build_gate_inputs
+from bot.state.gate_reducer import evaluate_strategy_gates
 from bot.utils.session_clock import get_session_context
-from strategies.smc_engine.displacement_engine import detect_displacement
-from strategies.smc_engine.entry_model import determine_entry
-from strategies.smc_engine.liquidity_engine import detect_liquidity_sweep
-from strategies.smc_engine.market_structure import analyze_market_structure
-from strategies.smc_engine.ob_breaker_engine import detect_ob_breaker
 from strategies.smc_engine.strategy_state import StrategyState
-from utils.indicators import calculate_atr
 from utils.log import log
 from utils.symbol_profiles import get_symbol_profile
-from utils.setup_logger import log_setup_evaluation, generate_setup_id
+from utils.setup_logger import log_setup_evaluation
+
+
+if TYPE_CHECKING:
+    from bot.execution.risk_engine import RiskEngine
+
+
+def fetch_ohlcv(*args, **kwargs):
+    """Live-only acquisition; offline imports never load the terminal module."""
+    from bot.data.market_data import fetch_ohlcv as fetch
+
+    return fetch(*args, **kwargs)
+
+
+@dataclass(frozen=True)
+class OrchestratorAcquisition:
+    candles: Callable
+    session: Callable
+    news: Callable
+    bias: Callable
+    liquidity: Callable
+    dxy: Callable
 
 
 @dataclass
@@ -40,8 +50,22 @@ class OrchestratorResult:
 
 
 class StrategyOrchestrator:
-    def __init__(self, risk_engine: RiskEngine | None = None):
-        self.risk_engine = risk_engine or RiskEngine()
+    def __init__(
+        self, risk_engine: RiskEngine | None = None, *,
+        acquisition: OrchestratorAcquisition | None = None,
+        emit_diagnostics: bool = True,
+    ):
+        if risk_engine is None:
+            from bot.execution.risk_engine import RiskEngine
+
+            risk_engine = RiskEngine()
+        self.risk_engine = risk_engine
+        self.acquisition = acquisition
+        self.emit_diagnostics = emit_diagnostics
+
+    def _record_setup(self, **kwargs):
+        if self.emit_diagnostics:
+            log_setup_evaluation(**kwargs)
 
     @staticmethod
     def _ensure_dict(val, name: str, default: dict | None = None) -> dict:
@@ -81,18 +105,29 @@ class StrategyOrchestrator:
         account_balance: float,
         daily_pnl: float,
         active_trade_count: int,
+        event_at: datetime | None = None,
     ) -> OrchestratorResult:
         """
         Evaluate a symbol through all 13 gates and return orchestrator result.
         """
         # Initialize setup logging structures
-        setup_id = generate_setup_id(symbol)
+        _now_utc = event_at or datetime.now(timezone.utc)
+        if _now_utc.tzinfo is None or _now_utc.utcoffset() is None:
+            raise ValueError("orchestrator event time must be timezone-aware")
+        _now_utc = _now_utc.astimezone(timezone.utc)
+        setup_id = "pre8n_" + hashlib.sha256(
+            f"phase8n.preflight.v1|{symbol}|{_now_utc.isoformat()}".encode("utf-8")
+        ).hexdigest()[:32]
         gate_results: dict[str, object] = {}
         market_conditions: dict[str, object] = {}
         timing_info: dict[str, object] = {}
         
         context: dict[str, object] = {"symbol": symbol, "setup_id": setup_id}
         current_price = 0.0
+        acquisition = self.acquisition or OrchestratorAcquisition(
+            fetch_ohlcv, get_session_context, get_news_status,
+            get_bias_snapshot, build_liquidity_map, analyze_dxy_correlation,
+        )
 
         if symbol not in PRODUCTION_EXECUTABLE_SYMBOLS:
             return OrchestratorResult("skip", state.state_name, "symbol_not_executable", context)
@@ -105,15 +140,14 @@ class StrategyOrchestrator:
 
             # Get current market price for metadata
             try:
-                sample_df = fetch_ohlcv(symbol, "M5", bars=1)
+                sample_df = acquisition.candles(symbol, "M5", bars=1)
                 if sample_df is not None and not sample_df.empty:
                     current_price = float(sample_df["close"].iloc[-1])
             except Exception:
                 current_price = 0.0
 
             # GATE 1: SESSION / KILLZONE CHECK
-            from datetime import datetime as _dt, timezone as _tz
-            _now_utc = _dt.now(_tz.utc)
+            state.set_event_time(_now_utc)
             
             gate_results["gate_1_session"] = {
                 "pass": False,
@@ -121,7 +155,7 @@ class StrategyOrchestrator:
             }
             
             hour_utc = _now_utc.hour
-            session_context = get_session_context()
+            session_context = acquisition.session(_now_utc)
             gate_results["gate_1_session"]["pass"] = bool(session_context.get("session_allowed", False))
             gate_results["gate_1_session"]["raw"] = session_context
             state.update_session(session_context)
@@ -130,7 +164,7 @@ class StrategyOrchestrator:
                 return OrchestratorResult("skip", state.state_name, "session_closed", context)
 
             # GATE 2: NEWS BLACKOUT CHECK
-            news_status_raw = get_news_status(symbol)
+            news_status_raw = acquisition.news(symbol, now=_now_utc)
             news_status = self._ensure_dict(news_status_raw, "news_status", {"news_clear": False})
             state.update_news(news_status)
             context["news"] = news_status
@@ -141,7 +175,7 @@ class StrategyOrchestrator:
             }
 
             if not news_status.get("news_clear", False):
-                log_setup_evaluation(
+                self._record_setup(
                     setup_id=setup_id,
                     symbol=symbol,
                     action="pause",
@@ -180,7 +214,7 @@ class StrategyOrchestrator:
             }
             
             if not can_open_more:
-                log_setup_evaluation(
+                self._record_setup(
                     setup_id=setup_id,
                     symbol=symbol,
                     action="skip",
@@ -205,7 +239,7 @@ class StrategyOrchestrator:
             structure_bars = int(profile.get("structure_bars", 320))
             entry_bars = int(profile.get("entry_bars", 220))
 
-            bias_snapshot = get_bias_snapshot(symbol, silent=True)
+            bias_snapshot = acquisition.bias(symbol, silent=True)
             bias_snapshot = self._ensure_dict(bias_snapshot, "bias_snapshot")
             state.update_bias(bias_snapshot)
             context["bias"] = bias_snapshot
@@ -221,7 +255,7 @@ class StrategyOrchestrator:
 
             if htf_bias not in ("bullish", "bearish"):
                 state.reject_setup("htf_bias_unconfirmed")
-                log_setup_evaluation(
+                self._record_setup(
                     setup_id=setup_id,
                     symbol=symbol,
                     action="skip",
@@ -249,7 +283,7 @@ class StrategyOrchestrator:
 
             # GATE 7: DXY CORRELATION CHECK
             if symbol.startswith("XAU"):
-                dxy_context_raw = analyze_dxy_correlation(symbol, silent=True)
+                dxy_context_raw = acquisition.dxy(symbol, silent=True, decision_timestamp=_now_utc)
                 dxy_context = self._ensure_dict(
                     dxy_context_raw, "dxy_context",
                     {"available": False, "confirms_bias": False, "reduce_size": False}
@@ -271,527 +305,97 @@ class StrategyOrchestrator:
             if not gate_results["gate_7_dxy"]["pass"]:
                 return OrchestratorResult("skip", state.state_name, "dxy_unsafe_or_conflicting", context)
 
-            # GATE 8: LIQUIDITY SWEEP CONFIRMATION
-            liquidity_context_raw = build_liquidity_map(symbol, silent=True)
+            # GATES 8–13: acquisition stays here; decisions use one shared reducer.
+            liquidity_context_raw = acquisition.liquidity(symbol, silent=True)
             liquidity_context = self._ensure_dict(liquidity_context_raw, "liquidity_context")
             liquidity_context["structure_context"] = self._ensure_dict(
-                liquidity_context.get("structure_context"),
-                "liquidity_context.structure_context",
+                liquidity_context.get("structure_context"), "liquidity_context.structure_context",
             )
             liquidity_context["liquidity_pools"] = self._ensure_dict_list(
-                liquidity_context.get("liquidity_pools"),
-                "liquidity_context.liquidity_pools",
+                liquidity_context.get("liquidity_pools"), "liquidity_context.liquidity_pools",
             )
-            context["liquidity"] = liquidity_context
-
-            structure_df = fetch_ohlcv(symbol, structure_tf, bars=structure_bars)
-            entry_df = fetch_ohlcv(symbol, entry_tf, bars=entry_bars)
-            internal_df = fetch_ohlcv(symbol, "M15", bars=220)
-            structure_context = liquidity_context.get("structure_context") or {}
-            structure_dir = str(structure_context.get("structure", ""))
-            structure_state = str(structure_context.get("state", ""))
-
+            structure_df = acquisition.candles(symbol, structure_tf, bars=structure_bars)
+            entry_df = acquisition.candles(symbol, entry_tf, bars=entry_bars)
+            internal_df = acquisition.candles(symbol, "M15", bars=220)
             if structure_df is None or structure_df.empty or entry_df is None or entry_df.empty:
                 gate_results["gate_8_liquidity"] = {
-                    "pass": False,
-                    "raw": {"reason": "insufficient_market_data"}
+                    "pass": False, "raw": {"reason": "insufficient_market_data"},
                 }
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="wait",
-                    reason="insufficient_market_data",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="insufficient_market_data"
+                self._record_setup(
+                    setup_id=setup_id, symbol=symbol, action="wait",
+                    reason="insufficient_market_data", gate_results=gate_results,
+                    market_conditions=market_conditions, timing_info=timing_info,
+                    outcome="rejected", outcome_detail="insufficient_market_data",
                 )
-                return OrchestratorResult(
-                    action="wait",
-                    state_name=state.state_name,
-                    reason="insufficient_market_data",
-                    context=context,
+                return OrchestratorResult("wait", state.state_name, "insufficient_market_data", context)
+
+            policy = StrategyConfig()
+            try:
+                inputs = build_gate_inputs(
+                    symbol=symbol, event_at=_now_utc,
+                    frames={"H1": structure_df, "M5": entry_df, "M15": internal_df},
+                    profile=profile, htf_bias=htf_bias, bias_snapshot=bias_snapshot,
+                    bias_resolution=bias_resolution,
+                    liquidity_context=liquidity_context, dxy_context=dxy_context,
+                    news_context=news_status, session_context=session_context,
+                    config=policy,
                 )
-
-            if structure_dir in ("bullish", "bearish") and structure_state in ("confirmed", "transition", "range"):
-                state.update_structure(structure_dir, structure_state)
-
-            liquidity_signal_raw = detect_liquidity_sweep(
-                structure_df,
-                structure_dir=htf_bias,
-                lookback=int(profile.get("liquidity", {}).get("lookback", 20)),
-                sweep_window=int(profile.get("liquidity", {}).get("sweep_window", 3)),
-            )
-            liquidity_signal = self._ensure_dict(liquidity_signal_raw, "liquidity_signal")
-            context["liquidity_signal"] = liquidity_signal
-            
-            gate_results["gate_8_liquidity"] = {
-                "pass": bool(liquidity_signal),
-                "raw": liquidity_signal
-            }
-
-            if not liquidity_signal:
-                state.reject_setup("liquidity_sweep_missing")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="wait",
-                    reason="liquidity_sweep_missing",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="liquidity_sweep_missing"
-                )
-                return OrchestratorResult(
-                    action="wait",
-                    state_name=state.state_name,
-                    reason="liquidity_sweep_missing",
-                    context=context,
-                )
-
-            side = liquidity_signal.get("side")
-            liq_type = liquidity_signal.get("type")
-            if side in ("buy", "sell"):
-                state.update_liquidity(side=side, index=int(len(structure_df) - 1), liquidity_type=liq_type)
-                # Record timing for sweep
-                timing_info["sweep_detected"] = _now_utc.isoformat()
-
-            # GATE 9: OB + FVG ZONE CHECK
-            displacement_raw = detect_displacement(
-                entry_df,
-                htf_bias,
-                atr_period=14,
-                impulse_atr_mult=float(profile.get("displacement", {}).get("impulse_atr_mult", 1.2)),
-                lookback_candles=int(profile.get("displacement", {}).get("lookback_candles", 3)),
-            )
-            displacement = self._ensure_dict(displacement_raw, "displacement") if displacement_raw else {}
-            context["displacement"] = displacement
-            displacement_valid = bool(displacement.get("valid"))
-            
-            gate_results["gate_9_displacement"] = {
-                "pass": displacement_valid,
-                "raw": displacement
-            }
-
-            if not displacement_valid:
-                state.reject_setup("displacement_missing")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="wait",
-                    reason="displacement_missing",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="displacement_missing"
-                )
-                return OrchestratorResult(
-                    action="wait",
-                    state_name=state.state_name,
-                    reason="displacement_missing",
-                    context=context,
-                )
-
-            state.update_displacement((displacement or {}).get("fvg") if isinstance(displacement, dict) else None)
-            # Record timing for displacement
-            timing_info["displacement_detected"] = _now_utc.isoformat()
-            
-            # PHASE 2: DISPLACEMENT TIER SYSTEM
-            displacement_tiers_config = profile.get("displacement_tiers", {})
-            displacement_tier_result = {
-                "enabled": displacement_tiers_config.get("enabled", False),
-                "tier": None,
-                "action": None,
-                "position_size_pct": 1.0,
-            }
-            
-            if displacement_tiers_config.get("enabled", False):
-                displacement_atr_mult = float(displacement.get("atr_multiplier", 0.0)) if displacement else 0.0
-                
-                # Determine tier
-                tier = None
-                for tier_name, tier_config in displacement_tiers_config.items():
-                    if tier_name.startswith("tier_"):
-                        min_mult = tier_config.get("min_atr_mult", 0.0)
-                        max_mult = tier_config.get("max_atr_mult", float("inf"))
-                        if min_mult <= displacement_atr_mult < max_mult:
-                            tier = tier_name
-                            displacement_tier_result["tier"] = tier
-                            displacement_tier_result["action"] = tier_config.get("action")
-                            displacement_tier_result["position_size_pct"] = tier_config.get("position_size_pct", 1.0)
-                            break
-                
-                # Apply tier action
-                if tier == "tier_1" and displacement_tier_result["action"] == "log_only":
-                    state.reject_setup("displacement_tier_1_log_only")
-                    log_setup_evaluation(
-                        setup_id=setup_id,
-                        symbol=symbol,
-                        action="skip",
-                        reason="displacement_tier_1_log_only",
-                        gate_results=gate_results,
-                        market_conditions=market_conditions,
-                        timing_info=timing_info,
-                        outcome="rejected",
-                        outcome_detail="displacement_tier_1_log_only"
-                    )
-                    return OrchestratorResult(
-                        action="skip",
-                        state_name=state.state_name,
-                        reason="displacement_tier_1_log_only",
-                        context=context,
-                    )
-                
-                # For tier 2 and 3, pass the position size adjustment to context
-                if tier in ("tier_2", "tier_3"):
-                    context["displacement_tier_adjustment"] = displacement_tier_result
-            
-            context["displacement_tier"] = displacement_tier_result
-            gate_results["displacement_tier"] = displacement_tier_result
-
-            fvgs_raw = get_unfilled_fvgs(entry_df, timeframe=entry_tf, direction=htf_bias) if entry_df is not None else []
-            fvgs = self._ensure_dict_list(fvgs_raw, "fvgs")
-            context["fvgs"] = fvgs
-
-            internal_structure_raw = analyze_market_structure(internal_df, silent=True) if internal_df is not None and not internal_df.empty else None
-            internal_structure = self._ensure_dict(internal_structure_raw, "internal_structure")
-            context["internal_structure"] = internal_structure
-
-            # GATE 10: INTERNAL M15 BOS/CHoCH CONFIRMATION (hard boolean gate)
-            internal_event = internal_structure.get("event") if internal_structure else None
-            internal_early_event = (internal_structure.get("early_event") or {}).get("event") if internal_structure else None
-            has_internal_confirmation = internal_event in ("BOS", "CHOCH") or internal_early_event in ("BOS", "CHOCH")
-            
-            gate_results["gate_10_internal_structure"] = {
-                "pass": has_internal_confirmation,
-                "raw": {
-                    "event": internal_event,
-                    "early_event": internal_early_event,
-                    "internal_structure": internal_structure
+            except GateInputError:
+                gate_results["gate_8_liquidity"] = {
+                    "pass": False, "raw": {"reason": "causal_input_unsafe"},
                 }
-            }
+                self._record_setup(
+                    setup_id=setup_id, symbol=symbol, action="wait",
+                    reason="causal_input_unsafe", gate_results=gate_results,
+                    market_conditions=market_conditions, timing_info=timing_info,
+                    outcome="rejected", outcome_detail="causal_input_unsafe",
+                )
+                return OrchestratorResult("wait", state.state_name, "causal_input_unsafe", context)
 
-            if not has_internal_confirmation:
-                state.reject_setup("internal_structure_missing")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="skip",
-                    reason="internal_structure_missing",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="internal_structure_missing"
-                )
-                return OrchestratorResult(
-                    action="skip",
-                    state_name=state.state_name,
-                    reason="internal_structure_missing",
-                    context=context,
-                )
-            
-            # Record timing for internal structure
-            if has_internal_confirmation:
-                timing_info["internal_structure_detected"] = _now_utc.isoformat()
-            
-            # PHASE 1: STRUCTURAL SHIFT VARIANT EVALUATION
-            structural_config = profile.get("structural_shift", {})
-            variant = structural_config.get("variant", "original")
-            
-            variant_result = {
-                "variant": variant,
-                "enabled": variant != "original",
-                "pass": True,
-                "details": {},
-            }
-            
-            if variant == "variant_a":
-                # Variant A: Weighted collapse
-                variant_a_config = structural_config.get("variant_a", {})
-                if variant_a_config.get("enabled", False):
-                    variant_a_result = calculate_variant_a_strength(
-                        liquidity_signal=liquidity_signal,
-                        displacement=displacement,
-                        internal_structure=internal_structure,
-                        atr=atr_val,
-                        config=structural_config,
-                    )
-                    variant_result["details"]["variant_a"] = variant_a_result
-                    # Variant A doesn't block - it feeds into scoring
-                    context["structural_shift_strength"] = variant_a_result
-            
-            elif variant == "variant_b":
-                # Variant B: Sequential chain
-                variant_b_config = structural_config.get("variant_b", {})
-                if variant_b_config.get("enabled", False):
-                    variant_b_result = check_variant_b_sequence(
-                        liquidity_signal=liquidity_signal,
-                        displacement=displacement,
-                        internal_structure=internal_structure,
-                        config=structural_config,
-                    )
-                    variant_result["details"]["variant_b"] = variant_b_result
-                    variant_result["pass"] = variant_b_result["pass"]
-                    
-                    if not variant_b_result["pass"]:
-                        state.reject_setup(f"variant_b_sequence_failed_{variant_b_result['missing_stage']}")
-                        log_setup_evaluation(
-                            setup_id=setup_id,
-                            symbol=symbol,
-                            action="skip",
-                            reason=f"variant_b_sequence_failed_{variant_b_result['missing_stage']}",
-                            gate_results=gate_results,
-                            market_conditions=market_conditions,
-                            timing_info=timing_info,
-                            outcome="rejected",
-                            outcome_detail=f"variant_b_sequence_failed_{variant_b_result['missing_stage']}"
-                        )
-                        return OrchestratorResult(
-                            action="skip",
-                            state_name=state.state_name,
-                            reason=f"variant_b_sequence_failed_{variant_b_result['missing_stage']}",
-                            context=context,
-                        )
-            
-            # Freshness window check (applies to both variants)
-            freshness_config = structural_config.get("freshness_window", {})
-            if freshness_config.get("enabled", False):
-                freshness_result = check_freshness_window(
-                    timing_info=timing_info,
-                    config=structural_config,
-                )
-                variant_result["details"]["freshness_window"] = freshness_result
-                
-                if not freshness_result["pass"]:
-                    state.reject_setup(f"freshness_window_failed_{freshness_result['failed_stage']}")
-                    log_setup_evaluation(
-                        setup_id=setup_id,
-                        symbol=symbol,
-                        action="skip",
-                        reason=f"freshness_window_failed_{freshness_result['failed_stage']}",
-                        gate_results=gate_results,
-                        market_conditions=market_conditions,
-                        timing_info=timing_info,
-                        outcome="rejected",
-                        outcome_detail=f"freshness_window_failed_{freshness_result['failed_stage']}"
-                    )
-                    return OrchestratorResult(
-                        action="skip",
-                        state_name=state.state_name,
-                        reason=f"freshness_window_failed_{freshness_result['failed_stage']}",
-                        context=context,
-                    )
-            
-            context["structural_shift_variant"] = variant_result
-            gate_results["structural_shift_variant"] = variant_result
-            
-            ob_result_raw = detect_ob_breaker(
-                entry_df if entry_df is not None else fetch_ohlcv(symbol, structure_tf, bars=int(profile.get("structure_bars", 220))),
-                htf_bias,
-                premium_zone=structure_context.get("premium_zone"),
-                discount_zone=structure_context.get("discount_zone"),
-                equilibrium_level=structure_context.get("equilibrium_level"),
-            )
-            ob_result = self._ensure_dict(ob_result_raw, "ob_result")
-            context["ob"] = ob_result
-            
-            # Collect market conditions
-            atr_val = float(calculate_atr(entry_df, 14) or 0.0) if entry_df is not None else 0.0
-            market_conditions.update({
-                "atr": atr_val,
-                "spread": 20.0,  # Default spread points - should be fetched from MT5 in live
-                "session": session_context.get("active_session"),
-                "day_of_week": _now_utc.weekday(),
-                "hour_utc": _now_utc.hour,
-                "volatility_percentile": 0.5,  # Placeholder - would need historical calculation
-                "trend_strength": htf_bias,
-                "distance_to_htf_ob": 0.0,  # Placeholder - would need calculation
-                "distance_to_daily_open": 0.0,  # Placeholder - would need calculation
-            })
-
-            # GATE 11: setup-only confluence; safety filters are earlier vetoes.
-            first_fvg = fvgs[0] if fvgs else None
-            ob_zone = ob_result.get("zone") if ob_result.get("valid") else None
-            fvg_in_ob_zone = False
-            if first_fvg and ob_zone:
-                try:
-                    atr_val_for_fvg = float(calculate_atr(entry_df, 14) or 0.0)
-                    fvg_tol = atr_val_for_fvg * 0.30
-                    fvg_low = float(first_fvg["bottom"])
-                    fvg_high = float(first_fvg["top"])
-                    ob_low = float(ob_zone[0])
-                    ob_high = float(ob_zone[1])
-                    # gap if FVG is entirely above or below OB zone
-                    if fvg_low > ob_high:
-                        gap = fvg_low - ob_high
-                    elif fvg_high < ob_low:
-                        gap = ob_low - fvg_high
-                    else:
-                        gap = 0.0
-                    fvg_in_ob_zone = gap <= fvg_tol
-                except Exception:
-                    fvg_in_ob_zone = False
-
-            score_result_raw = score_setup(
-                {
-                    "htf_bias": htf_bias,
-                    "trade_direction": htf_bias,
-                    "price_in_discount_or_premium": bool(
-                        structure_context.get("discount_zone") if htf_bias == "bullish" else structure_context.get("premium_zone")
-                    ),
-                    "valid_ob_present": bool((ob_result or {}).get("valid")),
-                    "fvg_in_ob_zone": fvg_in_ob_zone,
-                    "liquidity_swept_before_entry": bool(liquidity_signal),
-                    # internal_bos_on_m15 removed - now Gate 10 hard check
-                    "internal_bos_early": bool(
-                        (internal_structure or {}).get("event") not in ("BOS", "CHOCH") and
-                        (internal_structure or {}).get("early_event", {}).get("event") in ("BOS", "CHOCH")
-                    ),
-                }
-            )
-            score_result = self._ensure_dict(
-                score_result_raw, "score_result", {"passes_threshold": False, "score": 0, "grade": "F"}
-            )
-            context["score"] = score_result
-            
-            gate_results["gate_11_confluence_score"] = {
-                "pass": score_result.get("passes_threshold", False),
-                "raw": score_result
-            }
-
-            if not score_result.get("passes_threshold", False):
-                state.reject_setup("score_below_threshold")
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="skip",
-                    reason="score_below_threshold",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="score_below_threshold"
-                )
-                return OrchestratorResult(
-                    action="skip",
-                    state_name=state.state_name,
-                    reason="score_below_threshold",
-                    context=context,
-                )
-
-            canonical = evaluate_legacy_context(
-                adapter="live",
-                symbol=symbol,
-                decision_at=_now_utc,
-                side=htf_bias,
-                entry_frame=entry_df,
-                htf_bias=htf_bias,
-                dxy_context=dxy_context,
-                news_context=news_status,
-                session_context=session_context,
-                evidence=SetupEvidence(
-                    bool(structure_context.get("discount_zone") if htf_bias == "bullish" else structure_context.get("premium_zone")),
-                    bool((ob_result or {}).get("valid")),
-                    fvg_in_ob_zone,
-                    bool(liquidity_signal),
-                ),
-            )
-            context["strategy_decision"] = canonical.to_dict()
-            gate_results["canonical_strategy"] = {
-                "pass": canonical.entry_eligible,
-                "raw": canonical.to_dict(),
-            }
-            if not canonical.entry_eligible:
-                return OrchestratorResult(
-                    "skip",
-                    state.state_name,
-                    canonical.reasons[0].value.lower(),
-                    context,
-                )
-
-            # GATE 12-13: RR VALIDATION (min 1:3), POSITION SIZE, and ENTRY DETERMINATION
-            # Note: In the 13-gate system, gates 12-13 represent final RR/position/entry checks before trade signal
-            current_price = float(entry_df["close"].iloc[-1]) if entry_df is not None and not entry_df.empty else 0.0
-            entry = determine_entry(
-                symbol,
-                state,
-                current_price,
-                score_result=score_result,
-                context={
-                    "ob_zone": ob_zone,
-                    "fvg_zone": first_fvg,
-                    "after_london_open": session_context.get("active_session") == "london",
-                    "asian_liquidity_swept": any(
-                        pool.get("type") in ("asian_high", "asian_low")
-                        for pool in liquidity_context.get("liquidity_pools", [])
-                    ),
-                    "sweep_rejected": bool((internal_structure or {}).get("event") in ("CHOCH", "BOS")),
-                    "internal_structure_event": (internal_structure or {}).get("event"),
-                    "htf_zone_alignment": bool(ob_result.get("valid")),
-                },
-            )
-            context["entry"] = entry
-            
-            gate_results["gate_12_13_rr_entry"] = {
-                "pass": bool(entry),
-                "raw": {"entry": entry, "current_price": current_price}
-            }
-
-            if entry:
-                context["entry"] = entry
-                # Record timing for entry
-                timing_info["entry_ready"] = _now_utc.isoformat()
-                
-                # Log successful candidate
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="candidate_ready",
-                    reason="setup_passed_all_gates",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    trade_metrics={
-                        "direction": entry.get("direction"),
-                        "entry_type": entry.get("entry_type"),
-                        "entry_mode": entry.get("entry_mode"),
-                        "score": score_result.get("score"),
-                        "grade": score_result.get("grade"),
-                    },
-                    outcome="taken",
-                    outcome_detail="candidate_ready"
-                )
-                return OrchestratorResult(
-                    action="candidate_ready",
-                    state_name=state.state_name,
-                    reason="setup_passed_all_gates",
-                    context=context,
-                )
+            cached = getattr(state, "_gate_record", None)
+            if cached is not None and cached.data()["last_event_id"] == inputs.event_id:
+                prior = cached
             else:
-                context["entry"] = entry
-                log_setup_evaluation(
-                    setup_id=setup_id,
-                    symbol=symbol,
-                    action="wait",
-                    reason="entry_not_ready",
-                    gate_results=gate_results,
-                    market_conditions=market_conditions,
-                    timing_info=timing_info,
-                    outcome="rejected",
-                    outcome_detail="entry_not_ready"
+                previous = cached.data() if cached is not None else {}
+                prior = record_from_state(
+                    state, event_at=_now_utc,
+                    last_event_id=previous.get("last_event_id"),
+                    last_result=previous.get("last_result"),
                 )
-                return OrchestratorResult(
-                    action="wait",
-                    state_name=state.state_name,
-                    reason="entry_not_ready",
-                    context=context,
-                )
+            transition = evaluate_strategy_gates(prior, inputs, _now_utc, policy)
+            next_state = state_from_record(transition.state_record, _now_utc)
+            for field in STATE_FIELDS:
+                setattr(state, field, getattr(next_state, field))
+            state._setup_consumption = next_state._setup_consumption
+            state._gate_record = transition.state_record
 
+            gate_result = transition.result()
+            setup_id = transition.setup_id
+            context.update(gate_result["context"])
+            gate_results.update(gate_result["gate_results"])
+            timing_info.update(gate_result["timing_info"])
+            market_conditions.update(gate_result["market_conditions"])
+            action = gate_result["action"]
+            reason = gate_result["reason"]
+            self._record_setup(
+                setup_id=setup_id, symbol=symbol, action=action, reason=reason,
+                gate_results=gate_results, market_conditions=market_conditions,
+                timing_info=timing_info,
+                trade_metrics={
+                    "direction": (context.get("entry") or {}).get("direction"),
+                    "entry_type": (context.get("entry") or {}).get("entry_type"),
+                    "entry_mode": (context.get("entry") or {}).get("entry_mode"),
+                    "score": (context.get("score") or {}).get("score"),
+                    "grade": (context.get("score") or {}).get("grade"),
+                } if action == "candidate_ready" else None,
+                outcome="taken" if action == "candidate_ready" else "rejected",
+                outcome_detail="candidate_ready" if action == "candidate_ready" else reason,
+            )
+            return OrchestratorResult(action, state.state_name, reason, context)
         except Exception as e:
+            if not self.emit_diagnostics:
+                context["error_type"] = type(e).__name__
+                return OrchestratorResult("error", state.state_name, "orchestrator_input_unsafe", context)
             import traceback
             err_msg = str(e)
             tb = traceback.format_exc()
@@ -799,7 +403,7 @@ class StrategyOrchestrator:
             log(f"[ORCH-TRACE] {symbol}:\n{tb}", "red")
             
             # Log the error to setup logger
-            log_setup_evaluation(
+            self._record_setup(
                 setup_id=setup_id,
                 symbol=symbol,
                 action="error",
@@ -834,3 +438,7 @@ class StrategyOrchestrator:
                 reason=f"orchestrator_live_error: {err_msg}",
                 context=context,
             )
+        finally:
+            context["gate_results"] = gate_results
+            context["timing_info"] = timing_info
+            context["market_conditions"] = market_conditions

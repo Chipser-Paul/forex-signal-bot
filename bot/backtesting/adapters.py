@@ -82,6 +82,9 @@ def process_quote_entry(
     quantity: float,
     tolerance: float = 0.0,
     available_volume: float | None = None,
+    setup_recovery=None,
+    setup_record=None,
+    fill_journal=None,
 ) -> tuple[EntryDecision, PositionState | None]:
     event = quote_event(quote, sequence=sequence)
     decision = process_entry_event(state, event, tolerance=tolerance)
@@ -91,19 +94,40 @@ def process_quote_entry(
     fill_kind = FillKind.SIMULATED_TRIGGER
     trade_id = lifecycle_stable_id(intent.signal_id, event.event_id, fill_kind.value)
     direction = Side.BUY if intent.direction is Direction.BUY else Side.SELL
-    _historical_position, fill = engine.open_market(
-        action_id=lifecycle_stable_id(intent.signal_id, event.event_id, "historical-entry"),
-        trade_id=trade_id,
-        direction=direction,
-        requested_volume=quantity,
-        stop_price=intent.stop_loss,
-        target_price=intent.final_target,
-        quote=quote,
-        signal_available_at=intent.signal_available_at,
-        source_event_id=intent.source_event_id,
-        market_event_id=event.event_id,
-        available_volume=available_volume,
-    )
+    action_id = lifecycle_stable_id(intent.signal_id, event.event_id, "historical-entry")
+    binding = None
+    if setup_recovery is not None:
+        if setup_record is None or fill_journal is None:
+            raise HistoricalExecutionError("setup recovery requires a durable decision and fill journal")
+        binding = setup_recovery.prepare(
+            setup_record, intent, action_id=action_id, trade_id=trade_id, entry_event=event, tolerance=tolerance,
+        )
+    try:
+        _historical_position, fill = engine.open_market(
+            action_id=action_id,
+            trade_id=trade_id,
+            direction=direction,
+            requested_volume=quantity,
+            stop_price=intent.stop_loss,
+            target_price=intent.final_target,
+            quote=quote,
+            signal_available_at=intent.signal_available_at,
+            source_event_id=intent.source_event_id,
+            market_event_id=event.event_id,
+            available_volume=available_volume,
+        )
+    except HistoricalExecutionError:
+        if binding is not None:
+            rejected = next((item for item in reversed(engine.rejections) if item["action_id"] == action_id), None)
+            if rejected is not None:
+                fill_journal.publish_rejection(binding, rejected)
+                setup_recovery.confirm(binding)
+        raise
+    if binding is not None:
+        fill_journal.publish(fill)
+        consumed = setup_recovery.confirm(binding)
+        if consumed.outcome not in ("CONSUMED", "DUPLICATE_IGNORED"):
+            raise HistoricalExecutionError("confirmed historical fill requires setup reconciliation")
     position = record_fill(
         decision.state,
         event,

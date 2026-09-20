@@ -53,6 +53,21 @@ def stable_news_id(provider: str, event_at: datetime, currency: str, name: str) 
     return hashlib.sha256(material.encode("utf-8")).hexdigest()[:24]
 
 
+def active_high_impact_usd_event_ids(
+    events: Iterable[NewsEvent], decision_at: datetime, config: StrategyConfig,
+) -> tuple[str, ...]:
+    """Apply the frozen inclusive event-time window after source validation."""
+    now = decision_at.astimezone(timezone.utc)
+    deduplicated = {event.event_id: event for event in events}
+    return tuple(
+        event.event_id
+        for event in sorted(deduplicated.values(), key=lambda item: (item.event_at, item.event_id))
+        if event.currency == "USD"
+        and event.impact is NewsImpact.HIGH
+        and event.event_at - config.news_block_before <= now <= event.event_at + config.news_block_after
+    )
+
+
 def evaluate_news(
     snapshot: NewsSnapshot | None,
     decision_at: datetime,
@@ -73,18 +88,10 @@ def evaluate_news(
     if age.total_seconds() < 0 or age > config.news_max_age:
         return SafetyResult(SafetyState.DATA_UNSAFE, "stale_or_future_snapshot", provenance=snapshot.provider)
 
-    deduplicated: dict[str, NewsEvent] = {}
     for event in snapshot.events:
         if event.provider != snapshot.provider or event.retrieved_at != snapshot.retrieved_at:
             return SafetyResult(SafetyState.DATA_UNSAFE, "event_provenance_mismatch", provenance=snapshot.provider)
-        deduplicated[event.event_id] = event
-    active = tuple(
-        event.event_id
-        for event in sorted(deduplicated.values(), key=lambda item: (item.event_at, item.event_id))
-        if event.currency == "USD"
-        and event.impact is NewsImpact.HIGH
-        and event.event_at - config.news_block_before <= now <= event.event_at + config.news_block_after
-    )
+    active = active_high_impact_usd_event_ids(snapshot.events, now, config)
     if active:
         return SafetyResult(SafetyState.BLOCKED, "high_impact_usd_window", active, snapshot.provider)
     return SafetyResult(SafetyState.CLEAR, "fresh_provider_no_active_event", (), snapshot.provider)

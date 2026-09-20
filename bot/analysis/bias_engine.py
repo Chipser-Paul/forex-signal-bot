@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from bot.data.market_data import MarketDataRequest, fetch_batch, fetch_ohlcv
 from strategies.smc_engine.market_structure import analyze_market_structure
 
 
@@ -64,8 +63,7 @@ def _direction_to_score(direction: str) -> int:
     return 0
 
 
-def analyze_timeframe_bias(symbol: str, timeframe: str, bars: int | None = None, silent: bool = False) -> TimeframeBias:
-    df = fetch_ohlcv(symbol, timeframe, bars=bars or DEFAULT_BARS.get(timeframe, 320))
+def _bias_from_frame(timeframe: str, df, silent: bool) -> TimeframeBias:
     result = analyze_market_structure(df, silent=silent) if df is not None and not df.empty else None
     direction = _normalize_direction(result)
     return TimeframeBias(
@@ -80,29 +78,30 @@ def analyze_timeframe_bias(symbol: str, timeframe: str, bars: int | None = None,
     )
 
 
+def analyze_timeframe_bias(symbol: str, timeframe: str, bars: int | None = None, silent: bool = False) -> TimeframeBias:
+    from bot.data.market_data import fetch_ohlcv
+
+    df = fetch_ohlcv(symbol, timeframe, bars=bars or DEFAULT_BARS.get(timeframe, 320))
+    return _bias_from_frame(timeframe, df, silent)
+
+
+def timeframe_biases_from_frames(frames, timeframes: tuple[str, ...] = BIAS_TIMEFRAMES, silent: bool = False) -> dict[str, TimeframeBias]:
+    """Use the same structure analysis for injected and broker-fetched frames."""
+    return {tf: _bias_from_frame(tf, frames.get(tf), silent) for tf in timeframes}
+
+
 def get_timeframe_biases(symbol: str, timeframes: tuple[str, ...] = BIAS_TIMEFRAMES, silent: bool = False) -> dict[str, TimeframeBias]:
+    from bot.data.market_data import MarketDataRequest, fetch_batch
+
     requests = [
         MarketDataRequest(symbol=symbol, timeframe=tf, bars=DEFAULT_BARS.get(tf, 320))
         for tf in timeframes
     ]
     data = fetch_batch(requests)
 
-    biases: dict[str, TimeframeBias] = {}
-    for tf in timeframes:
-        df = data.get((symbol, tf))
-        result = analyze_market_structure(df, silent=silent) if df is not None and not df.empty else None
-        direction = _normalize_direction(result)
-        biases[tf] = TimeframeBias(
-            timeframe=tf,
-            direction=direction,
-            score=_direction_to_score(direction),
-            confidence=int((result or {}).get("confidence", 0) or 0),
-            state=str((result or {}).get("state", "range")),
-            event=(result or {}).get("event"),
-            condition=(result or {}).get("condition"),
-            lead_bias=((result or {}).get("lead_bias") or {}).get("direction"),
-        )
-    return biases
+    return timeframe_biases_from_frames(
+        {tf: data.get((symbol, tf)) for tf in timeframes}, timeframes, silent,
+    )
 
 
 def aggregate_htf_bias(timeframe_biases: dict[str, TimeframeBias]) -> dict[str, object]:
@@ -149,8 +148,7 @@ def aggregate_htf_bias(timeframe_biases: dict[str, TimeframeBias]) -> dict[str, 
     }
 
 
-def get_bias_snapshot(symbol: str, silent: bool = False) -> dict[str, object]:
-    timeframe_biases = get_timeframe_biases(symbol, silent=silent)
+def _snapshot_from_biases(symbol: str, timeframe_biases: dict[str, TimeframeBias]) -> dict[str, object]:
     htf_bias = aggregate_htf_bias(timeframe_biases)
     return {
         "symbol": symbol,
@@ -168,6 +166,14 @@ def get_bias_snapshot(symbol: str, silent: bool = False) -> dict[str, object]:
         },
         "htf_bias": htf_bias,
     }
+
+
+def bias_snapshot_from_frames(symbol: str, frames, silent: bool = False) -> dict[str, object]:
+    return _snapshot_from_biases(symbol, timeframe_biases_from_frames(frames, silent=silent))
+
+
+def get_bias_snapshot(symbol: str, silent: bool = False) -> dict[str, object]:
+    return _snapshot_from_biases(symbol, get_timeframe_biases(symbol, silent=silent))
 
 
 def resolve_trade_bias(snapshot: dict[str, object] | None) -> dict[str, object]:

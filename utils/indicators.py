@@ -1,6 +1,5 @@
 #utils\indicators.py
 
-import MetaTrader5 as mt5
 import pandas as pd
 
 def calculate_atr(df, period=14):

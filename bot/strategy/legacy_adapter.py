@@ -53,6 +53,7 @@ def evaluate_legacy_context(
     session_context: dict,
     evidence: SetupEvidence,
     config: StrategyConfig | None = None,
+    consumed_block_ids: frozenset[str] = frozenset(),
 ) -> StrategyDecision:
     """Translate old dictionary analysis into the canonical fail-closed contract."""
     policy = config or StrategyConfig()
@@ -73,7 +74,7 @@ def evaluate_legacy_context(
                 available,
             ),
         )
-    block = evaluate_order_block(entry_frame, requested, decision, policy)
+    block = evaluate_order_block(entry_frame, requested, decision, policy, consumed_ids=consumed_block_ids)
     data = StrategyInput(
         symbol=symbol,
         decision_at=decision,
@@ -95,6 +96,7 @@ def evaluate_legacy_context(
         order_block=block,
         evidence=evidence,
         source_candles=source_candles,
+        invalidation={"order_block_id": block.block_id},
     )
     evaluator = evaluate_live_strategy if adapter == "live" else evaluate_replay_strategy
     return evaluator(data, policy)

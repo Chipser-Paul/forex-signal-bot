@@ -248,5 +248,8 @@ chunks.
 - Phase 8 requires owner-supplied historical bid/ask data and dated metadata.
 - Phase 8 performs scientific validation; Phase 9 controls deployment.
 
+Phase 8A's acceptance, preregistration and holdout controls are defined in
+`docs/PHASE8_SCIENTIFIC_VALIDATION.md`; they preserve this execution model.
+
 Phase 7 engine verification is not profitability evidence and is not a live
 trading recommendation.

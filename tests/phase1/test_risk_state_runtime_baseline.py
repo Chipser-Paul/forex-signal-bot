@@ -125,7 +125,6 @@ def test_orchestrator_delegates_daily_limit_to_phase4_authority(monkeypatch):
     fake_datetime.timezone = datetime_module.timezone
     fake_datetime.timedelta = datetime_module.timedelta
     monkeypatch.setitem(sys.modules, "datetime", fake_datetime)
-    monkeypatch.setattr(orchestrator_module, "generate_setup_id", lambda symbol: "FIXED_SETUP")
     monkeypatch.setattr(
         orchestrator_module,
         "fetch_ohlcv",
@@ -134,9 +133,9 @@ def test_orchestrator_delegates_daily_limit_to_phase4_authority(monkeypatch):
     monkeypatch.setattr(
         orchestrator_module,
         "get_session_context",
-        lambda: {"active_session": "new_york", "session_allowed": True},
+        lambda now: {"active_session": "new_york", "session_allowed": True},
     )
-    monkeypatch.setattr(orchestrator_module, "get_news_status", lambda symbol: {"news_clear": True})
+    monkeypatch.setattr(orchestrator_module, "get_news_status", lambda symbol, now: {"news_clear": True})
     logged: dict = {}
     monkeypatch.setattr(orchestrator_module, "log_setup_evaluation", lambda **kwargs: logged.update(kwargs))
 
@@ -146,11 +145,12 @@ def test_orchestrator_delegates_daily_limit_to_phase4_authority(monkeypatch):
         account_balance=1000.0,
         daily_pnl=-100.0,
         active_trade_count=0,
+        event_at=datetime_module.datetime(2026, 1, 15, 12, tzinfo=datetime_module.timezone.utc),
     )
 
     assert result.action == "skip"
     assert result.reason == "htf_bias_unconfirmed"
-    assert result.context["setup_id"] == "FIXED_SETUP"
+    assert result.context["setup_id"].startswith("pre8n_")
     assert result.state_name != "DAILY_LIMIT_HIT"
     assert list(logged["gate_results"])[:3] == [
         "gate_1_session",

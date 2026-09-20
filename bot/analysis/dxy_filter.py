@@ -11,7 +11,12 @@ from bot.data.candles import (
     causal_snapshot,
     get_timeframe_spec,
 )
-from bot.data.market_data import fetch_ohlcv
+
+# NOTE (Phase 8H import-safety): ``bot.data.market_data`` imports MetaTrader5
+# at module level.  ``fetch_ohlcv`` is therefore imported inside the
+# live-fetch helpers below so that importing this module (and the pure
+# strategy layer that depends on it) never requires the MT5 terminal
+# library.  Call-time behaviour is unchanged.
 
 
 DXY_SYMBOL_CANDIDATES = (
@@ -34,6 +39,8 @@ DXY_SCALE = 50.14348112
 
 def _resolve_dxy_symbol(symbol_candidates: tuple[str, ...] = DXY_SYMBOL_CANDIDATES) -> str | None:
     """Try to find a working DXY symbol from MT5"""
+    from bot.data.market_data import fetch_ohlcv
+
     for candidate in symbol_candidates:
         df = fetch_ohlcv(candidate, "H1", bars=50)
         if df is not None and not df.empty:
@@ -114,6 +121,8 @@ def get_synthetic_dxy(timeframe="H1", bars=100, decision_timestamp=None):
         decision_timestamp or datetime.now(timezone.utc),
         field="decision_timestamp",
     )
+    from bot.data.market_data import fetch_ohlcv
+
     frames: dict[str, pd.DataFrame] = {}
     for symbol, _weight, _invert in DXY_BASKET:
         rates = fetch_ohlcv(
@@ -197,6 +206,7 @@ def _gold_direction_snapshot(
 ) -> dict[str, object]:
     """Get gold direction from market structure analysis"""
     from strategies.smc_engine.market_structure import analyze_market_structure
+    from bot.data.market_data import fetch_ohlcv
 
     df = fetch_ohlcv(
         symbol,
@@ -221,27 +231,39 @@ def _gold_direction_snapshot(
     }
 
 
-def analyze_dxy_correlation(symbol: str = "XAUUSDm", silent: bool = False) -> dict[str, object]:
+def analyze_dxy_correlation(
+    symbol: str = "XAUUSDm", silent: bool = False,
+    decision_timestamp: object | None = None,
+) -> dict[str, object]:
     """
     Returns the full DXY block for the log and scorer.
     Uses synthetic DXY implementation.
     """
-    decision = datetime.now(timezone.utc)
+    decision = as_utc_timestamp(
+        decision_timestamp or datetime.now(timezone.utc), field="decision_timestamp",
+    )
     gold = _gold_direction_snapshot(
         symbol,
         silent=silent,
         decision_timestamp=decision,
     )
-    gold_dir = str(gold["direction"])
-    gold_state = str(gold["state"])
-    gold_lead_bias = gold.get("lead_bias")
-
     # Try to get synthetic DXY with pair count
     dxy_values, basket_pairs_used = get_synthetic_dxy(
         "H1",
         100,
         decision_timestamp=decision,
     )
+    return dxy_context_from_values(gold, dxy_values, basket_pairs_used)
+
+
+def dxy_context_from_values(
+    gold: dict[str, object], dxy_values: np.ndarray | None,
+    basket_pairs_used: int,
+) -> dict[str, object]:
+    """Apply the existing correlation interpretation to acquired causal values."""
+    gold_dir = str(gold["direction"])
+    gold_state = str(gold["state"])
+    gold_lead_bias = gold.get("lead_bias")
     if dxy_values is None:
         return {
             "available": False,

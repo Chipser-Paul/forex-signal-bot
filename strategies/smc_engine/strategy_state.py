@@ -1,7 +1,7 @@
 # strategies/smc_engine/strategy_state.py
 # Persistent SMC strategy state per symbol
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from utils.log import log
 
 STATE_EXPIRY_MINUTES = 120
@@ -19,8 +19,25 @@ STATES = [
 
 
 class StrategyState:
-    def __init__(self):
+    def __init__(self, event_time: datetime | None = None):
+        self._event_time_utc: datetime | None = None
+        if event_time is not None:
+            self.set_event_time(event_time)
         self.reset()
+
+    def set_event_time(self, event_time: datetime):
+        if event_time.tzinfo is None or event_time.utcoffset() is None:
+            raise ValueError("strategy event time must be timezone-aware UTC")
+        normalized = event_time.astimezone(timezone.utc)
+        if self._event_time_utc is not None and normalized < self._event_time_utc:
+            raise ValueError("strategy event time cannot move backward")
+        self._event_time_utc = normalized
+
+    def _now(self) -> datetime:
+        # Preserve the legacy naive-UTC state format at this boundary.
+        if self._event_time_utc is None:
+            return datetime.utcnow()
+        return self._event_time_utc.replace(tzinfo=None)
 
     # -------------------------------------------------
     # Reset
@@ -60,7 +77,7 @@ class StrategyState:
         self.daily_limits_hit = False
         self.last_rejection_reason = None
 
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
         # Cascade circuit breaker tracking
         self._consecutive_same_dir_losses = 0
@@ -76,7 +93,7 @@ class StrategyState:
     # Expiry & timeout checks
     # -------------------------------------------------
     def is_expired(self) -> bool:
-        return datetime.utcnow() - self.last_update > timedelta(minutes=STATE_EXPIRY_MINUTES)
+        return self._now() - self.last_update > timedelta(minutes=STATE_EXPIRY_MINUTES)
 
     def liquidity_timed_out(self, current_index: int) -> bool:
         """
@@ -99,7 +116,7 @@ class StrategyState:
         self.structure_state = state
         if state == "confirmed":
             self.state_name = "SCANNING_FOR_SETUP"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def update_liquidity(self, side: str, index: int, liquidity_type: str | None = None):
         """
@@ -119,28 +136,28 @@ class StrategyState:
         self.liquidity_swept = True
         self.liquidity_type = liquidity_type
         self.liquidity_index = index
-        self.liquidity_time = datetime.utcnow()
+        self.liquidity_time = self._now()
         self.state_name = "SETUP_FOUND_PENDING_CONFIRMATION"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def update_displacement(self, fvg: tuple | None = None):
         self.displacement_seen = True
         self.fvg_zone = fvg
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def update_bias(self, bias_snapshot: dict | None):
         self.bias_snapshot = bias_snapshot
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def update_session(self, session_context: dict | None):
         self.session_context = session_context
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def update_news(self, news_status: dict | None):
         self.news_status = news_status
         if news_status and not news_status.get("news_clear", True):
             self.state_name = "NEWS_BLACKOUT"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def set_daily_limit_hit(self, hit: bool, reason: str | None = None):
         self.daily_limits_hit = bool(hit)
@@ -149,7 +166,7 @@ class StrategyState:
             self.last_rejection_reason = reason or "daily_limit_hit"
         elif self.state_name == "DAILY_LIMIT_HIT":
             self.state_name = "SCANNING_FOR_SETUP"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def register_setup_candidate(
         self,
@@ -172,7 +189,7 @@ class StrategyState:
             "fvg_zone": fvg_zone,
             "asian_sweep": asian_sweep,
             "metadata": metadata or {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": self._now().isoformat(),
         }
         self.setup_score = score
         self.setup_grade = grade
@@ -182,7 +199,7 @@ class StrategyState:
         self.fvg_zone = fvg_zone
         self.asian_sweep_detected = asian_sweep
         self.state_name = "SETUP_FOUND_PENDING_CONFIRMATION"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def register_entry_plan(self, entries: list):
         """
@@ -190,12 +207,12 @@ class StrategyState:
         """
         self.entry_started = False
         self.remaining_entries = entries.copy()
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def mark_entry_filled(self):
         self.entry_started = True
         self.state_name = "TRADE_ACTIVE"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     def reject_setup(self, reason: str):
         self.setup_candidate = None
@@ -205,7 +222,7 @@ class StrategyState:
         self.trade_direction = None
         self.last_rejection_reason = reason
         self.state_name = "SCANNING_FOR_SETUP"
-        self.last_update = datetime.utcnow()
+        self.last_update = self._now()
 
     # -------------------------------------------------
     # Cascade circuit breaker
@@ -216,7 +233,7 @@ class StrategyState:
         After 2 same-direction losses in a row, block that direction for CASCADE_BLOCK_HOURS.
         A win in either direction resets the counter.
         """
-        now = now or datetime.utcnow()
+        now = now or self._now()
         if result == "loss" and direction == self._last_trade_direction:
             self._consecutive_same_dir_losses += 1
             if self._consecutive_same_dir_losses >= 2:
@@ -238,7 +255,7 @@ class StrategyState:
         """
         Returns True if the given direction is currently blocked by the cascade breaker.
         """
-        now = now or datetime.utcnow()
+        now = now or self._now()
         if self._direction_blocked_until is None:
             return False
         if self._last_trade_direction is None:

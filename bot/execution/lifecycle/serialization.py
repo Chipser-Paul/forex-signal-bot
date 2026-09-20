@@ -13,6 +13,9 @@ from .models import (
     LifecycleTransition,
     PnlComponent,
     PositionState,
+    EntryIntent,
+    EntryMode,
+    ReadinessStyle,
     as_utc,
     stable_id,
 )
@@ -32,6 +35,24 @@ def _json_value(value: Any) -> Any:
 
 def position_to_payload(position: PositionState) -> dict[str, Any]:
     return _json_value(asdict(position))
+
+
+def entry_intent_to_payload(intent) -> dict[str, Any]:
+    """Canonical JSON-compatible representation without adapter-specific IDs."""
+    return _json_value(asdict(intent))
+
+
+def entry_intent_from_payload(payload: Mapping[str, Any]) -> EntryIntent:
+    if set(payload) != set(EntryIntent.__dataclass_fields__):
+        raise ValueError("entry intent schema mismatch")
+    values = dict(payload)
+    values["direction"] = Direction(values["direction"])
+    values["entry_mode"] = EntryMode(values["entry_mode"])
+    values["readiness_style"] = ReadinessStyle(values["readiness_style"])
+    for name in ("source_candle_open_time", "signal_available_at", "expires_at"):
+        if values[name] is not None:
+            values[name] = datetime.fromisoformat(values[name].replace("Z", "+00:00"))
+    return EntryIntent(**values)
 
 
 def _parse_reason(value: str | None) -> ExitReason | str | None:

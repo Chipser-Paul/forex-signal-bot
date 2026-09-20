@@ -42,6 +42,12 @@ backtests/warmup_*/
 backtests/shadow_*/
 backtests/shadow_mode_*/
 backtests/phase7_results/
+backtests/phase8_results/
+validation_results/
+empirical_data/
+phase8_exports/
+*.jsonl.gz.partial
+*.complete.json.partial
 frontend/utils/.bot_process.json
 frontend/utils/.ui_process.json
 runtime/risk_state/
@@ -49,3 +55,5 @@ runtime/execution_state/
 analysis_results.json
 .tmp_*.py
 .kilo/
+# Phase 8N-J/K raw engineering probe artifacts (summaries are committed in probes/PROBES.md)
+probes/*.json
