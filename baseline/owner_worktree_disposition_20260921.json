@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "manifest_kind": "phase8_owner_worktree_disposition_audit",
+  "created_utc": "2026-09-21T15:10:00Z",
+  "owner_worktree": "C:/Users/chips/forex-signal-bot (branch main, HEAD 55f7dd3488eec695fa1b7c1810177e5d40c6932a)",
+  "method": {
+    "description": "Read-only audit. Files were hashed, diffed (tracked) or header-inspected (untracked) without any copy, stage, rename, delete, stash or overwrite. Secret scans were count-only; no credential values were read or printed.",
+    "secret_scan_pattern": "password|passwd|secret|api[_-]?key|token|BEGIN [A-Z ]*PRIVATE KEY|session_key|.env (case-insensitive, count-only)"
+  },
+  "audit_context": {
+    "canonical_tree_relation": "The canonical sanitized tree descends from the same original repository. For the four tracked files, the canonical version equals the owner HEAD version for utils/setup_logger.py and differs for the other three because the phase 3-8 lineage evolved them while the owner folder carried local modifications on top of pre-phase-split code.",
+    "dirty_state_matches_expectation": "4 modified + 6 untracked = 10 paths, matching the task brief."
+  },
+  "dispositions": [
+    {
+      "path": "backtests/shadow_mode_backtest.py",
+      "status": "tracked_modified",
+      "size_bytes": 61316,
+      "sha256_prefix": "e4095fcea1522245",
+      "file_category": "legacy Phase-0-era shadow backtest harness (Python source)",
+      "secret_privacy_classification": "clean - no secret/credential patterns",
+      "canonical_path": "backtests/shadow_mode_backtest.py (exists, phase-7-evolved version)",
+      "semantic_comparison": "Owner adds ~256/-67 lines on top of pre-phase-split code: reproducibility logging (_write_repro_log), structure-reset diagnostics (_patched_update_structure), and tick/period adjustments. The canonical version is the evolution of the same harness through phases 3-7 and is itself superseded by the Phase 8 frozen evaluation pipeline; the owner modifications are a parallel local experiment on the old baseline.",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "Both the base version and the owner variant describe the legacy shadow-mode workflow that the Phase 8 scientific-validation pipeline replaces. Migrating the owner variant would contaminate the frozen evaluation line with non-validated local logic. Preserve as-is in the owner folder."
+    },
+    {
+      "path": "bot/execution/risk_engine.py",
+      "status": "tracked_modified",
+      "size_bytes": 4178,
+      "sha256_prefix": "624be4808c46e6c4",
+      "file_category": "production module (risk engine)",
+      "secret_privacy_classification": "clean",
+      "canonical_path": "bot/execution/risk_engine.py (exists, evolved version)",
+      "semantic_comparison": "Owner adds a read-only property alias max_trades returning max_concurrent_trades. No behavior change; canonical does not contain the alias but computes equivalent behavior from max_concurrent_trades.",
+      "proposed_disposition": "REQUIRES_OWNER_DECISION",
+      "disposition_rationale": "Trivial additive convenience with no semantic effect, but it touches a production module outside any authorized phase scope. Owner should decide whether to fold it into a future maintenance commit; automatic migration is not warranted."
+    },
+    {
+      "path": "bot/state/orchestrator.py",
+      "status": "tracked_modified",
+      "size_bytes": 41162,
+      "sha256_prefix": "dc18debf0d339293",
+      "file_category": "production module (strategy orchestrator)",
+      "secret_privacy_classification": "clean",
+      "canonical_path": "bot/state/orchestrator.py (exists, evolved version)",
+      "semantic_comparison": "Owner moves the atr_val computation earlier in one branch and recomputes it later (behavior-preserving reordering; same value, same formula). The canonical version computes the identical value in its evolved structure.",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "Behavior-preserving local refactor with no unique value; canonical logic already produces the same market_conditions output."
+    },
+    {
+      "path": "utils/setup_logger.py",
+      "status": "tracked_modified",
+      "size_bytes": 3960,
+      "sha256_prefix": "7ce3c34a26575c18",
+      "file_category": "production utility (evaluation logging)",
+      "secret_privacy_classification": "clean",
+      "canonical_path": "utils/setup_logger.py (canonical blob equals owner HEAD blob; the modification is owner-local only)",
+      "semantic_comparison": "Owner adds an optional timestamp parameter to log_setup_evaluation so logged evaluations can carry deterministic event time instead of wall-clock now(). Backward compatible; no caller changes required.",
+      "proposed_disposition": "KEEP_AND_MIGRATE",
+      "disposition_rationale": "Small, additive, behavior-preserving reproducibility improvement that aligns with the Phase 8 determinism goals. Migration itself remains a separately authorized follow-up task; nothing is migrated in this checkpoint."
+    },
+    {
+      "path": "backtests/_trade_period_summary.py",
+      "status": "untracked",
+      "size_bytes": 1822,
+      "sha256_prefix": "d6f345f54263e83e",
+      "file_category": "one-off ad-hoc analysis script",
+      "secret_privacy_classification": "clean",
+      "canonical_path": null,
+      "semantic_comparison": "Hard-codes a path to backtests/shadow_3m_rr15_phase0_with_logging/shadow_mode_trades.csv (a folder that does not exist in the canonical tree) and aggregates buy/sell PnL per period.",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "One-off helper for a July 2026 manual review of Phase-0-era shadow artifacts; the Phase 8 evaluation pipeline produces equivalent summaries deterministically."
+    },
+    {
+      "path": "backtests/diagnostic_compare.py",
+      "status": "untracked",
+      "size_bytes": 4772,
+      "sha256_prefix": "bba8ec089c11f7db",
+      "file_category": "one-off diagnostic comparison script",
+      "secret_privacy_classification": "clean",
+      "canonical_path": null,
+      "semantic_comparison": "Compares Run A vs filtered Run B trades for an Apr 17 - Jul 17 window across legacy shadow outputs; imports reference old module layout.",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "Legacy-window one-off comparison superseded by the frozen Phase 8 evaluation with gate/reason accounting."
+    },
+    {
+      "path": "backtests/diagnostic_report.md",
+      "status": "untracked",
+      "size_bytes": 14315,
+      "sha256_prefix": "00d170a51040c542",
+      "file_category": "historical diagnostic report (Markdown)",
+      "secret_privacy_classification": "clean - contains simulated shadow-backtest results only, no account data",
+      "canonical_path": null,
+      "semantic_comparison": "Report dated 2026-07-30 against pre-phase-split commit 6af59c7a; documents the old engine's behavior. The canonical docs tree records the current validated line.",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "Historical investigation record tied to an obsolete commit; retained in the owner folder for provenance, not carried into the canonical validation line."
+    },
+    {
+      "path": "backtests/strategy_state_audit.md",
+      "status": "untracked",
+      "size_bytes": 12623,
+      "sha256_prefix": "0d849f5b28b0f80e",
+      "file_category": "historical audit report (Markdown)",
+      "secret_privacy_classification": "clean",
+      "canonical_path": null,
+      "semantic_comparison": "StrategyState persistence audit dated 2026-07-30; the questions it investigated were later resolved by the Phase 8 checkpoint/resume verification work (deterministic interruption/resume, equivalence tests).",
+      "proposed_disposition": "SUPERSEDED",
+      "disposition_rationale": "Its findings are superseded by verified Phase 8 state-persistence guarantees; kept in owner folder as history."
+    },
+    {
+      "path": "htf_bias_diagnostic.py",
+      "status": "untracked",
+      "size_bytes": 7757,
+      "sha256_prefix": "73a0405a9add85e3",
+      "file_category": "diagnostic tool (HTF bias tracing)",
+      "secret_privacy_classification": "clean",
+      "canonical_path": null,
+      "semantic_comparison": "Standalone diagnostic capturing an HTF-bias snapshot; written against the pre-phase-split module layout. The canonical tree centralizes bias evaluation inside the validated pipeline.",
+      "proposed_disposition": "REQUIRES_OWNER_DECISION",
+      "disposition_rationale": "Potentially useful debugging aid, but its imports target the old layout and it sits at repository root; compatibility with the canonical tree is unverified. Owner decides whether to modernize and adopt it in a maintenance task."
+    },
+    {
+      "path": "mt5_data_diagnostic.py",
+      "status": "untracked",
+      "size_bytes": 9209,
+      "sha256_prefix": "1da8e7f7690085b4",
+      "file_category": "live-data diagnostic tool (direct MetaTrader5 API)",
+      "secret_privacy_classification": "clean of credentials; touches live broker data access by design",
+      "canonical_path": null,
+      "semantic_comparison": "Direct MT5 connectivity test. The canonical validation tree enforces a strict no-MT5/no-network import firewall (tested); introducing this file would sit against that control.",
+      "proposed_disposition": "PRIVATE_LOCAL_ONLY",
+      "disposition_rationale": "Live-environment tool that belongs to the owner's broker machine, not to the scientific-validation codebase, whose firewall tests prohibit MT5 imports."
+    }
+  ],
+  "summary": {
+    "KEEP_AND_MIGRATE": ["utils/setup_logger.py (proposed only; migration requires separate authorization)"],
+    "ALREADY_INTEGRATED": [],
+    "SUPERSEDED": [
+      "backtests/shadow_mode_backtest.py",
+      "bot/state/orchestrator.py",
+      "backtests/_trade_period_summary.py",
+      "backtests/diagnostic_compare.py",
+      "backtests/diagnostic_report.md",
+      "backtests/strategy_state_audit.md"
+    ],
+    "GENERATED_OR_CACHE": [],
+    "PRIVATE_LOCAL_ONLY": ["mt5_data_diagnostic.py"],
+    "REQUIRES_OWNER_DECISION": ["bot/execution/risk_engine.py", "htf_bias_diagnostic.py"]
+  },
+  "integrity_statement": "No owner file was copied, staged, deleted, renamed, stashed or overwritten during this audit; no secret value was read or printed."
+}

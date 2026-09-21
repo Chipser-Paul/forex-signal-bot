@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "manifest_kind": "phase8_phase_lineage_audit",
+  "created_utc": "2026-09-21T14:35:00Z",
+  "audited_against": {
+    "sanitized_base_commit": "1c593f5e14597b6b25a8abe702457e71a10e545c",
+    "sanitized_base_tree": "62e173d57c5bc624da16e6f21bbb655e11a532b7",
+    "canonical_branch": "integration/phase8-checkpoint-20260921"
+  },
+  "method": {
+    "description": "Read-only audit of local phase worktrees. Phase branch tips were fetched into a temporary integration clone (no source worktree modified) and compared against the sanitized tree using git merge-base ancestry and tree diffs.",
+    "ancestry_test": "git merge-base --is-ancestor <phase_tip> 42c0956704a2fe3e51770807e2768050dd27f6c2",
+    "deletion_test": "git diff --name-status <phase_tree> sanitized_tree over bot/ strategies/ runtime/ utils/ tests/ config/ frontend/ counted deletions"
+  },
+  "result_summary": {
+    "all_phase_tips_are_ancestors_of_phase8_tip": true,
+    "production_path_deletions_between_any_phase_tree_and_sanitized_tree": 0,
+    "phase8_tip_commit": "42c0956704a2fe3e51770807e2768050dd27f6c2",
+    "fail_closed_check": "PASS - no completed-phase production change is missing from the sanitized tree",
+    "conclusion": "The sanitized Phase 8 tree strictly contains every Phase 1-7 final tree plus Phase 8 work; the only differences are later-phase evolution in the linear lineage and the 48 excluded legacy cache pickles."
+  },
+  "phases": [
+    {
+      "phase": 0,
+      "purpose": "Project baseline, gate framework and setup logging groundwork",
+      "local_branch": "main (owner worktree C:/Users/chips/forex-signal-bot)",
+      "final_commit": "55f7dd3488eec695fa1b7c1810177e5d40c6932a",
+      "completion_status": "complete (checkpoint reproducibility fix committed; carried into phase-1 lineage)",
+      "presence_in_sanitized_tree": "PRESENT (superseded by later-phase evolution in normal lineage)",
+      "representative_paths": ["baseline/", "backtests/shadow_mode_backtest.py", "runtime/"],
+      "verification_evidence": "owner main commit lineage; Phase 1 worktree branched from it"
+    },
+    {
+      "phase": 1,
+      "purpose": "Reproducible test baseline and CI harness",
+      "local_branch": "phase/1-baseline (C:/Users/chips/forex-signal-bot-phase1)",
+      "final_commit": "ef52f54b1c33fab45e83410d937eef11f3495cbc",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": [".github/workflows/tests.yml", "pytest.ini", "baseline/phase1_manifest.json", "requirements-dev.txt", "docs/PHASE1_BASELINE.md"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 2,
+      "purpose": "Causal market-data alignment (no future data, no forward filling)",
+      "local_branch": "phase/2-causal-data (C:/Users/chips/forex-signal-bot-phase2)",
+      "final_commit": "d15b386dcae810ee63ca572515a82abbb4d0ebe8",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/data/candles.py", "bot/data/market_data.py", "bot/analysis/dxy_filter.py", "backtests/causal_replay.py"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 3,
+      "purpose": "Execution parity - unify live and backtest trade lifecycle",
+      "local_branch": "phase/3-execution-parity (C:/Users/chips/forex-signal-bot-phase3)",
+      "final_commit": "40521066e67c58b00c0b874a4bf9c260ad3113fa",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/execution/lifecycle/", "backtests/execution_parity_replay.py"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 4,
+      "purpose": "Account-level risk protection",
+      "local_branch": "phase/4-risk-protection (C:/Users/chips/forex-signal-bot-phase4)",
+      "final_commit": "242d2532479842b44b1fe83a87603f72400c7318",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/execution/confluence_scorer.py", "bot/execution/lifecycle/entry.py", "backtests/risk_protection_replay.py"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 5,
+      "purpose": "Broker execution safety and reconciliation",
+      "local_branch": "phase/5-broker-safety (C:/Users/chips/forex-signal-bot-phase5)",
+      "final_commit": "657a377cb239e533ccd15436ba91d28a9cfe4c85",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/execution/broker/", "backtests/broker_safety_replay.py", ".env.example"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 6,
+      "purpose": "Strategy semantics and market filters (frozen phase6 strategy)",
+      "local_branch": "phase/6-strategy-semantics (C:/Users/chips/forex-signal-bot-phase6)",
+      "final_commit": "3c8a9ae39f6c98571f95f2a6657dcf138b4bf272",
+      "completion_status": "complete (candidate phase6-frozen-v1 frozen here)",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/analysis/dxy_filter.py", "bot/execution/news_filter.py", "backtests/strategy_semantics_replay.py", "bot/strategy/"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 7,
+      "purpose": "Realistic cost-aware backtesting",
+      "local_branch": "phase/7-realistic-backtesting (C:/Users/chips/forex-signal-bot-phase7)",
+      "final_commit": "930b3c9f3e69ba5827581c906d192e8acbc167a1",
+      "completion_status": "complete",
+      "presence_in_sanitized_tree": "PRESENT",
+      "representative_paths": ["bot/backtesting/", "backtests/realistic_execution_replay.py", "baseline/phase7_legacy_inventory.json"],
+      "verification_evidence": "tip is ancestor of phase-8 tip; 0 production-path deletions vs sanitized tree"
+    },
+    {
+      "phase": 8,
+      "purpose": "Scientific validation - empirical development evaluation infrastructure (Phases 8A-8N-K)",
+      "local_branch": "phase/8-scientific-validation (C:/Users/chips/forex-signal-bot-phase8)",
+      "final_commit": "42c0956704a2fe3e51770807e2768050dd27f6c2",
+      "completion_status": "IN PROGRESS - infrastructure verified through 8N-K (feature memoization); empirical evaluation NOT executed; feasibility audit pending",
+      "presence_in_sanitized_tree": "PRESENT (sanitized tree = this tree minus 48 legacy cache pickles, plus provenance manifest)",
+      "representative_paths": ["bot/validation/", "backtests/development_evaluation_control.py", "backtests/replay_performance_control.py", "docs/PHASE8N_EMPIRICAL_REPLAY_PERFORMANCE.md", "tests/phase8n_j/", "tests/phase8n_k/"],
+      "verification_evidence": "sanitized-base manifest cross-check; 1,299-test battery green on the sanitized tree; detached clean-snapshot verification of 8N-K"
+    }
+  ]
+}

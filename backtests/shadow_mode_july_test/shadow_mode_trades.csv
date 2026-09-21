@@ -1,8 +1,0 @@
-ticket,symbol,direction,opened_at,closed_at,entry_price,exit_price,sl,tp,risk_price,sl_reason,lot,score,grade,reason,pnl
-1,XAUUSDm,sell,2026-07-01T01:50:00+00:00,2026-07-01T07:50:00+00:00,3976.435,3974.756,3974.756,3932.131,14.768,internal_structure_anchor,0.01,9,B,sl_hit,1.679
-2,XAUUSDm,sell,2026-07-06T05:00:00+00:00,2026-07-06T07:45:00+00:00,4153.955,4165.376,4165.376,4096.828,11.421,internal_structure_anchor,0.01,9,B,sl_hit,-11.421
-3,XAUUSDm,sell,2026-07-07T05:15:00+00:00,2026-07-07T07:45:00+00:00,4122.354,4133.154,4133.154,4049.227,10.8,internal_structure_anchor,0.01,8,B,sl_hit,-10.8
-4,XAUUSDm,sell,2026-07-07T19:00:00+00:00,2026-07-07T19:05:00+00:00,4121.668,4120.141,4120.141,4049.227,12.165,internal_structure_anchor,0.01,8,B,sl_hit,1.527
-5,XAUUSDm,sell,2026-07-10T08:45:00+00:00,2026-07-10T10:20:00+00:00,4095.947,4108.905,4108.905,4049.227,12.958,internal_structure_anchor,0.01,8,B,sl_hit,-12.958
-6,XAUUSDm,sell,2026-07-13T03:00:00+00:00,2026-07-13T05:05:00+00:00,4064.541,4063.944,4063.944,4023.279,13.754,internal_structure_anchor,0.01,9,B,sl_hit,0.597
-7,XAUUSDm,sell,2026-07-13T05:20:00+00:00,2026-07-13T06:20:00+00:00,4061.237,4056.392,4056.392,4023.182,12.685,internal_structure_anchor,0.01,9,B,sl_hit,4.845

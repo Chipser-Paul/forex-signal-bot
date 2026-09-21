@@ -1,0 +1,595 @@
+{
+  "schema_version": 1,
+  "manifest_kind": "phase8_canonical_hygiene_audit",
+  "created_utc": "2026-09-21T16:45:00Z",
+  "canonical_branch": "integration/phase8-checkpoint-20260921",
+  "baseline_commit": "1c593f5e14597b6b25a8abe702457e71a10e545c",
+  "removal_policy": "Only artifacts conclusively proven generated, contaminated or operating-system metadata were removed. No ambiguous file was removed. Broad ignore rules were avoided: desktop.ini is the narrow OS-metadata rule; each legacy shadow output directory is listed individually rather than a broad CSV ignore.",
+  "removed": {
+    "desktop_ini_group": {
+      "group_path_pattern": "**/desktop.ini",
+      "count": 100,
+      "representative_entry": {
+        "path": ".claude/desktop.ini",
+        "git_blob_id": "a3959a2520be57932df9540bdc1e2fa6fd02e5ce",
+        "size_bytes": 104,
+        "sha256": "2c13ef435937fd454641915b9550d6ff9b398560dcc1dda144858758498e484b",
+        "category": "operating-system metadata (Windows Explorer shell config)",
+        "removal_reason": "Windows Explorer/Google Drive File Stream metadata; no repository function",
+        "dependency_evidence": "All 100 files byte-identical (content check); content is a [.ShellClassInfo] IconResource pointing to a machine-local Google Drive File Stream path; zero references from source, tests or config"
+      },
+      "all_paths": [
+        ".claude/desktop.ini",
+        ".streamlit/desktop.ini",
+        ".streamlit/static/desktop.ini",
+        "backtests/cached_data/desktop.ini",
+        "backtests/desktop.ini",
+        "backtests/shadow_mode_atr3x_maxcap40/desktop.ini",
+        "backtests/shadow_mode_atr3x_maxcap40_oos/desktop.ini",
+        "backtests/shadow_mode_early_bos/desktop.ini",
+        "backtests/shadow_mode_july_test/desktop.ini",
+        "backtests/shadow_mode_trail_1_5x/desktop.ini",
+        "backtests/shadow_mode_trail_2stage/desktop.ini",
+        "backtests/shadow_mode_trail_2x/desktop.ini",
+        "backtests/shadow_mode_trail_atr3x/desktop.ini",
+        "backtests/shadow_mode_v5/desktop.ini",
+        "backtests/shadow_mode_wider_sl_v2/desktop.ini",
+        "backtests/shadow_mode_wider_sl_v2_short/desktop.ini",
+        "bot/analysis/desktop.ini",
+        "bot/data/desktop.ini",
+        "bot/desktop.ini",
+        "bot/execution/desktop.ini",
+        "bot/state/desktop.ini",
+        "bot/utils/desktop.ini",
+        "config/desktop.ini",
+        "config/symbol_profiles/desktop.ini",
+        "frontend/desktop.ini",
+        "frontend/ui_pages/desktop.ini",
+        "frontend/utils/desktop.ini",
+        "mobile_app/android/.kotlin/desktop.ini",
+        "mobile_app/android/.kotlin/sessions/desktop.ini",
+        "mobile_app/android/app/desktop.ini",
+        "mobile_app/android/app/src/debug/desktop.ini",
+        "mobile_app/android/app/src/desktop.ini",
+        "mobile_app/android/app/src/main/desktop.ini",
+        "mobile_app/android/app/src/main/java/desktop.ini",
+        "mobile_app/android/app/src/main/java/io/desktop.ini",
+        "mobile_app/android/app/src/main/java/io/flutter/desktop.ini",
+        "mobile_app/android/app/src/main/java/io/flutter/plugins/desktop.ini",
+        "mobile_app/android/app/src/main/kotlin/com/desktop.ini",
+        "mobile_app/android/app/src/main/kotlin/com/example/desktop.ini",
+        "mobile_app/android/app/src/main/kotlin/com/example/mobile_app/desktop.ini",
+        "mobile_app/android/app/src/main/kotlin/desktop.ini",
+        "mobile_app/android/app/src/main/res/desktop.ini",
+        "mobile_app/android/app/src/main/res/drawable-v21/desktop.ini",
+        "mobile_app/android/app/src/main/res/drawable/desktop.ini",
+        "mobile_app/android/app/src/main/res/mipmap-hdpi/desktop.ini",
+        "mobile_app/android/app/src/main/res/mipmap-mdpi/desktop.ini",
+        "mobile_app/android/app/src/main/res/mipmap-xhdpi/desktop.ini",
+        "mobile_app/android/app/src/main/res/mipmap-xxhdpi/desktop.ini",
+        "mobile_app/android/app/src/main/res/mipmap-xxxhdpi/desktop.ini",
+        "mobile_app/android/app/src/main/res/values-night/desktop.ini",
+        "mobile_app/android/app/src/main/res/values/desktop.ini",
+        "mobile_app/android/app/src/profile/desktop.ini",
+        "mobile_app/android/build/desktop.ini",
+        "mobile_app/android/build/reports/desktop.ini",
+        "mobile_app/android/build/reports/problems/desktop.ini",
+        "mobile_app/android/desktop.ini",
+        "mobile_app/android/gradle/desktop.ini",
+        "mobile_app/android/gradle/wrapper/desktop.ini",
+        "mobile_app/desktop.ini",
+        "mobile_app/ios/Flutter/desktop.ini",
+        "mobile_app/ios/Runner.xcodeproj/desktop.ini",
+        "mobile_app/ios/Runner.xcodeproj/project.xcworkspace/desktop.ini",
+        "mobile_app/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/desktop.ini",
+        "mobile_app/ios/Runner.xcodeproj/xcshareddata/desktop.ini",
+        "mobile_app/ios/Runner.xcodeproj/xcshareddata/xcschemes/desktop.ini",
+        "mobile_app/ios/Runner.xcworkspace/desktop.ini",
+        "mobile_app/ios/Runner.xcworkspace/xcshareddata/desktop.ini",
+        "mobile_app/ios/Runner/Assets.xcassets/AppIcon.appiconset/desktop.ini",
+        "mobile_app/ios/Runner/Assets.xcassets/LaunchImage.imageset/desktop.ini",
+        "mobile_app/ios/Runner/Assets.xcassets/desktop.ini",
+        "mobile_app/ios/Runner/Base.lproj/desktop.ini",
+        "mobile_app/ios/Runner/desktop.ini",
+        "mobile_app/ios/RunnerTests/desktop.ini",
+        "mobile_app/ios/desktop.ini",
+        "mobile_app/lib/desktop.ini",
+        "mobile_app/linux/desktop.ini",
+        "mobile_app/linux/flutter/desktop.ini",
+        "mobile_app/linux/runner/desktop.ini",
+        "mobile_app/macos/Flutter/desktop.ini",
+        "mobile_app/macos/Runner.xcodeproj/desktop.ini",
+        "mobile_app/macos/Runner.xcodeproj/project.xcworkspace/desktop.ini",
+        "mobile_app/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/desktop.ini",
+        "mobile_app/macos/Runner.xcodeproj/xcshareddata/desktop.ini",
+        "mobile_app/macos/Runner.xcodeproj/xcshareddata/xcschemes/desktop.ini",
+        "mobile_app/macos/Runner.xcworkspace/desktop.ini",
+        "mobile_app/macos/Runner.xcworkspace/xcshareddata/desktop.ini",
+        "mobile_app/macos/Runner/Assets.xcassets/AppIcon.appiconset/desktop.ini",
+        "mobile_app/macos/Runner/Assets.xcassets/desktop.ini",
+        "mobile_app/macos/Runner/Base.lproj/desktop.ini",
+        "mobile_app/macos/Runner/Configs/desktop.ini",
+        "mobile_app/macos/Runner/desktop.ini",
+        "mobile_app/macos/RunnerTests/desktop.ini",
+        "mobile_app/macos/desktop.ini",
+        "mobile_app/test/desktop.ini",
+        "mobile_app/web/desktop.ini",
+        "mobile_app/web/icons/desktop.ini",
+        "runtime/desktop.ini",
+        "strategies/desktop.ini",
+        "strategies/smc_engine/desktop.ini",
+        "utils/desktop.ini"
+      ]
+    },
+    "legacy_shadow_outputs": {
+      "count": 48,
+      "files": [
+        {
+          "path": "backtests/shadow_3m_rr15/shadow_mode_equity_curve.csv",
+          "git_blob_id": "55e6c8fdd32b8c292677cdbc6c70cc180f1ac698",
+          "size_bytes": 684599,
+          "sha256": "3f2104a81f384f34d1b5ce5a87b381e37970c82a88b2844e509ad0396932c955",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15/shadow_mode_summary.json",
+          "git_blob_id": "422d40699a052f84fa57b10177763c8874802a23",
+          "size_bytes": 26661,
+          "sha256": "0340eae4c711c308ad52c7d1a8484ce6b5620a0562d9bda9366c6f3449956a06",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15/shadow_mode_trades.csv",
+          "git_blob_id": "b0789aaaa48f569b8182c35f7d19dd623711b387",
+          "size_bytes": 9020,
+          "sha256": "1e9b9ea725b68bbf29fb4a7f750c6c741ff2fe6a935b9bb5c43692f9842d1356",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_aligned/shadow_mode_equity_curve.csv",
+          "git_blob_id": "86589b94cdb56768e6f8f415b2edf4c3a5b8d963",
+          "size_bytes": 683999,
+          "sha256": "b3076e6003baf1906d44737944e60f3418da875ebd1c88a89829c376a7d2a6e3",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_aligned/shadow_mode_summary.json",
+          "git_blob_id": "105f98513ca4c24ff0e9f4c3b18b10921cc21a6b",
+          "size_bytes": 32032,
+          "sha256": "234802ccce7ed1b277106ca32a9e76280f23ac3b12eb252aef69c2739aaa2559",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_aligned/shadow_mode_trades.csv",
+          "git_blob_id": "347018e48a286dddf937ff5b796ec6e9ba387549",
+          "size_bytes": 11606,
+          "sha256": "119f382df53bcb200dda23ccfd6e7aca428689b90235d9ed76be928b2f8c5531",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_phase0_baseline/shadow_mode_equity_curve.csv",
+          "git_blob_id": "86589b94cdb56768e6f8f415b2edf4c3a5b8d963",
+          "size_bytes": 683999,
+          "sha256": "b3076e6003baf1906d44737944e60f3418da875ebd1c88a89829c376a7d2a6e3",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_phase0_baseline/shadow_mode_summary.json",
+          "git_blob_id": "105f98513ca4c24ff0e9f4c3b18b10921cc21a6b",
+          "size_bytes": 32032,
+          "sha256": "234802ccce7ed1b277106ca32a9e76280f23ac3b12eb252aef69c2739aaa2559",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr15_phase0_baseline/shadow_mode_trades.csv",
+          "git_blob_id": "347018e48a286dddf937ff5b796ec6e9ba387549",
+          "size_bytes": 11606,
+          "sha256": "119f382df53bcb200dda23ccfd6e7aca428689b90235d9ed76be928b2f8c5531",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr2/shadow_mode_equity_curve.csv",
+          "git_blob_id": "154bd34623f09a8664e3f38c6b60eb0347ed16bd",
+          "size_bytes": 683618,
+          "sha256": "3d54a487fc4871c6f12fcd11ed3b36eda8bd476de7924c53eb002ee6078f8cac",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr2/shadow_mode_summary.json",
+          "git_blob_id": "e242c5bbad83b87a80a78e80a4aebff6be168fd1",
+          "size_bytes": 25834,
+          "sha256": "90bfe0d5ee46e574ebba26cc5980e4c6ddb41bb39e443cc3c7a69c5df593d8f8",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr2/shadow_mode_trades.csv",
+          "git_blob_id": "08ba0d56b0749ac1118d43f726008961a0725f4c",
+          "size_bytes": 9492,
+          "sha256": "91d0c7b981b20f95b1a7beaa5c211de2f26e8d210e0545d3f9009960be2838b1",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr3/shadow_mode_equity_curve.csv",
+          "git_blob_id": "9c71a4a76fc100c80b8ae1b08f7e795f794339da",
+          "size_bytes": 681556,
+          "sha256": "da50ef67062842207bba551e4cbacf8068b460e46a4a090da2b7c3958591eabe",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr3/shadow_mode_summary.json",
+          "git_blob_id": "317a3ece54024ed75791684a78d2a638ac8014a1",
+          "size_bytes": 25788,
+          "sha256": "bf25e1fcc23288609cc778430bc4722c943495436f0d7c1e224fe01526025a12",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_3m_rr3/shadow_mode_trades.csv",
+          "git_blob_id": "b556ad739359247977a0303a949cca6e1c088fec",
+          "size_bytes": 8858,
+          "sha256": "55dd340833e75c41e2580f8bae2b38957b04684538280453221235929095344d",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40/shadow_mode_equity_curve.csv",
+          "git_blob_id": "e0e3d976a3db0ca679d5b22821fce781c4d37ffc",
+          "size_bytes": 672374,
+          "sha256": "359ee0832e5e423369a29a84300958b079145352bdbc5654ce5405170e56c4b2",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40/shadow_mode_summary.json",
+          "git_blob_id": "e191d1a476affe066f51079316a47366d96a57b0",
+          "size_bytes": 3657,
+          "sha256": "acc5eb61ac61542bc2fec3c7e8ce72cb15ee4d0d35baba3dd41fd6d76763cad0",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40/shadow_mode_trades.csv",
+          "git_blob_id": "d50e198971269610d36cc2004ea88f130ec9c8b0",
+          "size_bytes": 10375,
+          "sha256": "15239bc538f87233c9a22c12f51d2997099d0d23c3f0095152f5bb9a7102486b",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40_oos/shadow_mode_equity_curve.csv",
+          "git_blob_id": "6b278ac4b66869954f34d05f654c9bcdd71d78c0",
+          "size_bytes": 1085372,
+          "sha256": "bf6525204e27b10767727fbf2e20ae09e13931a2837fefb72243c29a0b7a1c57",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40_oos/shadow_mode_summary.json",
+          "git_blob_id": "85346369d729fc85c639176e556c1f14ddd888a2",
+          "size_bytes": 2053,
+          "sha256": "3d15ef178b3ebbddd6bc9a18f50adcab7128921dc3a7b0f5ae7e72275fcaa0c4",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_atr3x_maxcap40_oos/shadow_mode_trades.csv",
+          "git_blob_id": "f1a421136d95dcd680d2cecb8291eed4abbbdd73",
+          "size_bytes": 3936,
+          "sha256": "8dba498444df967d02a643856cac86a625ce27e5ba440f1a9bcc2bc858ab38c5",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_early_bos/shadow_mode_equity_curve.csv",
+          "git_blob_id": "3d5b8ef1eca0c37b5c58aca03a8696c99b5b2442",
+          "size_bytes": 629021,
+          "sha256": "9a78a5985e1d4568cec244481a0b12f058554c3075bd44a421e1c5525aeef5bb",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_early_bos/shadow_mode_summary.json",
+          "git_blob_id": "70d76b7ecbec6075bd349bfa0588c54ddbd91960",
+          "size_bytes": 1310,
+          "sha256": "91607731bfc29bd8f3b52280acdf2b466e22ad694035f9025ec641dc743efabb",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_early_bos/shadow_mode_trades.csv",
+          "git_blob_id": "f843104783804a09bb224e3b6a1e3c8e98621c4c",
+          "size_bytes": 9896,
+          "sha256": "0210034a81a88a266f979abc10b05c7a593084bf1d7b6abec4c495303a4a9b92",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_july_test/shadow_mode_equity_curve.csv",
+          "git_blob_id": "2c93214b205ce826ed8c3da5b81c54e551b6946e",
+          "size_bytes": 85317,
+          "sha256": "5ae28b982fc6a0fb35aab15c59745832e5f33d21aabb1e2478441ab823b29974",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_july_test/shadow_mode_summary.json",
+          "git_blob_id": "b86c2373a50ef84894741230d31a5b84857f330f",
+          "size_bytes": 3783,
+          "sha256": "5a953c829b8ae9d2d04c0077f6f524885868e8b418f5e69e9683aa3aa1b89435",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_july_test/shadow_mode_trades.csv",
+          "git_blob_id": "ec8fefaf5f0f77adbb4676ecba3d606f4343e2cd",
+          "size_bytes": 1229,
+          "sha256": "31c4b5b4d0320394e2f1c36b579f8d61d357b5214047c7b19bb57f92c676de0b",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_1_5x/shadow_mode_equity_curve.csv",
+          "git_blob_id": "8df89aeb02bf62dbd71eacd9bf371ae9c86d682f",
+          "size_bytes": 669993,
+          "sha256": "83f2f19a609785d623140da70cd94d1d819d413b30cab8c7cb9faadb67bcb756",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_1_5x/shadow_mode_summary.json",
+          "git_blob_id": "88f57dfe06c02e1f4c4ef60dbea3c6c9bf16edb8",
+          "size_bytes": 9297,
+          "sha256": "e9b7e23f863632cf5c9354309fa63dadcb9833b1e8c56e90cc87194c3685537d",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_1_5x/shadow_mode_trades.csv",
+          "git_blob_id": "a0f53f56df25980e946b4d93c5ec91bb9b080af3",
+          "size_bytes": 8568,
+          "sha256": "e461b62d464f185ae4b8973e893b00130fd6e43624f18cbbc13cb98fbdd20fdb",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2stage/shadow_mode_equity_curve.csv",
+          "git_blob_id": "03c15d77950cab2399f03a8615cd7b09e10e4156",
+          "size_bytes": 669131,
+          "sha256": "d0d0c5918fff70925580e46ba7098fd0a45a2c1a6b5d15dcd2e2f05405b14929",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2stage/shadow_mode_summary.json",
+          "git_blob_id": "0ab7ac6067709b0357d6f10759ec38f0246691f7",
+          "size_bytes": 9299,
+          "sha256": "fc67fdf152281c8d8d7980e834bfa8c97f237a0e0c38a518fc38b6c50c3aa45d",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2stage/shadow_mode_trades.csv",
+          "git_blob_id": "b3ffffe05a30bf18b6c4799cdb1ad1566ee5cabe",
+          "size_bytes": 9070,
+          "sha256": "4c35ae0da0efd65a1c25bf93d269b061024a77c9f7a15e456d57985ce593d3d1",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2x/shadow_mode_equity_curve.csv",
+          "git_blob_id": "a880e7f9598bdb339489de6721d287cb5613c75b",
+          "size_bytes": 662610,
+          "sha256": "d5a711a2d003cc74e4914f422a05d86488c2554702851a6ce4ef0dbbc492ea25",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2x/shadow_mode_summary.json",
+          "git_blob_id": "dbfa8a2a9f6582572ed4b3efd5a2a60b1b08d7ca",
+          "size_bytes": 8897,
+          "sha256": "0aad0a049a027ec89370f8e17648c5d7ec6f1751db017963b8b2fe5a18897bae",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_2x/shadow_mode_trades.csv",
+          "git_blob_id": "9ae7119675f8757d8894741c964ddd24b8dba54d",
+          "size_bytes": 8044,
+          "sha256": "c45086268df3692188ae4fb6d0add13bb0e2541f740798475fe0a31011abc2a1",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_atr3x/shadow_mode_equity_curve.csv",
+          "git_blob_id": "051b3d8faf0ae8d3a87a72d83e5a98a7b6e8cef0",
+          "size_bytes": 671034,
+          "sha256": "829fa730bc344aea5c62acd7a5d605d829a297ef46a151c2fb589ccf157785de",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_atr3x/shadow_mode_summary.json",
+          "git_blob_id": "1f08e6d4944d904cad5652fb8fa33af63825a98c",
+          "size_bytes": 8837,
+          "sha256": "d5aa7a5fea89d7304ca95a301a5bfbec38d07792e56650cba05c9669ede1b243",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_trail_atr3x/shadow_mode_trades.csv",
+          "git_blob_id": "f28cabb60a10fe00ec86567f792e0575ca8ddfe8",
+          "size_bytes": 9582,
+          "sha256": "dd0dfd2e2b12b46d39ff323051a9893e8a191b49d2e16e86da6eb190b14149f1",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_v5/shadow_mode_equity_curve.csv",
+          "git_blob_id": "50c312dc46f5753efcc7853ccff2cc40ff45c546",
+          "size_bytes": 657855,
+          "sha256": "da36356e74b0e21a5bc3f34a46526c2ac494504034c754cb7e83364527f47a66",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_v5/shadow_mode_summary.json",
+          "git_blob_id": "3fae1dbc48cc7a73542fd349b3b12fa0ba6a96de",
+          "size_bytes": 2158,
+          "sha256": "099e7e18abdabc561dbc4fadc651ddd9ccfa6fa0fd743ce9bdd921a808411007",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_v5/shadow_mode_trades.csv",
+          "git_blob_id": "32bc9373306d26f1681bc7277cd09aa9b9f390c1",
+          "size_bytes": 8475,
+          "sha256": "3de7960bea6835c714e57e36b26f201ae092029a9ffb28bd7b9d7b75042a97b2",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2/shadow_mode_equity_curve.csv",
+          "git_blob_id": "c7addedc7191e2e477d48c0d8deb0b91c2f3f1d8",
+          "size_bytes": 657364,
+          "sha256": "bc869bd500bb2781fdc4db49121537c253b7f7d209caad1a56fc63a3c81151cb",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2/shadow_mode_summary.json",
+          "git_blob_id": "0f8484d1a9d7093ad147924cb23d1c58a66bc718",
+          "size_bytes": 9410,
+          "sha256": "e6ba00a4a920e288d359b443e3bc7193cb670d35c6e3a66a8d6706acb44adce2",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2/shadow_mode_trades.csv",
+          "git_blob_id": "2dd11b453d8adb6a6a14744f5aab2e049881b6bc",
+          "size_bytes": 10263,
+          "sha256": "8794a8dfa9ba80c27144138e26f6fb32043b485a98992d5f6ea39920b6dd5d4f",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2_short/shadow_mode_equity_curve.csv",
+          "git_blob_id": "60de48aaf730088293dd5ad8b7bd803dba1cdfa9",
+          "size_bytes": 49137,
+          "sha256": "9bc055fd5a4396c1ae324296fa0abc068c3b204964000bb40175a7e272d86baa",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2_short/shadow_mode_summary.json",
+          "git_blob_id": "85deb6283a365c9a3ad68714001bac2d1ff7f408",
+          "size_bytes": 1290,
+          "sha256": "1fce82e4d31e16d02e4dcdc5fd07cda2998cb6d2b341f0aca65529d1162337de",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        },
+        {
+          "path": "backtests/shadow_mode_wider_sl_v2_short/shadow_mode_trades.csv",
+          "git_blob_id": "8b137891791fe96927ad78e64b0aad7bded08bdc",
+          "size_bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "category": "generated legacy shadow-mode backtest output",
+          "removal_reason": "Generated output of backtests/shadow_mode_backtest.py (--out writes shadow_mode_trades.csv/shadow_mode_equity_curve.csv/shadow_mode_summary.json); not a required fixture",
+          "dependency_evidence": "Files match the harness output schema; git history shows they were added as result snapshots; zero references from tests/, bot/, strategies/, runtime/, utils/, config/, frontend/ (grep verified); only in-tree reference is the standalone one-off backtests/_analyze_v2.py"
+        }
+      ]
+    }
+  },
+  "retained": [
+    {
+      "path": "backtests/_analyze_v2.py",
+      "category": "one-off analysis script (source code)",
+      "reason": "It is source code, not generated data; the task forbids removing source. Its hard-coded dependency on backtests/shadow_mode_wider_sl_v2/shadow_mode_trades.csv now points at an untracked path. It is not imported by any test or module (verified) and pytest cannot collect it, so removal of the CSVs does not affect the suite.",
+      "follow_up": "OWNER_REVIEW: modernize or delete in a separately authorized maintenance task."
+    },
+    {
+      "path": "backtests/shadow_mode_backtest.py",
+      "category": "legacy harness (source code, evolves through phase lineage)",
+      "reason": "Source code retained; produces shadow outputs when run; outputs themselves are not fixtures."
+    }
+  ],
+  "gitignore_additions": [
+    "desktop.ini",
+    "backtests/shadow_3m_rr2/",
+    "backtests/shadow_3m_rr3/",
+    "backtests/shadow_3m_rr15/",
+    "backtests/shadow_3m_rr15_aligned/",
+    "backtests/shadow_3m_rr15_phase0_baseline/",
+    "backtests/shadow_mode_atr3x_maxcap40/",
+    "backtests/shadow_mode_atr3x_maxcap40_oos/",
+    "backtests/shadow_mode_early_bos/",
+    "backtests/shadow_mode_july_test/",
+    "backtests/shadow_mode_trail_1_5x/",
+    "backtests/shadow_mode_trail_2stage/",
+    "backtests/shadow_mode_trail_2x/",
+    "backtests/shadow_mode_trail_atr3x/",
+    "backtests/shadow_mode_v5/",
+    "backtests/shadow_mode_wider_sl_v2/",
+    "backtests/shadow_mode_wider_sl_v2_short/"
+  ],
+  "ambiguity_statement": "No ambiguous artifact was found: desktop.ini was conclusively proven to be Explorer metadata; the 48 shadow data files were conclusively proven to be harness outputs with no fixture role."
+}
