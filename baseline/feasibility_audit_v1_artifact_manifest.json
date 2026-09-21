@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "manifest_kind": "phase8_feasibility_audit_v1_artifact_manifest",
+  "created_utc": "2026-09-21T22:03:54Z",
+  "disposition": "REJECTED_FOR_SAMPLE_SIZE_FUTILITY",
+  "feasibility_verdict": "FEASIBILITY INSUFFICIENT — NO RUN AUTHORIZED",
+  "candidate": "phase6-frozen-v1",
+  "evaluation_plan": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81",
+  "plan_fingerprint": "adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09",
+  "runner_compatibility": "evidence-runner_compatibility-v1-a81ef827217a69c6",
+  "audit_baseline_commit": "c38f9dc8a0c75e7d3a563f98ef927102f37fa9bc",
+  "note": "Raw audit outputs remain outside Git. This manifest lets reviewers verify which external artifacts support the published V1 disposition without copying raw evidence into the repository. Sizes and SHA-256 hashes were computed from the files as they exist at publication time.",
+  "artifacts": [
+    {
+      "logical_artifact_name": "phase8n_k_real_activity_density_fold01",
+      "artifact_role": "fold-01 full-fold real-strategy density probe (historical engineering probe reproduced by the audit)",
+      "file_size_bytes": 638,
+      "sha256": "84d03fa2dedb84e0d7e3518118ea37f34237b6b4b25933a662e0c0bd49a796f2",
+      "modified_utc": "2026-09-19T13:31:25Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-phase8/probes/real_activity_density_fold01.json"
+    },
+    {
+      "logical_artifact_name": "phase8n_k_candidate_density_sample",
+      "artifact_role": "1,000-decision mechanically sampled candidate-density probe (historical engineering probe)",
+      "file_size_bytes": 991,
+      "sha256": "f306ae3788f53df2dd1bb3296cfc27c2832bfcf912a035655fcbc68151840ef9",
+      "modified_utc": "2026-09-18T21:20:52Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-phase8/probes/candidate_density.json"
+    },
+    {
+      "logical_artifact_name": "feasibility_audit_v1_counts_fold01",
+      "artifact_role": "audit reproduction of fold-01 decision accounting through the frozen shared reducer (canonical counts)",
+      "file_size_bytes": 1609,
+      "sha256": "da337a29390adceca7fca87442c580e8e37025449a80680dd55da375a92c16e0",
+      "modified_utc": "2026-09-21T21:25:42Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-data/phase8/feasibility_audit_20260921/counts_fold-01.json"
+    },
+    {
+      "logical_artifact_name": "feasibility_audit_v1_scores_fold01",
+      "artifact_role": "audit gate-11 confluence-score distribution and failed-check counts",
+      "file_size_bytes": 4579,
+      "sha256": "f407332ffe41f779b8ab90ce5699596a34da5ebbd2912a87e36e8bfb23eb5f45",
+      "modified_utc": "2026-09-21T21:32:46Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-data/phase8/feasibility_audit_20260921/scores_fold-01.json"
+    },
+    {
+      "logical_artifact_name": "feasibility_audit_v1_run_log_fold01",
+      "artifact_role": "audit run log for the fold-01 counts reproduction",
+      "file_size_bytes": 1574,
+      "sha256": "e3d4af15fb9b34f5a0eb19db022b7bb87993eacdeca2cca65f1db79cb349b52a",
+      "modified_utc": "2026-09-21T21:20:25Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-data/phase8/feasibility_audit_20260921/run_fold01.log"
+    },
+    {
+      "logical_artifact_name": "fold01_feature_store_identity",
+      "artifact_role": "published fold-01 feature-store identity payload (store fold-01-1d710826193a6767)",
+      "file_size_bytes": 4680,
+      "sha256": "c8828ff782977720f3a0cfcd5e0eb38c01a91a900c3e449648669d3685d4b035",
+      "modified_utc": "2026-09-19T12:25:32Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-data/phase8/evidence/market-feature-store/fold-01-1d710826193a6767/feature-store.json"
+    },
+    {
+      "logical_artifact_name": "fold01_feature_store_completion_marker",
+      "artifact_role": "published fold-01 feature-store completion marker",
+      "file_size_bytes": 240,
+      "sha256": "4306709a5f59482acdd3c3c9da67ddf30e80f88f6a11bf53f4ba180999c4feca",
+      "modified_utc": "2026-09-19T12:25:33Z",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — NOT STRATEGY EVIDENCE, NOT PROFITABILITY EVIDENCE",
+      "storage": "external (outside Git)",
+      "external_path": "C:/Users/chips/forex-signal-bot-data/phase8/evidence/market-feature-store/fold-01-1d710826193a6767/feature-store.complete.json"
+    }
+  ]
+}

@@ -1645,3 +1645,26 @@ documented in
 `docs/PHASE8N_EMPIRICAL_REPLAY_PERFORMANCE.md` §8.9–§8.10; hardware
 diagnostics and fold-03/04 density confirmation are required before any run
 authorization. No empirical evaluation was executed.
+
+## 2026-09-21 — V1 sample-size feasibility disposition (sealed)
+
+The preregistered feasibility gate was executed read-only from the canonical
+checkpoint `c38f9dc8` and returned `FEASIBILITY INSUFFICIENT — NO RUN
+AUTHORIZED`: fold-01 produced zero raw strategy candidates across 13,269
+scheduled decisions (7,273 skip + 5,827 wait + 169 news-blocked; exactly
+reconciled), so the >=30-closed-trades-per-fold requirement is mathematically
+unreachable under `phase6-frozen-v1`. Folds 02-04:
+NOT_ATTEMPTED_DUE_TO_EARLY_FUTILITY. The zero-candidate outcome was
+investigated and classified LEGITIMATE_FROZEN_STRATEGY_BEHAVIOR (526
+decisions reached frozen confluence scoring; best score 7/8 against the
+frozen 8/8 threshold). Disposition: `REJECTED_FOR_SAMPLE_SIZE_FUTILITY`; the
+V1 64-cell plan is retained but `PROHIBITED_DUE_TO_SAMPLE_SIZE_FUTILITY`.
+Evidence: `docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md`; artifact manifest:
+`baseline/feasibility_audit_v1_artifact_manifest.json`; contamination record:
+`phase8n_feasibility_audit_v1_fold01` in
+`baseline/phase8_contamination_register.json`. No profitability metric was
+computed; Phase 0-7 remain complete; Phase 8 infrastructure functioned as
+intended; holdout untouched; fingerprint/canonical-byte engineering debt is
+recorded and must be resolved before any V2 scientific freeze (next research
+identity, when work resumes, should be development-scoped, e.g.
+`phase6-development-v2`; V2 development has not begun).

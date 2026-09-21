@@ -25,6 +25,11 @@ trading and demo execution are out of scope for Phase 8.
   (created 2026-09-21 from the sanitized snapshot)
 - Sanitized root commit: `1c593f5e14597b6b25a8abe702457e71a10e545c`
   (parentless; tree `62e173d57c5bc624da16e6f21bbb655e11a532b7`)
+- **V1 disposition (2026-09-21): `phase6-frozen-v1` is
+  `REJECTED_FOR_SAMPLE_SIZE_FUTILITY` — the frozen candidate is not
+  executable and the V1 64-cell plan is not authorized for execution. See
+  `docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md` and
+  `baseline/feasibility_audit_v1_artifact_manifest.json`.**
 - This checkpoint commit: see `git log -1` on the branch (message:
   `chore: publish sanitized Phase 8 continuation checkpoint`)
 - Provenance manifest: `baseline/phase8_sanitized_snapshot_manifest.json`
@@ -102,7 +107,13 @@ All frozen data lives **outside Git** under
 Every consumption path verifies package/partition manifest hashes before use.
 Never place market data inside the repository.
 
-## 7. Correct evaluation plan (the only one authorized for future execution)
+## 7. Evaluation plan (retained historical preregistration — execution now prohibited)
+
+> **Disposition (2026-09-21):** this plan is retained byte-for-byte as the
+> historical V1 preregistration but its execution for `phase6-frozen-v1` is
+> `PROHIBITED_DUE_TO_SAMPLE_SIZE_FUTILITY` (see section 11 and
+> `docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md`). It is listed here as the
+> identity reference for the frozen artifacts only.
 
 - Package: `evidence-development_evaluation_plan-v1-4a6ab94c3e303c81`
 - Fingerprint: `adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09`
@@ -147,33 +158,58 @@ calls `build_compatibility_record` from `bot/validation/runner_compatibility.py`
     keep heavy work sequential on this machine.
   - The identity chain caught every fault exactly as designed.
 
-## 11. Current blocker: pre-run sample-size feasibility audit
+## 11. Current blocker: pre-run sample-size feasibility audit — **RESOLVED (V1 rejected)**
 
-Before any 64-cell run is authorized, a **sample-size feasibility audit** must
-answer: does the frozen strategy produce enough eligible candidates on the
-frozen data to yield at least 30 closed trades per fold (section 14)? The
-audit counts candidates and rejection reasons only — it must not compute
-profitability.
+The sample-size feasibility audit was completed on 2026-09-21 from the
+canonical checkpoint and concluded `FEASIBILITY INSUFFICIENT — NO RUN
+AUTHORIZED`: fold-01 produced **zero raw strategy candidates** across all
+13,269 scheduled decisions (7,273 skip + 5,827 wait + 169 news-blocked +
+0 candidate_ready = 13,269, exactly reconciled), so
+`closed trades <= 0 < 30` per fold and the preregistered minimum is
+mathematically unreachable under the frozen candidate. Folds 02–04 were not
+attempted due to early futility. `phase6-frozen-v1` is
+`REJECTED_FOR_SAMPLE_SIZE_FUTILITY`; the V1 64-cell plan is retained but
+`PROHIBITED_DUE_TO_SAMPLE_SIZE_FUTILITY`. Full evidence and interpretation:
+`docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md`. No profitability conclusion was
+reached and none may be inferred from this result.
 
 ## 12. Why fold-1's zero-candidate observation requires investigation
 
-A full-fold, real-strategy probe over all 13,269 fold-1 decisions measured
-**zero candidates** (7,273 skip / 5,827 wait decisions, 169 news-blocked) and
-therefore zero fills. Before the 64-cell run, this must be investigated
-without changing strategy semantics: it may be legitimate market behavior for
-the frozen window, but an unnoticed configuration/orchestration regression
-would silently invalidate 64 cells of work. The investigation is a read-only
-analysis task and must be completed and documented first.
+The investigation is complete (2026-09-21, read-only, no semantics changed).
+The zero-candidate outcome is classified **LEGITIMATE_FROZEN_STRATEGY_BEHAVIOR**:
+the accounting reconciles exactly, the frozen gate funnel is internally
+consistent, and among the 526 decisions that reached frozen confluence
+scoring the best raw score was 7/8 against the frozen 8/8 threshold (522
+scored 5/8; FVG/order-block overlap failed 526/526; valid order block failed
+522/526). Full diagnostic detail:
+`docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md` §4. Fold-01 data is now
+development-contaminated for future strategy design (see the
+`phase8n_feasibility_audit_v1_fold01` record in
+`baseline/phase8_contamination_register.json`) and must never be represented
+as untouched validation or holdout evidence for a V2 candidate influenced by
+this result.
 
-## 13. Exact safe next task (no profitability computation)
+## 13. Historical feasibility-audit task record (closed; no profitability computation)
 
-1. Build and publish fold-03 and fold-04 feature stores (resumable build:
-   already-published folds are skipped; run on an idle, cool machine,
-   sequential I/O).
-2. Then count eligible candidates and rejection reasons across all four
-   folds using the published stores and the shared reducer (gate/reason
-   accounting only).
-3. Aggregate the counts into the feasibility verdict.
+The V1 feasibility audit has completed with a rejection, so the tasks below
+are **closed**; they are retained as history.
+
+1. ~~Build and publish fold-03 and fold-04 feature stores~~ — not attempted
+   (early futility at fold-01; never built).
+2. ~~Count eligible candidates and rejection reasons across all four
+   folds~~ — fold-01 counted (zero candidates); folds 02–04 not attempted
+   due to early futility.
+3. ~~Aggregate the counts into the feasibility verdict~~ — verdict:
+   `FEASIBILITY INSUFFICIENT — NO RUN AUTHORIZED` (sealed in
+   `docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md`).
+
+Any future research must use a new candidate identity and should be
+development-scoped rather than frozen (e.g. `phase6-development-v2`). V2
+development has not begun. Before any V2 scientific freeze, the
+`REPRODUCIBILITY_ENGINEERING_DEBT — MUST BE RESOLVED BEFORE V2 SCIENTIFIC
+FREEZE` (newline-dependent fingerprint reproduction; see
+`docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md` §10) must be repaired by a
+versioned canonical-byte contract in a separate task.
 
 ## 14. Acceptance requirement
 
@@ -183,11 +219,19 @@ feasibility must pass before the 64-cell run is authorized.
 
 ## 15. Empirical execution prohibition
 
-**Do not execute any empirical evaluation until (a) the feasibility audit
-passes, and (b) the owner issues a new explicit run authorization.** No
-scenario, fold or fidelity reduction is permitted to force a pass. The
-runner's verification chain refuses invalidated plans, unregistered packages
-and legacy inputs.
+**The V1 64-cell plan `evidence-development_evaluation_plan-v1-4a6ab94c3e303c81`
+for `phase6-frozen-v1` is `PROHIBITED_DUE_TO_SAMPLE_SIZE_FUTILITY` and is not
+authorized for execution.** The separately invalidated plan
+(`evidence-development_evaluation_plan-v1-ba2745f96fda3939`) remains
+`INVALIDATED_BEFORE_EXECUTION`; the two statuses are distinct and must not be
+conflated. No demo or live trading is authorized. Any future evaluation would
+require a new candidate identity, a passing feasibility audit for that
+candidate, and a new explicit owner run authorization. No scenario, fold or
+fidelity reduction is permitted to force a pass. Note: because the V1 plan
+binds the contamination register as of its freeze, the 2026-09-21 register
+append legitimately makes that plan's input-firewall re-verification report
+readiness drift — the frozen fail-closed design working as intended for a
+plan that is no longer authorized.
 
 ## 16. Phase 9 prerequisites
 
