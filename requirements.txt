@@ -1,0 +1,13 @@
+MetaTrader5
+pandas
+numpy
+ta
+scikit-learn
+python-dotenv
+keyring
+termcolor
+firebase-admin
+filelock>=3.16,<4
+fastapi
+uvicorn
+streamlit

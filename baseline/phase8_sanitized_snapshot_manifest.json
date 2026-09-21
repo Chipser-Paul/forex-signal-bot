@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "manifest_kind": "phase8_sanitized_snapshot_provenance",
+  "source_repository_url": "https://github.com/Chipser-Paul/forex-signal-bot.git",
+  "source_branch": "phase/8-scientific-validation",
+  "source_head": "42c0956704a2fe3e51770807e2768050dd27f6c2",
+  "source_tree": "b3206a60500a6a95b9fef8a8391848b68a1538bb",
+  "snapshot_created_utc": "2026-09-21T13:19:09Z",
+  "exclusion_reason": "TRACKED_MARKET_CACHE_EXTERNAL_DATA",
+  "excluded_files": [
+    {
+      "path": "backtests/cached_data/EURUSDm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "92ca40adb9923274f113ede37a9a60858f3524c0",
+      "sha256": "6c2e8b881b18f30a339536ceca5924d2e72327d68e7619a570b848843d5b6b2e"
+    },
+    {
+      "path": "backtests/cached_data/EURUSDm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "bf7519fc20796df2ea54486c1507e234c7c45239",
+      "sha256": "68c5290067fb8f4b6056eeb99274bcd02143143d791d98a075910d42ad8b2d30"
+    },
+    {
+      "path": "backtests/cached_data/EURUSDm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "0fd63d41234090dbfd6f7b6ad81ea897e8a72392",
+      "sha256": "ecc306aefa5e1333aa909007f26417a404cd2a67cedd8cb5bb5027d9e6408489"
+    },
+    {
+      "path": "backtests/cached_data/EURUSDm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "29a72c2385c805f3cd7d1a2409f1651954c9176f",
+      "sha256": "f54ca83e36ecafc881ba72b72aa1f39904477820c55312033db1626bf87028c1"
+    },
+    {
+      "path": "backtests/cached_data/GBPUSDm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "64d0575a60bca20043e0fc5274eec7366eb73f1d",
+      "sha256": "51406dbf143708adebfeb8ae62a3e570bebbb9b30a70e9880ede427ce0147592"
+    },
+    {
+      "path": "backtests/cached_data/GBPUSDm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "a28a3263b95128420a204333281cba6e083b1978",
+      "sha256": "7c19281d31a0a5487733c90fdd82fa4af0f19e374abd1ee4b2de9f88de3d4059"
+    },
+    {
+      "path": "backtests/cached_data/GBPUSDm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "59bae2e9b00270e83a51acf48c78b27fa8059c87",
+      "sha256": "8f6e1d133b600d90697506c8900a749f52c1032cb3a140653a2eb52b78ac11c5"
+    },
+    {
+      "path": "backtests/cached_data/GBPUSDm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "4b45de44d93372ecdf3a0020ed8c07563a8776b1",
+      "sha256": "d2396f1066d0873305291fdace0cc0a99f9fa01ef785e768c676287010117297"
+    },
+    {
+      "path": "backtests/cached_data/USDCADm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "c070694dc2dc4755e1a65f6fe46716a0380f13db",
+      "sha256": "026a49a2800e9a82d17ba6bf57ee982b624eb863620afccd64b63ac1c582686e"
+    },
+    {
+      "path": "backtests/cached_data/USDCADm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "50b9d2272fe56a90136a99bd3128e60a84f93219",
+      "sha256": "df72dfa2a53a49135d63e2d9fae1ecd830447fb076a34386dc1ccc2a929e8aef"
+    },
+    {
+      "path": "backtests/cached_data/USDCADm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "c9d0ee94233233563003e98322bbc22a2107d98c",
+      "sha256": "07edbdd62ca8c56bea9c7dceb22e7f651fafc83f95c0cd489d254d8286f75cd0"
+    },
+    {
+      "path": "backtests/cached_data/USDCADm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "d16bf405b92399355fc75db07a2864ca63c45735",
+      "sha256": "3bef50486f143f79da9b49961ef5a5694a2e19bdb1f17cc170e352ec3ae4c263"
+    },
+    {
+      "path": "backtests/cached_data/USDCHFm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "61f41417d772892899d6375c078494231ca57a9c",
+      "sha256": "a996e278150ba36911523ed31e6f6b3433eb2c274252839a624a1f3c88018875"
+    },
+    {
+      "path": "backtests/cached_data/USDCHFm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "3ff346c2c8ade11bef723ee6c2b2af8869afff33",
+      "sha256": "d75fae48ea91f78f0607fcba59f22ec9ae256ce53e9a1ab6ef6f024d0c8ed17d"
+    },
+    {
+      "path": "backtests/cached_data/USDCHFm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "2dcd221232de1693d71b4bebe2e557a3f28a0552",
+      "sha256": "c5e3c7e4b4ab58627e3ef3b60ecd500f58e8e0ea4588bb74e5e3edd5ee23a85b"
+    },
+    {
+      "path": "backtests/cached_data/USDCHFm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "282572e380396c08e24f7807170586c2e0549740",
+      "sha256": "745244394966eb24b2d52532c30e176e2a4bfdbc48d22a2c83c7a9a97161ffe9"
+    },
+    {
+      "path": "backtests/cached_data/USDJPYm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "36ab05443b7cddaead2e27f5569578a081171fd6",
+      "sha256": "659c00b09647aec729f925beaff3211e5a606c0a002466db9a8262be1a19a6d8"
+    },
+    {
+      "path": "backtests/cached_data/USDJPYm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "7566de8185ba1f08b84fa94eab2f186948e0dc93",
+      "sha256": "828055b08369c15d1cef189cf3b8376dbaf2fe5b8458a07d0195d18aa8cd0177"
+    },
+    {
+      "path": "backtests/cached_data/USDJPYm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "0434d8f579c8e0e3dd42aaa7c583c52530b9c560",
+      "sha256": "6d6885ee8b197af1cc9f736880659c4645358bef2104d7c66974c002167be475"
+    },
+    {
+      "path": "backtests/cached_data/USDJPYm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "ad77362564d47279c2a9dfad705374c33e509120",
+      "sha256": "8e47c963bfe1194298cd8abe140ea48cf3aa48e45d0d1c2fe274bb5516bce943"
+    },
+    {
+      "path": "backtests/cached_data/USDSEKm_H1_20240926_20260228.pkl",
+      "bytes": 531033,
+      "git_blob_id": "cf0ee6cc3c304d4fdb81d0e392bb1a9f9ca76b5b",
+      "sha256": "d7661441993028a114f2a80df514abd45eb665aa09d3c689a50f87f23b737753"
+    },
+    {
+      "path": "backtests/cached_data/USDSEKm_H1_20250224_20260308.pkl",
+      "bytes": 387264,
+      "git_blob_id": "8dbb2db7f57e612f931d534d93674fd460407a84",
+      "sha256": "cd67ee9f84713b47215bf5bbfe8b9bdc6c9f3459130169342e17084ad37806a4"
+    },
+    {
+      "path": "backtests/cached_data/USDSEKm_H1_20250224_20260601.pkl",
+      "bytes": 475104,
+      "git_blob_id": "2ba8f31d3b7fdbc3373ddd6d5572bb6bf14a7880",
+      "sha256": "f798ee13eed194b4ca3b92690a936be9b30bc6daffa64f8d7a72a8e9f2a4ee4a"
+    },
+    {
+      "path": "backtests/cached_data/USDSEKm_H1_20250626_20260713.pkl",
+      "bytes": 390504,
+      "git_blob_id": "c7724fd219cf0f24976147ad8ac27eb795491d74",
+      "sha256": "4bd37a6a8a8a472e48670486cfc0b81c0f1d2918adc2f043cf5a05bc005b5054"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_D1_20240926_20260228.pkl",
+      "bytes": 27966,
+      "git_blob_id": "6124bd535631c5af87b43640c915fee57bb5a860",
+      "sha256": "712cac2ddd9fdba19709fee39c101f951dd9aa8e199d68679ab8d928ded47b30"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_D1_20250224_20260308.pkl",
+      "bytes": 20646,
+      "git_blob_id": "79e72f4e66ef1ff436f71016e608f45785e02eca",
+      "sha256": "d07d8c7b619d14e40fc3250a5ae1e1e107b9304dde5f597dec3c147373dbade3"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_D1_20250224_20260601.pkl",
+      "bytes": 24966,
+      "git_blob_id": "6de96dfaa6d240321b84ee68bfbc12dcb87c6028",
+      "sha256": "a18599aa03abf62a4233471734dd0a19d812ab933b3f12ece780e57efe619d48"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_D1_20250626_20260713.pkl",
+      "bytes": 20886,
+      "git_blob_id": "1188cd8c66a4a347b8e98e7522451af0715ed0f6",
+      "sha256": "4f26bf92742e192fe26396ed34549fcd812e7d4718e4783a83b8fbca501efe24"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H1_20240926_20260228.pkl",
+      "bytes": 505533,
+      "git_blob_id": "7109bf64a15f45ea315e89fb25d4b10a164b733b",
+      "sha256": "5f903bcafacb2f1402b6330de561aae6af52074a0c83936f73b8b6a9f2f5d733"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H1_20250224_20260308.pkl",
+      "bytes": 368484,
+      "git_blob_id": "e56f38d44ba25fb3068034233071db23a8ea6743",
+      "sha256": "c90427c0ef1d399575597e434e2ffae7b8bc922ccf4242ba308ad5ff891b988e"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H1_20250224_20260601.pkl",
+      "bytes": 451164,
+      "git_blob_id": "24a9e2265765b7eab06215114cb7fc41ea41ec4e",
+      "sha256": "ff1cf6d23f87fc8c632bf278169800fec2f61db63488a68ff1d3bb37d1e1ac5a"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H1_20250626_20260713.pkl",
+      "bytes": 371844,
+      "git_blob_id": "6c964fad283e56dd1e3acdad1223520daf3c0325",
+      "sha256": "8a8c4e6208c1b3afe8fbc045db191708823ab26c177e3bda778c0ecdda7aaa6b"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H4_20240926_20260228.pkl",
+      "bytes": 137775,
+      "git_blob_id": "9a87f0fbcb1e0c1d67327c58cee27ad06948d7ff",
+      "sha256": "84d23e74219721ef3e5220117b816c58eb0680c3aae149749237764b19f04db2"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H4_20250224_20260308.pkl",
+      "bytes": 100575,
+      "git_blob_id": "955c3adbf5367a4d84899efd213f68d6404bb113",
+      "sha256": "46f6e0f1d5fb6be4372f7738f277619307c0ef2adbafdd1b644cd2ce696be431"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H4_20250224_20260601.pkl",
+      "bytes": 122895,
+      "git_blob_id": "d9b054b60c3444be3f497f81b9da7ddb76a9e32a",
+      "sha256": "832bbb0eb85cef35bbddfee748e9608440cfb4792c299466bf387e09b2f226fa"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_H4_20250626_20260713.pkl",
+      "bytes": 101475,
+      "git_blob_id": "6001447b67b5485b269238bffbc80c6182194023",
+      "sha256": "dfac1154cb750c6684ca75657c70a04775d785fc49ec2ae1d31ead898055c617"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M15_20240926_20260228.pkl",
+      "bytes": 2015742,
+      "git_blob_id": "d6b7a80d10891632b15fe5aeba94f2c8c11735bc",
+      "sha256": "05d7e8cb97b3e058014a16d0d0e7099eecfcbd029497d886f61c0d55f4b6679a"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M15_20250224_20260308.pkl",
+      "bytes": 1468722,
+      "git_blob_id": "05d7fa129ed0522329dc4fb69f08219cd43540a8",
+      "sha256": "e44871be3ee63d1163ad25c6789497a2ee3c4bdadf49a81c1ef70603299f61dc"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M15_20250224_20260601.pkl",
+      "bytes": 1799262,
+      "git_blob_id": "889149cabba34b92aa6b649a0e4ca5764e7570ff",
+      "sha256": "cb80e8163a0982dfe1a3c6d3afffde959c33ae35f8de7c223feb44bb3a92058a"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M15_20250626_20260713.pkl",
+      "bytes": 1482402,
+      "git_blob_id": "3b894dcfff94e62bfa1cde66db2a5acb72120d91",
+      "sha256": "1a3420c814d82ea071003105c2437f8ea65d6de3d49dee23887113657870d057"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M5_20240926_20260228.pkl",
+      "bytes": 4860770,
+      "git_blob_id": "e1c9abda9cb45fbc00047c5b0fca2cd69c43fa98",
+      "sha256": "188c214b0d6dd323ed7bf010cbd1d4845ee725f986b44327d3c047fd9b8c0417"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M5_20250224_20260308.pkl",
+      "bytes": 4400090,
+      "git_blob_id": "19e777ac4ec8169164c77af855f3a6cfbd0cdfc2",
+      "sha256": "e5e3bc9ea5c2a2b27b11ae46539eb9ee661c92759f6f23bffe07b6f4cd5e551e"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M5_20250224_20260601.pkl",
+      "bytes": 5391650,
+      "git_blob_id": "ebee98fa5393ed5fa3b8653151bda2285b8d80c7",
+      "sha256": "403d452caf809337e69e915ed301289597907b038d099021f273d5a7701ee7f0"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_M5_20250626_20260713.pkl",
+      "bytes": 4442510,
+      "git_blob_id": "f4f84f5edf5a50442b89404d15c442fb5202baf1",
+      "sha256": "3551e93706d2f1887825a81ae4494f20f56b0899e55c29d2a1cad60f0aa9e29b"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_W1_20240926_20260228.pkl",
+      "bytes": 5702,
+      "git_blob_id": "5cb78c77e24784ddb0d201550b79c02eed0763c1",
+      "sha256": "2b211d3f99f72cc5829a372ab2e75ab5a2e46b379b6b9b9d2f7905f53959bb46"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_W1_20250224_20260308.pkl",
+      "bytes": 4502,
+      "git_blob_id": "a2140632114d688be1bfa0116ce2166e33d94753",
+      "sha256": "a776dc45a5fd1cc3c719aae426024f7105e5c4ab74918b95cf7872b37784cc64"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_W1_20250224_20260601.pkl",
+      "bytes": 5222,
+      "git_blob_id": "a4d004a6ef8646635239ccae1adf9cb68a3aad96",
+      "sha256": "4e184f1055b809e68254289caf758121dd77ec9a20efe530d3123c1abc94fb67"
+    },
+    {
+      "path": "backtests/cached_data/XAUUSDm_W1_20250626_20260713.pkl",
+      "bytes": 4562,
+      "git_blob_id": "a08700d6219ae5faccf6268c70113421ea83b93e",
+      "sha256": "a6a92fa3fe2ac71bcd7dd7387da9bd772d685b84915a9e2dbe0436570dbb1357"
+    }
+  ],
+  "excluded_count": 48,
+  "excluded_total_bytes": 38838775,
+  "historical_fernet_key_classification": "frontend/session_key.key existed in this repository's published Git history and must be considered exposed. It is unreachable from this sanitized snapshot commit, but the key is retained in prior remote history and must not be reused. No key was rotated and no history was rewritten in this task; the key value is deliberately not reproduced here.",
+  "raw_data_content_statement": "No raw market data content is included in this snapshot. The 48 excluded pickle files under backtests/cached_data/ contained externally sourced market candle caches and are removed; no replacement cache data is present.",
+  "snapshot_purpose_statement": "This snapshot is a continuation checkpoint of the Phase 8 scientific-validation source tree. It is NOT empirical evidence, contains no evaluation results, no candidate acceptance and no strategy performance data."
+}

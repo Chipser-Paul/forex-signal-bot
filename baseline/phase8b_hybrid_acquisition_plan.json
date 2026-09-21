@@ -1,0 +1,51 @@
+{
+  "benchmark": {
+    "end_exclusive": "2024-08-12T00:00:00Z",
+    "maximum_output_bytes": 1073741824,
+    "start": "2024-08-05T00:00:00Z"
+  },
+  "bulk_storage": {
+    "compression": "zstd",
+    "format": "parquet",
+    "tick_chunk_days": 7
+  },
+  "development": {
+    "end_exclusive": "2025-01-01T00:00:00Z",
+    "start": "2019-01-01T00:00:00Z"
+  },
+  "outstanding_inputs": [
+    "licensed_historical_usd_high_impact_news",
+    "commission_schedule",
+    "historical_or_preregistered_slippage",
+    "rollover_timezone",
+    "historically_effective_symbol_metadata",
+    "licensing_declarations"
+  ],
+  "plan_version": "phase8b-hybrid-v1",
+  "prior_access": [
+    {
+      "access_id": "phase8b-sample-20260831T120000-20260831T121500",
+      "classification": "OUTSIDE_PROPOSED_HOLDOUT",
+      "end_exclusive": "2026-08-31T12:15:00Z",
+      "integrity_manifest": "samples/XAUUSDm/sample-20260831T120000-20260831T121500.manifest.json",
+      "purpose": "bounded-acquisition-integrity-sample",
+      "start": "2026-08-31T12:00:00Z",
+      "strategy_evaluated": false
+    }
+  ],
+  "proposed_untouched_tick_holdout": {
+    "end_exclusive": "2026-08-01T00:00:00Z",
+    "performance_access_permitted": false,
+    "start": "2025-01-01T00:00:00Z",
+    "status": "PROVISIONAL_UNTIL_FINAL_PLAN_HASHED"
+  },
+  "schema_version": 1,
+  "status": "PROPOSED_NOT_FINALIZED",
+  "tick_calibration": {
+    "continuous_coverage_claimed": false,
+    "months": [1, 4, 7, 10],
+    "selection_basis": "calendar-only-no-performance-or-volatility-selection",
+    "selection_rule": "first Monday-starting seven-day UTC block in each selected month of every development year",
+    "years": [2019, 2020, 2021, 2022, 2023, 2024]
+  }
+}

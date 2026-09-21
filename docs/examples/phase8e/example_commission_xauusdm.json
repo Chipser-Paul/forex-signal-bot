@@ -1,0 +1,20 @@
+[
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration schedule from DUMMY_PROVIDER - never ship as real evidence",
+    "symbol": "XAUUSDm",
+    "mode": "PER_LOT_ROUND_TURN",
+    "amount": 10.0,
+    "currency": "USD",
+    "units": "USD per 1.0 lot round turn, charged half per side",
+    "charging_point": "ROUND_TURN",
+    "minimum_charge": 0.0,
+    "rounding": "NONE",
+    "account_type": "EXAMPLE_ONLY standard account",
+    "effective_from": "2024-01-01T00:00:00Z",
+    "effective_to": "2024-12-31T23:59:59Z",
+    "source_description": "EXAMPLE_ONLY - DUMMY_PROVIDER published commission schedule page (fictional)",
+    "source_file_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "licensing_declaration": "EXAMPLE_ONLY - fictional demonstration record; NOT_EMPIRICAL by construction"
+  }
+]

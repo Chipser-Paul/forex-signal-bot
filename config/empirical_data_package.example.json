@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "package_id": "OWNER_TO_ASSIGN",
+  "broker_source": "OWNER_TO_RECORD_BROKER_AND_EXPORT_SOURCE",
+  "fidelity": "TICK_BID_ASK",
+  "evaluation_period": {"name": "OWNER_PERIOD", "start": "OWNER_UTC_START", "end": "OWNER_UTC_END"},
+  "synthetic": false,
+  "collection_method": "OWNER_TO_DOCUMENT_READ_ONLY_EXPORT_METHOD",
+  "created_at": "OWNER_UTC_CREATION_TIMESTAMP",
+  "raw_data_outside_git": true,
+  "streams": [
+    {
+      "name": "xauusdm_execution_quotes",
+      "kind": "EXECUTION_QUOTES",
+      "relative_path": "streams/xauusdm_quotes.jsonl",
+      "sha256": "OWNER_SHA256",
+      "symbol": "XAUUSDm",
+      "start": "OWNER_UTC_START",
+      "end": "OWNER_UTC_END",
+      "record_count": 1,
+      "provenance": "OWNER_TO_DOCUMENT",
+      "license_or_restrictions": "OWNER_TO_DOCUMENT",
+      "timeframe": null,
+      "maximum_expected_gap_seconds": 60
+    }
+  ]
+}

@@ -1,0 +1,295 @@
+{
+  "schema_version": "phase8n.production-mapping-audit.v1",
+  "status": "RECOVERY_CLASSIFICATION_CORRECTED_NEW_RUN_AUTHORIZATION_REQUIRED",
+  "supported_path": "main.py -> bot.state.orchestrator -> bot.state.gate_reducer -> bot.strategy.legacy_adapter -> shared trade levels and Phase 3 intent -> secured Phase 5 confirmation -> shared setup consumption",
+  "diagnostic_path": "backtests.shadow_mode_backtest (not the supported cost-aware empirical runner)",
+  "symbol": "XAUUSDm",
+  "base_decision_timeframe": "M5",
+  "stage2_progress": {
+    "checkpoint_commit_sha1": "a2b358542cfa2f68e6e1b3660e1df2b21a18ac4a",
+    "status": "SYNTHETIC_ACCEPTANCE_PASSED_SUPERSEDING_PLAN_PUBLISHED",
+    "input_type": "bot.state.gate_inputs.StrategyEvaluationInputs",
+    "reducer": "bot.state.gate_reducer.evaluate_strategy_gates",
+    "setup_id_schema": "phase8n.setup-id.v1",
+    "state_schema": "phase8n.setup-state.v2",
+    "consumption_schema": "phase8n.setup-consumption-event.v1",
+    "restart_contract": "phase8n.authoritative-fill-replay.v1",
+    "scenario_cell_contract": "phase8n.scenario-cell-contract.v1",
+    "consumption_scenario_pairs": 16,
+    "complete_lifecycle_pairs": 8,
+    "historical_wrapper": "bot.validation.empirical_strategy_adapter.evaluate_historical_orchestration",
+    "synthetic_full_wrapper_cases_passed": 16,
+    "canonical_decision_engine_mocked": false,
+    "focused_tests_passed": 79,
+    "phase2_to_8_known_defect_tests_passed": 1131,
+    "full_suite": {
+      "passed": 1188,
+      "failed": 0,
+      "skipped": 1,
+      "xfailed": 0,
+      "xpassed": 0,
+      "subtests_passed": 10
+    },
+    "blockers": [
+      "NEW_EMPIRICAL_RUN_AUTHORIZATION_REQUIRED",
+      "APPROVED_STREAMING_EMPIRICAL_RUNNER_REQUIRED"
+    ],
+    "empirical_run_authorized": false
+  },
+  "plan_revision": {
+    "parent_package_id": "evidence-development_evaluation_plan-v1-82ef6fcab5c13547",
+    "parent_plan_fingerprint": "ae9b4e2a17562146f0ade44f758ca015f6ab9b017eaeaf665f7745278b131c79",
+    "parent_status_in_successor": "SUPERSEDED_BEFORE_EXECUTION",
+    "parent_original_bytes_unchanged": true,
+    "package_id": "evidence-development_evaluation_plan-v1-ba2745f96fda3939",
+    "plan_fingerprint": "d69bbed4542d9517dc46d043d12324f6a921a846bca39c30e57fdc3774779c72",
+    "status": "INVALIDATED_BEFORE_EXECUTION",
+    "cell_contract_fingerprint": "474c7aec8d3f6d23b21d7417bf7b22e7fdcb173e8009392a192fe50415dd3d0d",
+    "scenario_count": 16,
+    "fold_count": 4,
+    "cell_count": 64,
+    "implementation_hash_encoding": "UTF8_TEXT_CANONICAL_LF_SHA256",
+    "implementation_fingerprints": {
+      "consumption": "4663b8d6804e40162574d5b010351ad8d6a4a8d0e207e15f397938739fc0f515",
+      "empirical_adapter": "cab6de478da9888881cf7269a4e4788aad82b68be93a180b2890f6bd9f571783",
+      "gate_reducer": "e40899209586367f6eb38b22263759a985995460beb699fef65547951f164b03",
+      "levels_builder": "7c654daf108f6cdbcb87550df55a6d539380203a4d1450c0c1d57c015a9e59dd",
+      "lifecycle_parity": "6a43af9cea0ef74a49e9c69c265d5c3b267391207905411b0a30d3fbdfbb2889",
+      "restart": "e93e9aca3d72adbf5543b3f2c4a369c95f3d571542981a90957839bcb1a9fee7",
+      "state_migration": "d4e2917eedd526d628c6abe9f5cf171cf6be0fabd2be3c882d0f6b4c7d6740a5"
+    },
+    "publication_checks": 2,
+    "gates": {
+      "accepted_for_final_validation": false,
+      "empirical_strategy_evaluation_executed": false,
+      "holdout_access_authorized": false,
+      "phase9_authorized": false,
+      "strategy_evaluation_authorized": false
+    }
+  },
+  "recovery_correction": {
+    "parent_commit_sha1": "e3e9ac4f8bb99ece9c3364097cdfaf82af3e2fd7",
+    "status": "FROZEN_AWAITING_AUTHORIZED_RUN",
+    "faulty_plan_status": "INVALIDATED_BEFORE_EXECUTION",
+    "disposition_package_id": "evidence-development_plan_disposition-v1-dac472a23118c880",
+    "package_id": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81",
+    "plan_fingerprint": "adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09",
+    "predecessor_file_hashes": {
+      "evidence-development_evaluation_plan-v1-82ef6fcab5c13547": {
+        "PUBLISHED": "94357ca9b1853289d60b4c32b4d347f863e73febfd10f4c22fbc7c463fd389a8",
+        "manifest.json": "996fe92c55142e403bbc78bf4f3a62f3ef368f391312e3e0d93d44fa6e55fab5",
+        "manifest.sha256": "04e7de36ea032cd718844b1861ad58f43a6aa8a0fa328ce75a564ef7b77e8d28",
+        "package.json": "d72519e0548674a486600b69984657373ba386fada5244b5fbef944e406a1f5f"
+      },
+      "evidence-development_evaluation_plan-v1-ba2745f96fda3939": {
+        "PUBLISHED": "4ccf1365868cbd787516c163f22d47cf92fe5bc082bec9eb4f067b4bddadeaaf",
+        "manifest.json": "556d132541e6e632d9c7e9f5eaa2a36e373d83abae23452e96afaf856a6a1363",
+        "manifest.sha256": "4d5540e189e0b3bb263016800cdbb9ac5890d22697f6e386a6b20e46d6e1557a",
+        "package.json": "72e73ab66fe60e54c88ce860377cd85c6bf03d823f7b5b4f6692675ad854f50f"
+      }
+    },
+    "publication_checks": 2,
+    "recovery_outcome_contract": {
+      "schema": "phase8n.recovery-outcome.v1",
+      "regression_sha256": "61de1e4e5379215b82b144158ace0804fc1a95428a6e39e3ba135e04ea05a7ca",
+      "publication_code_sha256": "fc2568a5f2bb38cbe6ce7c08f192664c47b2ac8f9ce8d784ad94656c469418e1",
+      "regression_test": "tests/phase8/test_recovery_outcomes.py::test_rejected_entry_cleanup_is_not_consumption",
+      "dimensions": [
+        "state_changed",
+        "consumption_applied",
+        "consumption_already_present",
+        "binding_released",
+        "reconciliation_required",
+        "outcome"
+      ],
+      "consumed_requires": "AUTHORITATIVE_POSITIVE_ENTRY_FILL_AND_APPLIED_CONSUMPTION",
+      "rejected_unfilled": "UNRELATED_FILL_IGNORED",
+      "matched_consumption_replay": "DUPLICATE_IGNORED",
+      "aggregate_priority": [
+        "STATE_CORRUPT",
+        "IDENTITY_MISMATCH_BLOCKED",
+        "UNCERTAIN_BLOCKED",
+        "CONSUMED",
+        "UNRELATED_FILL_IGNORED",
+        "DUPLICATE_IGNORED"
+      ]
+    },
+    "implementation_fingerprints": {
+      "empirical_adapter": "cab6de478da9888881cf7269a4e4788aad82b68be93a180b2890f6bd9f571783",
+      "gate_reducer": "e40899209586367f6eb38b22263759a985995460beb699fef65547951f164b03",
+      "levels_builder": "7c654daf108f6cdbcb87550df55a6d539380203a4d1450c0c1d57c015a9e59dd",
+      "consumption": "328d1254e8b76e90a7124e0687e64b25515def630451e4e84e2e7e400e32c3e7",
+      "restart": "e93e9aca3d72adbf5543b3f2c4a369c95f3d571542981a90957839bcb1a9fee7",
+      "state_migration": "d4e2917eedd526d628c6abe9f5cf171cf6be0fabd2be3c882d0f6b4c7d6740a5",
+      "lifecycle_parity": "6a43af9cea0ef74a49e9c69c265d5c3b267391207905411b0a30d3fbdfbb2889"
+    },
+    "cell_contract_fingerprint": "dc624f125ce1e0014f27d0bc3a0489b03b1ea9b8be3c7088d51a45150aa6aaf6",
+    "gates": {
+      "accepted_for_final_validation": false,
+      "empirical_strategy_evaluation_executed": false,
+      "holdout_access_authorized": false,
+      "phase9_authorized": false,
+      "strategy_evaluation_authorized": false
+    },
+    "tests": {
+      "recovery_outcomes_passed": 23,
+      "focused_passed": 113,
+      "phase2_to_8_known_defects_passed": 1165,
+      "full_passed": 1222,
+      "failed": 0,
+      "skipped": 1,
+      "xfailed": 0,
+      "xpassed": 0,
+      "subtests_passed": 10
+    },
+    "empirical_cells_executed": 0
+  },
+  "historical_entries_context": "The entries below preserve Phase 8N-B; stage2_progress records historical 8N-E test results, plan_revision identifies its invalidated plan, and recovery_correction is the current 8N-F successor.",
+  "entries": [
+    {
+      "required_input": "completed M5 signal candle",
+      "source_timeframes": [
+        "M5"
+      ],
+      "production_function": "bot.data.market_data.fetch_ohlcv",
+      "output_type": "canonical candle frame",
+      "availability_rule": "available_at <= decision_at; exact boundary included",
+      "unsafe_behavior": "insufficient_entry_data",
+      "offline_field": "causal_frames.M5",
+      "identity_contribution": "open_time and available_at",
+      "mapping_status": "EXTRACTED"
+    },
+    {
+      "required_input": "W1/D1/H4/H1/M15 structure history",
+      "source_timeframes": [
+        "W1",
+        "D1",
+        "H4",
+        "H1",
+        "M15"
+      ],
+      "production_function": "bot.analysis.bias_engine.bias_snapshot_from_frames -> resolve_trade_bias",
+      "output_type": "bias snapshot and requested side",
+      "availability_rule": "each frame causal_snapshot at decision_at; no OHLC forward fill",
+      "unsafe_behavior": "INSUFFICIENT_CAUSAL_HISTORY or htf_bias_unconfirmed",
+      "offline_field": "PreparedBias.snapshot and requested_side",
+      "identity_contribution": "last causal open_time per timeframe",
+      "mapping_status": "EXTRACTED_SYNTHETIC_PARITY_ONLY"
+    },
+    {
+      "required_input": "liquidity pools and H1 structure",
+      "source_timeframes": [
+        "H1",
+        "M15",
+        "D1",
+        "W1"
+      ],
+      "production_function": "bot.analysis.liquidity_map.build_liquidity_map_from_frames",
+      "output_type": "liquidity map",
+      "availability_rule": "each frame causal_snapshot at decision_at",
+      "unsafe_behavior": "insufficient_market_data",
+      "offline_field": "prepared liquidity map",
+      "identity_contribution": "causal timeframe open_times",
+      "mapping_status": "EXTRACTED_SYNTHETIC_PARITY_ONLY"
+    },
+    {
+      "required_input": "sweep, displacement, internal structure, OB breaker and FVG context",
+      "source_timeframes": [
+        "H1",
+        "M15",
+        "M5"
+      ],
+      "production_function": "bot.state.orchestrator gates 8-11",
+      "output_type": "SetupEvidence and confluence gate context",
+      "availability_rule": "all component frames closed at decision_at",
+      "unsafe_behavior": "liquidity_sweep_missing; displacement_missing; internal_structure_missing; score_below_threshold",
+      "offline_field": "UNMAPPED SetupEvidence",
+      "identity_contribution": "source candle and setup IDs",
+      "mapping_status": "BLOCKED_STATEFUL_GATE_EXTRACTION"
+    },
+    {
+      "required_input": "six causal DXY constituents",
+      "source_timeframes": [
+        "H1"
+      ],
+      "production_function": "bot.strategy.dxy.evaluate_dxy and bot.analysis.dxy_filter.build_synthetic_dxy_from_frames",
+      "output_type": "DirectionResult",
+      "availability_rule": "Phase 2 backward causal alignment with bounded staleness",
+      "unsafe_behavior": "dxy_unavailable or dxy_constituents_stale",
+      "offline_field": "StrategyInput.dxy",
+      "identity_contribution": "constituent availability timestamps and package hash",
+      "mapping_status": "PURE_REDUCER_EXISTS_ADAPTER_NOT_WIRED"
+    },
+    {
+      "required_input": "fresh USD news provider snapshot",
+      "source_timeframes": [],
+      "production_function": "bot.strategy.news.evaluate_news",
+      "output_type": "SafetyResult",
+      "availability_rule": "event_at UTC; snapshot retrieved_at <= decision_at and age <= frozen max_age",
+      "unsafe_behavior": "stale_or_future_snapshot",
+      "offline_field": "StrategyInput.news",
+      "identity_contribution": "event IDs and provider retrieval timestamp",
+      "mapping_status": "DEVELOPMENT_ONLY_RETROSPECTIVE_EVENT_TIME_VETO_NOT_WIRED; LIVE_FRESHNESS_UNCHANGED"
+    },
+    {
+      "required_input": "UTC session and rollover state",
+      "source_timeframes": [],
+      "production_function": "bot.strategy.sessions.evaluate_session",
+      "output_type": "SessionResult",
+      "availability_rule": "decision_at UTC only",
+      "unsafe_behavior": "session blocked or data unsafe",
+      "offline_field": "StrategyInput.session",
+      "identity_contribution": "decision_at and frozen config fingerprint",
+      "mapping_status": "PURE_REDUCER_EXISTS_ADAPTER_NOT_WIRED"
+    },
+    {
+      "required_input": "mutable StrategyState and supported compatibility/final gate",
+      "source_timeframes": [
+        "M5",
+        "M15",
+        "H1"
+      ],
+      "production_function": "strategies.smc_engine.entry_model.determine_entry",
+      "output_type": "entry dictionary or rejection",
+      "availability_rule": "state updates and expiry must use injected decision clock",
+      "unsafe_behavior": "entry_not_ready",
+      "offline_field": "UNMAPPED entry_type and trigger",
+      "identity_contribution": "setup candidate ID and state transition time",
+      "mapping_status": "STATE_EVENT_TIME_INJECTED; BLOCKED_IMMUTABLE_SETUP_REDUCER_AND_STABLE_ID"
+    },
+    {
+      "required_input": "broker symbol specification, OB zone and setup anchors",
+      "source_timeframes": [
+        "M5",
+        "M15",
+        "H1"
+      ],
+      "production_function": "main._build_orchestrator_trade_levels -> bot.strategy.trade_levels.build_trade_levels",
+      "output_type": "absolute stop, absolute final target or rejection",
+      "availability_rule": "anchors from closed causal frames; metadata effective at decision_at",
+      "unsafe_behavior": "level_build_failed",
+      "offline_field": "LevelInputs/LevelResult available; final-gate orchestration unmapped",
+      "identity_contribution": "entry trigger and anchor IDs",
+      "mapping_status": "PURE_BUILDER_LIVE_DELEGATED; BLOCKED_UPSTREAM_SETUP_AND_OFFLINE_FINAL_GATE"
+    },
+    {
+      "required_input": "approved entry dictionary and source candle",
+      "source_timeframes": [
+        "M5"
+      ],
+      "production_function": "bot.execution.live_adapter.intent_from_strategy_entry",
+      "output_type": "Phase 3 EntryIntent",
+      "availability_rule": "source candle barrier and first eligible later event",
+      "unsafe_behavior": "no intent when entry or levels absent",
+      "offline_field": "UNMAPPED entry_intent",
+      "identity_contribution": "source event ID, signal availability and stable signal ID",
+      "mapping_status": "BLOCKED_UPSTREAM_FIELDS"
+    }
+  ],
+  "gates": {
+    "empirical_evaluation_authorized": false,
+    "holdout_access_authorized": false,
+    "final_validation_authorized": false,
+    "phase9_authorized": false
+  }
+}

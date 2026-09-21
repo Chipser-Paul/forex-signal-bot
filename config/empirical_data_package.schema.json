@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.invalid/forex-signal-bot/phase8/empirical-data-package.schema.json",
+  "title": "Phase 8 Empirical Data Package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "package_id", "broker_source", "fidelity", "evaluation_period", "streams", "synthetic", "collection_method", "created_at", "raw_data_outside_git"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "package_id": {"type": "string", "minLength": 1},
+    "broker_source": {"type": "string", "minLength": 1},
+    "fidelity": {"enum": ["TICK_BID_ASK", "BAR_BID_ASK", "MID_BAR_WITH_OBSERVED_COSTS", "MID_BAR_WITH_ASSUMED_COSTS", "INSUFFICIENT_FOR_VALIDATION"]},
+    "evaluation_period": {"$ref": "#/$defs/period"},
+    "synthetic": {"type": "boolean"},
+    "collection_method": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "raw_data_outside_git": {"const": true},
+    "streams": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stream"}}
+  },
+  "$defs": {
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "start", "end"],
+      "properties": {"name": {"type": "string"}, "start": {"type": "string", "format": "date-time"}, "end": {"type": "string", "format": "date-time"}}
+    },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind", "relative_path", "sha256", "symbol", "start", "end", "record_count", "provenance", "license_or_restrictions"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["EXECUTION_QUOTES", "ANALYSIS_CANDLES", "DXY_CONSTITUENT", "DIRECT_DXY", "NEWS_EVENTS", "BROKER_METADATA", "SLIPPAGE_OBSERVATIONS"]},
+        "relative_path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "symbol": {"type": "string", "minLength": 1},
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "record_count": {"type": "integer", "minimum": 1},
+        "provenance": {"type": "string", "minLength": 1},
+        "license_or_restrictions": {"type": "string", "minLength": 1},
+        "timeframe": {"type": ["string", "null"]},
+        "maximum_expected_gap_seconds": {"type": ["integer", "null"], "minimum": 1}
+      }
+    }
+  }
+}

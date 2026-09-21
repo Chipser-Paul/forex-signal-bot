@@ -1,0 +1,20 @@
+[
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration schedule from DUMMY_PROVIDER - never ship as real evidence",
+    "symbol": "XAUUSDm",
+    "account_type": "EXAMPLE_ONLY standard account",
+    "units": "ACCOUNT_CURRENCY_PER_LOT",
+    "swap_long": -12.34,
+    "swap_short": 5.67,
+    "rollover_timezone": "Etc/GMT-2",
+    "rollover_time": "00:00",
+    "triple_swap_weekday": "WEDNESDAY",
+    "holiday_exceptions": [],
+    "effective_from": "2024-01-01T00:00:00Z",
+    "effective_to": "2024-12-31T23:59:59Z",
+    "source_description": "EXAMPLE_ONLY - DUMMY_PROVIDER swap rates page dated within 2024 (fictional)",
+    "source_file_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "licensing_declaration": "EXAMPLE_ONLY - fictional demonstration record; NOT_EMPIRICAL by construction"
+  }
+]

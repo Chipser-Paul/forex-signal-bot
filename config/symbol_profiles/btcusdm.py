@@ -1,0 +1,35 @@
+PROFILE = {
+    "structure_tf": "H1",
+    "structure_bars": 360,
+    "entry_tf": "M15",
+    "entry_bars": 180,
+    "pair_limit": 1,
+    "risk_per_trade": 0.005,
+    "min_execution_rr": 1.4,
+    "kill_switch_min_bars": 6,
+    "kill_switch_atr_break_mult": 0.25,
+    "market_structure": {
+        "DISPLACEMENT_ATR_MULT": 1.35,
+        "LOW_VOL_RATIO": 0.65,
+        "HIGH_VOL_RATIO": 1.7,
+        "MIN_SWING_ATR_MULT": 0.85,
+        "PRESSURE_MIN_MOVE_ATR": 1.6,
+        "PRESSURE_MIN_BAR_COUNT": 4,
+    },
+    "liquidity": {
+        "lookback": 24,
+        "SWEEP_STRENGTH_MIN": 0.28,
+        "BODY_DOMINANCE_MIN": 0.40,
+        "EQ_TOL_ATR_MULT": 0.12,
+        "LOW_VOL_SKIP_RATIO": 0.55,
+    },
+    "displacement": {
+        "impulse_atr_mult": 1.45,
+        "lookback_candles": 4,
+    },
+    "ob_breaker": {
+        "level_pad_atr_mult": 0.25,
+        "lookback": 36,
+        "search_back": 16,
+    },
+}

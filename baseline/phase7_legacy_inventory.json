@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "source_manifest": "baseline/phase1_manifest.json",
+  "fidelity_class": "INSUFFICIENT_FOR_VALIDATION",
+  "result_label": "DIAGNOSTIC \u2014 NOT VALIDATED",
+  "result_set_count": 16,
+  "cache_pickle_count": 44,
+  "inventory_hash_source": "baseline/phase1_manifest.json",
+  "reason_codes": [
+    "MISSING_BID_ASK_PROVENANCE",
+    "MISSING_SLIPPAGE_PROVENANCE",
+    "MISSING_COMMISSION_PROVENANCE",
+    "MISSING_SWAP_PROVENANCE",
+    "MISSING_INTRABAR_PATH",
+    "MISSING_REPRODUCIBLE_RUN_MANIFEST"
+  ],
+  "preserved_read_only": true,
+  "profitability_evidence": false
+}

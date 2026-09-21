@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "source": "Phase 1 evidence inventory and current tracked-tree audit",
+  "policy": "All listed periods and artifacts are contaminated for final holdout selection.",
+  "artifacts": [
+    {"artifact_id":"shadow_3m_rr15","category":"LEGACY_RESULT","start":"2026-04-17T00:00:00Z","end":"2026-07-19T00:00:00Z","parameter_configuration":"RR 1.5 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_3m_rr15_aligned","category":"LEGACY_RESULT","start":"2026-04-17T00:00:00Z","end":"2026-07-19T00:00:00Z","parameter_configuration":"RR 1.5 aligned diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_3m_rr15_phase0_baseline","category":"LEGACY_RESULT","start":"2026-04-17T00:00:00Z","end":"2026-07-19T00:00:00Z","parameter_configuration":"RR 1.5 Phase 0 baseline","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_3m_rr2","category":"LEGACY_RESULT","start":"2026-04-17T00:00:00Z","end":"2026-07-19T00:00:00Z","parameter_configuration":"RR 2 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_3m_rr3","category":"LEGACY_RESULT","start":"2026-04-17T00:00:00Z","end":"2026-07-19T00:00:00Z","parameter_configuration":"RR 3 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_atr3x_maxcap40","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"ATR 3x/max cap 40 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_atr3x_maxcap40_oos","category":"LEGACY_RESULT","start":"2025-10-01T00:00:00Z","end":"2026-03-02T00:00:00Z","parameter_configuration":"ATR 3x/max cap 40 labeled OOS","reason":"already viewed; no longer untouched"},
+    {"artifact_id":"shadow_mode_early_bos","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"early BOS diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_july_test","category":"LEGACY_RESULT","start":"2026-07-01T00:00:00Z","end":"2026-07-15T00:00:00Z","parameter_configuration":"July diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_trail_1_5x","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"trailing 1.5x diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_trail_2stage","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"two-stage trailing diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_trail_2x","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"trailing 2x diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_trail_atr3x","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"ATR trailing 3x diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_v5","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"v5 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_wider_sl_v2","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-06-03T00:00:00Z","parameter_configuration":"wider stop v2 diagnostic","reason":"performance viewed before preregistration"},
+    {"artifact_id":"shadow_mode_wider_sl_v2_short","category":"LEGACY_RESULT","start":"2026-03-01T00:00:00Z","end":"2026-03-10T00:00:00Z","parameter_configuration":"short wider-stop diagnostic","reason":"performance viewed before preregistration"}
+  ],
+  "cache_inventory": {
+    "phase1_reported_count": 44,
+    "current_tracked_count": 48,
+    "count_discrepancy_fails_closed": true,
+    "paths": [
+      "backtests/cached_data/EURUSDm_H1_20240926_20260228.pkl","backtests/cached_data/EURUSDm_H1_20250224_20260308.pkl","backtests/cached_data/EURUSDm_H1_20250224_20260601.pkl","backtests/cached_data/EURUSDm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/GBPUSDm_H1_20240926_20260228.pkl","backtests/cached_data/GBPUSDm_H1_20250224_20260308.pkl","backtests/cached_data/GBPUSDm_H1_20250224_20260601.pkl","backtests/cached_data/GBPUSDm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/USDCADm_H1_20240926_20260228.pkl","backtests/cached_data/USDCADm_H1_20250224_20260308.pkl","backtests/cached_data/USDCADm_H1_20250224_20260601.pkl","backtests/cached_data/USDCADm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/USDCHFm_H1_20240926_20260228.pkl","backtests/cached_data/USDCHFm_H1_20250224_20260308.pkl","backtests/cached_data/USDCHFm_H1_20250224_20260601.pkl","backtests/cached_data/USDCHFm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/USDJPYm_H1_20240926_20260228.pkl","backtests/cached_data/USDJPYm_H1_20250224_20260308.pkl","backtests/cached_data/USDJPYm_H1_20250224_20260601.pkl","backtests/cached_data/USDJPYm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/USDSEKm_H1_20240926_20260228.pkl","backtests/cached_data/USDSEKm_H1_20250224_20260308.pkl","backtests/cached_data/USDSEKm_H1_20250224_20260601.pkl","backtests/cached_data/USDSEKm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_D1_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_D1_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_D1_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_D1_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_H1_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_H1_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_H1_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_H1_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_H4_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_H4_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_H4_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_H4_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_M15_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_M15_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_M15_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_M15_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_M5_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_M5_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_M5_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_M5_20250626_20260713.pkl",
+      "backtests/cached_data/XAUUSDm_W1_20240926_20260228.pkl","backtests/cached_data/XAUUSDm_W1_20250224_20260308.pkl","backtests/cached_data/XAUUSDm_W1_20250224_20260601.pkl","backtests/cached_data/XAUUSDm_W1_20250626_20260713.pkl"
+    ]
+  }
+}

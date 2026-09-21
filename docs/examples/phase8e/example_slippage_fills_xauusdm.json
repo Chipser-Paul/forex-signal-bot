@@ -1,0 +1,40 @@
+[
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional sanitized fill from DUMMY_PROVIDER - never ship as real evidence",
+    "fill_id": "EXAMPLE_ONLY-0000000001",
+    "symbol": "XAUUSDm",
+    "side": "BUY",
+    "action": "ENTRY_MARKET",
+    "request_utc": "2024-03-06T14:00:05Z",
+    "quote_utc": "2024-03-06T14:00:05Z",
+    "requested_price": 2128.10,
+    "fill_price": 2128.13,
+    "requested_volume": 0.1,
+    "filled_volume": 0.1,
+    "spread_at_request": 0.13,
+    "account_type": "EXAMPLE_ONLY demo account",
+    "point": 0.01,
+    "source_log_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "observation_interval_utc": ["2024-03-06T14:00:00Z", "2024-03-06T14:00:10Z"]
+  },
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional sanitized fill from DUMMY_PROVIDER - never ship as real evidence",
+    "fill_id": "EXAMPLE_ONLY-0000000002",
+    "symbol": "XAUUSDm",
+    "side": "SELL",
+    "action": "STOP_LOSS",
+    "request_utc": "2024-03-06T15:30:02Z",
+    "quote_utc": "2024-03-06T15:30:02Z",
+    "requested_price": 2126.50,
+    "fill_price": 2126.44,
+    "requested_volume": 0.1,
+    "filled_volume": 0.05,
+    "spread_at_request": 0.15,
+    "account_type": "EXAMPLE_ONLY demo account",
+    "point": 0.01,
+    "source_log_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "observation_interval_utc": ["2024-03-06T15:30:00Z", "2024-03-06T15:30:05Z"]
+  }
+]

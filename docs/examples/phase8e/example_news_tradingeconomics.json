@@ -1,0 +1,52 @@
+[
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration data from DUMMY_PROVIDER - never ship as real evidence",
+    "CalendarId": 999001,
+    "Date": "2024-01-05T13:30:00+00:00",
+    "Country": "United States",
+    "Currency": "USD",
+    "Importance": 3,
+    "Event": "EXAMPLE_ONLY - Dummy nonfarm payrolls release (DUMMY_PROVIDER)"
+  },
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration data from DUMMY_PROVIDER - never ship as real evidence",
+    "CalendarId": 999002,
+    "Date": "2024-03-20T18:00:00+00:00",
+    "Country": "US",
+    "Currency": "USD",
+    "Importance": 3,
+    "Event": "EXAMPLE_ONLY - Dummy federal funds rate decision (DUMMY_PROVIDER)"
+  },
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration data from DUMMY_PROVIDER - never ship as real evidence",
+    "CalendarId": 999003,
+    "Date": "2024-11-01T00:00:00+00:00",
+    "Country": "United States",
+    "Currency": "USD",
+    "Importance": 2,
+    "Event": "EXAMPLE_ONLY - Dummy medium-impact ISM manufacturing PMI (DUMMY_PROVIDER)"
+  },
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration data from DUMMY_PROVIDER - never ship as real evidence",
+    "CalendarId": 999004,
+    "Date": "2024-12-31T23:00:00+00:00",
+    "Country": "United States",
+    "Currency": "USD",
+    "Importance": 3,
+    "Event": "EXAMPLE_ONLY - Dummy year-end high-impact consumer confidence (DUMMY_PROVIDER)"
+  },
+  {
+    "EXAMPLE_ONLY": true,
+    "NOT_EMPIRICAL": "Fictional demonstration data from DUMMY_PROVIDER - never ship as real evidence",
+    "CalendarId": 999005,
+    "Date": "2024-02-01T09:00:00+00:00",
+    "Country": "Germany",
+    "Currency": "EUR",
+    "Importance": 3,
+    "Event": "EXAMPLE_ONLY - Dummy EUR row proving the USD currency filter (DUMMY_PROVIDER)"
+  }
+]
