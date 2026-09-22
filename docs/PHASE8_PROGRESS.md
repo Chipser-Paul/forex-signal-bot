@@ -1687,3 +1687,17 @@ authorized task: the V2 semantic diagnostic stage on Fold 01 only
 (read-only structural diagnostics under the charter's hypothesis
 register; no profitability metrics). No demo/live trading is
 authorized.
+
+V2 preregistration (2026-09-21): hypotheses `phase8-v2-H001`
+(exact-overlap possibly stricter than the economic concept),
+`phase8-v2-H002` (conjunctively restrictive valid-OB predicate) and
+`phase8-v2-H003` (temporal association, later diagnostic) registered
+in the append-only `baseline/phase8_v2_hypothesis_register.json`;
+diagnostic `phase8-v2-D001` (Frozen OB/FVG Structural Attrition
+Decomposition) preregistered in `docs/PHASE8_V2_DIAGNOSTIC_D001.md`
+as `REGISTERED_NOT_EXECUTED`. Diagnostic budget remains `0 / 12
+executed`; no new Fold-01 observation occurred during
+preregistration; no strategy variant has been observed so the
+8-variant/4-parameter budget lock is not yet triggered. Folds 02-04
+remain reserved; holdout untouched. Next authorized task:
+implement and execute D001 exactly as preregistered.

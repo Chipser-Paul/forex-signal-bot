@@ -248,6 +248,29 @@ demo/live trading is authorized.
   hypothesis register; no profitability metrics).
 - No demo/live trading is authorized.
 
+**V2 preregistration record (D001 stage).**
+
+- Hypotheses `phase8-v2-H001` (OB/FVG exact-overlap may be stricter
+  than the economic concept), `phase8-v2-H002` (valid-OB predicate
+  may be conjunctively restrictive) and `phase8-v2-H003` (temporal
+  association; later diagnostic) are registered in the append-only
+  register `baseline/phase8_v2_hypothesis_register.json`, bound to the
+  sealed charter identity and hash.
+- Diagnostic `phase8-v2-D001` (Frozen OB/FVG Structural Attrition
+  Decomposition) is preregistered in
+  `docs/PHASE8_V2_DIAGNOSTIC_D001.md` with status
+  `REGISTERED_NOT_EXECUTED`.
+- Diagnostic budget remains `0 / 12 executed` (registration consumes
+  nothing). No new Fold-01 observation occurred during
+  preregistration.
+- Next authorized task after publication: implement and execute D001
+  exactly as preregistered (read-only tooling, Fold 01 only,
+  structural metrics only, fail-closed stop conditions).
+- Folds 02-04 remain reserved (sequential fail-fast release); holdout
+  remains untouched. No strategy variant result has been observed,
+  so the 8-variant/4-parameter budget lock has not yet been
+  triggered.
+
 ## 14. Acceptance requirement
 
 The evaluation plan requires **at least 30 closed trades per fold**

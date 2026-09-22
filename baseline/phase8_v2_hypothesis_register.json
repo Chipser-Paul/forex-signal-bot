@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "register_kind": "phase8_v2_hypothesis_register",
+  "created_utc": "2026-09-21T00:00:00Z",
+  "charter": {
+    "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+    "sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+    "path": "docs/PHASE8_V2_RESEARCH_CHARTER.md",
+    "status": "APPROVED / PREREGISTERED"
+  },
+  "research_identity": "phase6-development-v2",
+  "canonical_preregistration_commit_basis": "a54d3fc6a5c802114278fcf67f6564af47a35b43",
+  "policy": {
+    "append_only": true,
+    "immutability": "Hypothesis records published in a commit are immutable: never edited, rewritten or deleted. Results are appended as separate linked result records (result_records) that reference the hypothesis_id; the original hypothesis text can never be silently changed. A hypothesis may only be marked ABANDONED/WITHDRAWN through a new result record.",
+    "id_rule": "IDs are monotonic in registration order (H001, H002, ...) and never reused.",
+    "registration_before_testing": "Per charter section 9, an ID must exist in this register before any testing; a diagnostic or variant may only cite registered IDs.",
+    "data_boundaries": "data_permitted for these hypotheses is Tier A (Fold 01) only per the charter; Folds 02-04 are reserved and released sequentially and fail-fast; holdout is inaccessible.",
+    "budget_accounting": {
+      "diagnostic_budget_max": 12,
+      "diagnostics_registered": 1,
+      "diagnostics_executed": 0,
+      "registration_consumes_budget": false,
+      "strategy_variant_budget_max": 8,
+      "strategy_variants_observed": 0,
+      "numeric_parameter_trial_budget_max": 4,
+      "numeric_parameter_trials_observed": 0,
+      "upward_revision_lock": "Per charter section 11: before the first strategy-variant result is observed the charter may still be corrected during supervisory review; after the first strategy-variant result is observed, upward budget revision is prohibited. No variant result has been observed."
+    }
+  },
+  "hypotheses": [
+    {
+      "hypothesis_id": "phase8-v2-H001",
+      "registered_utc": "2026-09-21T00:00:00Z",
+      "statement": "The frozen V1 requirement that a valid order block and fair-value gap satisfy an exact contemporaneous geometric overlap may be stricter than the underlying economic idea being represented. A causally related displacement structure may exist even when the two detected price regions do not literally overlap at the decision timestamp.",
+      "economic_rationale": "An order block and the displacement imbalance represented by an FVG describe related but not necessarily geometrically identical aspects of a price move. A displacement can originate from or react around a prior structural zone without requiring the two price intervals to intersect exactly.",
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "implementation_boundary": "D001 must not implement alternative overlap acceptance rules; no candidate count under an alternative overlap rule may be calculated.",
+      "code_components": [
+        "bot/state/gate_reducer.py (gate_11_confluence_score: fvg_in_ob geometry, atr*0.30 tolerance, first FVG only)",
+        "bot/state/gate_inputs.py (displacement/fvg decoding)",
+        "bot/strategy/confluence.py (fvg_overlap component)",
+        "bot/strategy/models.py (SetupEvidence.fvg_overlaps_order_block)"
+      ],
+      "expected_qualitative_effect": "If H001 is relevant, decisions reaching the structural stage should show that OB availability, FVG availability, and exact-overlap availability fail at materially different rates rather than all failing because neither structure exists.",
+      "expected_frequency_effect": "Qualitative only at this stage: relaxation of a sufficient-but-possibly-overstrict geometric conjunction would be expected to increase candidate frequency; no number is predicted and none may be computed by D001.",
+      "potential_failure_mode": "If OB and FVG availability themselves are near-zero, or the overlap conjunction is not a material attrition point (rates similar to structure absence), the geometric relationship is not the binding constraint and H001 is unsupported for V2 purposes.",
+      "data_permitted": ["TIER_A_FOLD01"],
+      "metrics_permitted": [
+        "gate reach funnel counts",
+        "OB state/reason decomposition",
+        "FVG state/reason decomposition",
+        "OB x FVG contingency counts",
+        "canonical overlap geometry description",
+        "direction consistency counts"
+      ],
+      "implementation_required": false,
+      "status": "REGISTERED",
+      "result": null,
+      "disposition": null
+    },
+    {
+      "hypothesis_id": "phase8-v2-H002",
+      "registered_utc": "2026-09-21T00:00:00Z",
+      "statement": "The frozen valid-order-block predicate may be conjunctively restrictive: individual OB structural or lifecycle subconditions may occur reasonably often while their required simultaneous conjunction makes valid_order_block rare.",
+      "economic_rationale": "OB identification, displacement confirmation, directional context, mitigation state, invalidation state and age are conceptually distinct properties. Requiring every property simultaneously may encode a narrower event than the intended structural concept.",
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "implementation_boundary": "D001 does not remove or weaken any OB condition; it only decomposes the existing canonical predicate's observable states and reasons.",
+      "code_components": [
+        "bot/strategy/order_blocks.py (detect_order_blocks, evaluate_order_block)",
+        "bot/strategy/config.py (order_block configuration: expiry bars and related parameters)",
+        "bot/state/gate_reducer.py (canonical_strategy gate ORDER_BLOCK_UNAVAILABLE / ORDER_BLOCK_DIRECTION_CONFLICT paths)"
+      ],
+      "expected_qualitative_effect": "If H002 is relevant, the diagnostic should reveal concentration in one or more specific OB subpredicate failures (e.g. a single lifecycle state dominating BlockState outcomes) rather than an absence of all OB-like structure.",
+      "expected_frequency_effect": "Qualitative only: relieving a dominant single subpredicate failure would be expected to increase valid-OB availability; no number is predicted and none may be computed by D001.",
+      "potential_failure_mode": "If OB-like structure is genuinely rare (no_confirmed_block dominates with little concentration elsewhere), the conjunction is not the bottleneck and H002 is unsupported.",
+      "data_permitted": ["TIER_A_FOLD01"],
+      "metrics_permitted": [
+        "BlockState outcome distribution",
+        "canonical failure-reason counts and co-occurrence counts",
+        "OB direction distribution"
+      ],
+      "implementation_required": false,
+      "status": "REGISTERED",
+      "result": null,
+      "disposition": null
+    },
+    {
+      "hypothesis_id": "phase8-v2-H003",
+      "registered_utc": "2026-09-21T00:00:00Z",
+      "statement": "OB and FVG evidence may be causally related across a short temporal sequence rather than being required to appear as a strictly simultaneous state at one decision timestamp.",
+      "economic_rationale": "Price displacement unfolds through ordered bars. A structural origin can precede the imbalance it produces, and a later causal FVG observation need not imply that the originating OB and FVG were first detected on the same completed bar.",
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "implementation_boundary": "Registered now but NOT necessarily fully tested by D001. A later diagnostic may investigate temporal distance explicitly. The full H003 test must not be smuggled into D001 merely because the data is available; D001 is restricted to its preregistered metric surface.",
+      "code_components": [
+        "bot/state/gate_reducer.py (ob_identity / fvg_identity / timing_info provenance in gate context)",
+        "bot/strategy/order_blocks.py (confirmed_at, confirmation_index)"
+      ],
+      "expected_qualitative_effect": "If H003 is relevant, OB and FVG detections should exhibit short, structured temporal offsets rather than being restricted to same-bar co-occurrence; measurable only by a later dedicated diagnostic.",
+      "expected_frequency_effect": "Qualitative only: a temporal-association rule would be expected to broaden admissible evidence relative to strict simultaneity; no number is predicted.",
+      "potential_failure_mode": "If causal OB/FVG pairs are temporally diffuse or absent, temporal association is not economically meaningful for this strategy.",
+      "data_permitted": ["TIER_A_FOLD01"],
+      "metrics_permitted": [
+        "OB-to-FVG temporal distance distributions (later diagnostic only)"
+      ],
+      "implementation_required": false,
+      "status": "REGISTERED",
+      "result": null,
+      "disposition": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "diagnostic_id": "phase8-v2-D001",
+      "title": "Frozen OB/FVG Structural Attrition Decomposition",
+      "specification_path": "docs/PHASE8_V2_DIAGNOSTIC_D001.md",
+      "budget_classification": "DIAGNOSTIC_INVESTIGATION",
+      "budget_consumption_upon_first_execution": "1 / 12",
+      "status": "REGISTERED_NOT_EXECUTED",
+      "registered_utc": "2026-09-21T00:00:00Z",
+      "linked_hypotheses": ["phase8-v2-H001", "phase8-v2-H002"],
+      "referenced_later_directions": ["phase8-v2-H003"],
+      "fold_boundary": ["2024-04-01T00:00:00Z", "2024-06-08T00:00:00Z"]
+    }
+  ],
+  "result_records": []
+}
