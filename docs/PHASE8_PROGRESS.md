@@ -1701,3 +1701,13 @@ preregistration; no strategy variant has been observed so the
 8-variant/4-parameter budget lock is not yet triggered. Folds 02-04
 remain reserved; holdout untouched. Next authorized task:
 implement and execute D001 exactly as preregistered.
+
+Provenance correction `phase8-v2-PC001` (2026-09-22): the D001 /
+H001-H003 preregistration was actually published in commit
+`8985fb2f8396a999dbddcc8b51342788823dc2c2` at
+`2026-09-22T22:20:51Z` (Git author/committer timestamp, verified
+against the GitHub authoritative publication timestamp); the
+`2026-09-21` date above was erroneous placeholder metadata and is
+superseded for chronology only. No empirical observation occurred
+before the correction; the diagnostic budget remains `0 / 12
+executed`; D001 remains `REGISTERED_NOT_EXECUTED`.

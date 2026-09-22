@@ -276,3 +276,23 @@ diagnostic to be preregistered separately.
 
 *End of D001 preregistration. Status remains `REGISTERED_NOT_EXECUTED`
 until an authorized execution task runs it exactly as specified here.*
+
+---
+
+## 10. Provenance correction (phase8-v2-PC001)
+
+* D001 was published in commit `8985fb2f8396a999dbddcc8b51342788823dc2c2`.
+* Authoritative preregistration publication time: `2026-09-22T22:20:51Z`
+  (Git commit author/committer timestamp, verified against the GitHub
+  authoritative publication timestamp).
+* The register's original `2026-09-21T00:00:00Z` timestamps (including
+  this diagnostic's `registered_utc`) were erroneous placeholder
+  metadata.
+* Correction `phase8-v2-PC001` (see
+  `baseline/phase8_v2_hypothesis_register.json`,
+  `provenance_corrections`) supersedes that timestamp for chronology
+  only.
+* No empirical execution occurred before the correction; D001 remains
+  `REGISTERED_NOT_EXECUTED`; its preregistered scientific question,
+  metric surface, hypotheses, population and prohibited outputs are
+  unchanged.

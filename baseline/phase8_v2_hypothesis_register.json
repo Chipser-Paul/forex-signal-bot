@@ -26,7 +26,14 @@
       "numeric_parameter_trial_budget_max": 4,
       "numeric_parameter_trials_observed": 0,
       "upward_revision_lock": "Per charter section 11: before the first strategy-variant result is observed the charter may still be corrected during supervisory review; after the first strategy-variant result is observed, upward budget revision is prohibited. No variant result has been observed."
-    }
+    },
+    "authoritative_time_semantics": [
+    "For scientific preregistration chronology the authoritative publication event is the canonical Git commit containing the registration; the commit SHA is the immutable publication anchor (Git author dates alone are not the scientific identity).",
+    "Git commit identity and timestamp must be recorded for every registration.",
+    "User-entered registered_utc metadata may not precede or contradict the actual publication event.",
+    "Future registration tooling must generate UTC timestamps from the current execution time rather than a manually supplied placeholder.",
+    "Any mismatch is corrected append-only (provenance_corrections) and never hidden."
+  ]
   },
   "hypotheses": [
     {
@@ -123,5 +130,26 @@
       "fold_boundary": ["2024-04-01T00:00:00Z", "2024-06-08T00:00:00Z"]
     }
   ],
-  "result_records": []
+  "result_records": [],
+  "provenance_corrections": [
+    {
+      "correction_id": "phase8-v2-PC001",
+      "correction_created_utc": "2026-09-22T22:29:04Z",
+      "affected_commit": "8985fb2f8396a999dbddcc8b51342788823dc2c2",
+      "affected_fields": [
+        "register created_utc",
+        "H001 (phase8-v2-H001) registered_utc",
+        "H002 (phase8-v2-H002) registered_utc",
+        "H003 (phase8-v2-H003) registered_utc",
+        "D001 (phase8-v2-D001) registered_utc"
+      ],
+      "erroneous_recorded_value": "2026-09-21T00:00:00Z",
+      "authoritative_publication_utc": "2026-09-22T22:20:51Z",
+      "authority": "Git commit author/committer timestamp of the canonical preregistration commit 8985fb2f8396a999dbddcc8b51342788823dc2c2 (git show -s --format='%ai | %ci' -> '2026-09-22 23:20:51 +0100' = 2026-09-22T22:20:51Z), independently verified against the GitHub authoritative publication timestamp.",
+      "explanation": "The original timestamps were placeholder metadata written during document preparation and did not represent the actual publication instant.",
+      "scientific_consequence": "No empirical diagnostic had executed before the correction; the diagnostic budget remains 0 / 12 executed.",
+      "preregistration_validity": "Hypotheses H001-H003 and diagnostic D001 were immutably published at commit 8985fb2f8396a999dbddcc8b51342788823dc2c2 before any empirical execution; the preregistration-before-observation property is preserved.",
+      "scope": "Chronology/provenance only. Original hypothesis text, economic rationales, and the D001 scientific question, metric surface, population and prohibited outputs remain unchanged."
+    }
+  ]
 }
