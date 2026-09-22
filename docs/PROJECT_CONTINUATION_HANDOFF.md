@@ -219,9 +219,34 @@ fingerprint semantics (`legacy_worktree_bytes_v0`) remain compatibility-only.
 Prospective scientific freezes must explicitly declare an approved
 prospective contract — legacy, missing and unknown/unapproved contracts
 are rejected (`bot/scientific/prospective_freeze.py`). This resolution
-does not by itself authorize a V2 scientific freeze; the next task is the
-V2 research charter/preregistration. Holdout remains untouched; no
+does not by itself authorize a V2 scientific freeze; the V2 research charter is now approved and preregistered (sealing
+record below). Holdout remains untouched; no
 demo/live trading is authorized.
+
+**V2 research charter sealing record.**
+
+- Charter: `docs/PHASE8_V2_RESEARCH_CHARTER.md`, status
+  `APPROVED / PREREGISTERED`; it is the governing preregistration for
+  the V2 research cycle.
+- Deterministic identity:
+  `phase8-v2-research-charter-v1-8527e3a5eec98f53` (derived from the
+  final charter SHA-256; the full hash is authoritative:
+  `8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc`).
+- Active research identity: `phase6-development-v2`;
+  `phase6-frozen-v2` does not exist, and charter publication does not
+  freeze a strategy.
+- No strategy experiments have yet occurred. Research budgets are
+  sealed: diagnostic investigations <= 12, strategy variants <= 8,
+  numeric parameter trials <= 4; upward budget revision is prohibited
+  after the first strategy-variant result (reduction only).
+- Fold 01 is initially the sole permitted design evidence (already
+  contaminated for V2 design); Folds 02-04 remain reserved and are
+  released sequentially and fail-fast (Fold 02 -> Fold 03 -> Fold 04);
+  holdout remains untouched.
+- Next authorized task: the V2 semantic diagnostic stage on Fold 01
+  only (read-only structural diagnostics under the charter's
+  hypothesis register; no profitability metrics).
+- No demo/live trading is authorized.
 
 ## 14. Acceptance requirement
 

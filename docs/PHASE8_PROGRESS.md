@@ -1670,6 +1670,20 @@ SCIENTIFIC FREEZES` via the verified `canonical_git_blob_v1` contract
 (`docs/PHASE8N_CANONICAL_BYTE_CONTRACT.md`; historical V1 identities
 unchanged, legacy contracts compatibility-only, prospective freezes must
 explicitly declare an approved prospective contract). This does not
-authorize a V2 scientific freeze; next task is the V2 research
-charter/preregistration (development-scoped, e.g. `phase6-development-v2`;
-V2 development has not begun).
+authorize a V2 scientific freeze; V2 research charter is now approved
+and preregistered: `phase8-v2-research-charter-v1-8527e3a5eec98f53`
+(final SHA-256
+`8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc`,
+`docs/PHASE8_V2_RESEARCH_CHARTER.md`, status `APPROVED / PREREGISTERED`).
+Active research identity: `phase6-development-v2`; `phase6-frozen-v2`
+does not exist and charter publication does not freeze a strategy. No
+strategy experiments have yet occurred; research budgets are sealed
+(diagnostic investigations <= 12, strategy variants <= 8, numeric
+parameter trials <= 4; upward revision prohibited after the first
+strategy-variant result). Fold 01 is initially the sole permitted
+design evidence; Folds 02-04 remain reserved and are released
+sequentially and fail-fast; holdout remains untouched. Next
+authorized task: the V2 semantic diagnostic stage on Fold 01 only
+(read-only structural diagnostics under the charter's hypothesis
+register; no profitability metrics). No demo/live trading is
+authorized.
