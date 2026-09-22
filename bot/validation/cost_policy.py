@@ -272,6 +272,15 @@ def build_acceptance_restrictions() -> dict[str, Any]:
 # Binding set
 # ---------------------------------------------------------------------------
 
+#: Files whose content defines the execution-cost-surface fingerprint
+#: (shared verbatim by the legacy working-tree fingerprint and the
+#: prospective canonical_git_blob_v1 fingerprint).
+_EXECUTION_MODEL_MODULES = (
+    "bot/backtesting/costs.py",
+    "bot/backtesting/models.py",
+    "bot/backtesting/engine.py",
+)
+
 
 def strategy_fingerprint(config: StrategyConfig | None = None) -> str:
     config = config or StrategyConfig()
@@ -289,11 +298,7 @@ def risk_policy_fingerprint(policy: RiskPolicy | None = None) -> str:
 def execution_model_fingerprint() -> str:
     """Fingerprint the committed execution-cost surface (content hash)."""
     worktree = Path(__file__).resolve().parents[2]
-    modules = (
-        "bot/backtesting/costs.py",
-        "bot/backtesting/models.py",
-        "bot/backtesting/engine.py",
-    )
+    modules = _EXECUTION_MODEL_MODULES
     module_hashes: dict[str, str] = {}
     for relative in modules:
         blob = (worktree / relative).read_bytes()
@@ -305,6 +310,33 @@ def execution_model_fingerprint() -> str:
         ensure_ascii=True,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def execution_model_fingerprint_canonical(
+    commit: str, worktree: Path | None = None, *, blob_source=None
+) -> str:
+    """Prospective ``canonical_git_blob_v1`` execution-cost-surface fingerprint.
+
+    Same module surface (``bot/backtesting/costs.py``, ``models.py``,
+    ``engine.py`` — lexicographically ordered by the canonical contract) but
+    hashed from the **committed Git blobs** at ``commit`` through the versioned
+    canonical-byte contract (``bot.scientific.canonical_bytes``).  Checkout
+    representation (``core.autocrlf``, CRLF vs LF) cannot influence the
+    digest.
+
+    Mandatory for all future (post-V1) scientific freezes.  The legacy
+    :func:`execution_model_fingerprint` keeps its historical
+    raw-working-tree-bytes semantics (``legacy_worktree_bytes_v0``) and is
+    retained solely for verifying already-published historical artifacts such
+    as the published cost policy.  The two are different contracts and are
+    never interchangeable.
+    """
+    from bot.scientific.canonical_bytes import canonical_framed_digest
+
+    root = Path(worktree) if worktree is not None else Path(__file__).resolve().parents[2]
+    return canonical_framed_digest(
+        _EXECUTION_MODEL_MODULES, commit=commit, repo=root, blob_source=blob_source
+    )
 
 
 def build_bindings(

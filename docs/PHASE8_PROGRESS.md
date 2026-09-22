@@ -1664,7 +1664,12 @@ Evidence: `docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md`; artifact manifest:
 `phase8n_feasibility_audit_v1_fold01` in
 `baseline/phase8_contamination_register.json`. No profitability metric was
 computed; Phase 0-7 remain complete; Phase 8 infrastructure functioned as
-intended; holdout untouched; fingerprint/canonical-byte engineering debt is
-recorded and must be resolved before any V2 scientific freeze (next research
-identity, when work resumes, should be development-scoped, e.g.
-`phase6-development-v2`; V2 development has not begun).
+intended; holdout untouched; the fingerprint/canonical-byte engineering
+debt is now `REPRODUCIBILITY_ENGINEERING_DEBT — RESOLVED FOR PROSPECTIVE
+SCIENTIFIC FREEZES` via the verified `canonical_git_blob_v1` contract
+(`docs/PHASE8N_CANONICAL_BYTE_CONTRACT.md`; historical V1 identities
+unchanged, legacy contracts compatibility-only, prospective freezes must
+explicitly declare an approved prospective contract). This does not
+authorize a V2 scientific freeze; next task is the V2 research
+charter/preregistration (development-scoped, e.g. `phase6-development-v2`;
+V2 development has not begun).

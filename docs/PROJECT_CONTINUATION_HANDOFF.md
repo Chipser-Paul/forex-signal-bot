@@ -205,11 +205,23 @@ are **closed**; they are retained as history.
 
 Any future research must use a new candidate identity and should be
 development-scoped rather than frozen (e.g. `phase6-development-v2`). V2
-development has not begun. Before any V2 scientific freeze, the
+development has not begun. The former
 `REPRODUCIBILITY_ENGINEERING_DEBT — MUST BE RESOLVED BEFORE V2 SCIENTIFIC
 FREEZE` (newline-dependent fingerprint reproduction; see
-`docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md` §10) must be repaired by a
-versioned canonical-byte contract in a separate task.
+`docs/PHASE8_FEASIBILITY_DISPOSITION_V1.md` §10) is now
+`REPRODUCIBILITY_ENGINEERING_DEBT — RESOLVED FOR PROSPECTIVE SCIENTIFIC
+FREEZES`: the versioned canonical-byte contract `canonical_git_blob_v1`
+(`bot/scientific/canonical_bytes.py`,
+`docs/PHASE8N_CANONICAL_BYTE_CONTRACT.md`) fingerprints committed Git
+blobs and is checkout/newline-independent. Historical V1 identities are
+unchanged and were not generated under the new contract; legacy
+fingerprint semantics (`legacy_worktree_bytes_v0`) remain compatibility-only.
+Prospective scientific freezes must explicitly declare an approved
+prospective contract — legacy, missing and unknown/unapproved contracts
+are rejected (`bot/scientific/prospective_freeze.py`). This resolution
+does not by itself authorize a V2 scientific freeze; the next task is the
+V2 research charter/preregistration. Holdout remains untouched; no
+demo/live trading is authorized.
 
 ## 14. Acceptance requirement
 

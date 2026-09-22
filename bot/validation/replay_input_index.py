@@ -102,6 +102,63 @@ def pipeline_fingerprint(worktree: Path) -> str:
     return digest.hexdigest()
 
 
+def pipeline_fingerprint_canonical(
+    commit: str, worktree: Path, *, blob_source=None
+) -> str:
+    """Prospective ``canonical_git_blob_v1`` replay-mechanics fingerprint.
+
+    Identical file surface and lexicographic order to
+    :func:`pipeline_fingerprint`, but hashed from the **committed Git blobs**
+    at ``commit`` through the versioned canonical-byte contract
+    (``bot.scientific.canonical_bytes``), so the digest is independent of the
+    checkout's ``core.autocrlf`` setting and physical line endings.
+
+    Mandatory for all future (post-V1) scientific freezes.  The legacy
+    :func:`pipeline_fingerprint` keeps its historical raw-working-tree-bytes
+    semantics (``legacy_worktree_bytes_v0``) and is retained solely for
+    verifying already-published historical artifacts such as the Fold 01/02
+    feature stores.  The two fingerprints are different quantities under
+    different contracts and are never interchangeable.
+    """
+    from bot.scientific.canonical_bytes import canonical_framed_digest
+
+    return canonical_framed_digest(
+        PIPELINE_FINGERPRINT_FILES, commit=commit, repo=Path(worktree),
+        blob_source=blob_source,
+    )
+
+
+def pipeline_fingerprint_at_commit(
+    commit: str, worktree: Path, *, blob_source=None
+) -> str:
+    """Historical legacy framing applied to **committed blob bytes**.
+
+    Reproduces a published store binding (e.g. the Fold 01/02 feature stores'
+    ``pipeline_fingerprint``) without the historical build worktree: the same
+    length-prefixed legacy framing as :func:`pipeline_fingerprint`, but the
+    input bytes come from the Git object database at ``commit`` instead of
+    whatever the current checkout materialises.  Verified live against the
+    fold-01 store binding at the canonical checkpoint.
+
+    This is a *verification* seam for historical artifacts under their
+    original semantics (``legacy_worktree_bytes_v0`` over canonical bytes);
+    it is not the prospective contract (use
+    :func:`pipeline_fingerprint_canonical` for new freezes).
+    """
+    from bot.scientific.canonical_bytes import canonical_blob_bytes
+
+    repo = Path(worktree)
+    digest = hashlib.sha256()
+    for relative in PIPELINE_FINGERPRINT_FILES:
+        data = canonical_blob_bytes(
+            relative, commit=commit, repo=repo, blob_source=blob_source
+        )
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(relative.encode("utf-8"))
+        digest.update(data)
+    return digest.hexdigest()
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
