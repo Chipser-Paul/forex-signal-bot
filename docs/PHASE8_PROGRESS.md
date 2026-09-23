@@ -1733,3 +1733,13 @@ evidence (wait 5,827; skip 7,273 incl. 169 news-blocked; scores
 522x5/8 + 4x7/8). No strategy variant selected; no profitability
 metric emitted; Folds 02-04 remain reserved; holdout untouched. Next
 step: supervisory review before D002 or Variant 1.
+
+## Update — 2026-09-23: D001 supervisory qualification (Q001) and D002 preregistration
+
+- **D001 qualified (append-only):** register record `phase8-v2-D001-Q001` (`SUPERVISORY_INTERPRETATION_QUALIFICATION`). D001 status is now `EXECUTED_WITH_INTERPRETATION_QUALIFICATIONS`. R001 and its original classifications are unchanged (append-only); interpretation only is superseded.
+- **H001 → `INCONCLUSIVE_D001`** (was `SUPPORTED_BY_D001` in R001): D001 identified an upstream FVG-availability bottleneck. It did not test whether canonical overlap tolerance is too strict because no canonical OB/FVG pair existed. H001 remains open.
+- **H002 → `INCONCLUSIVE_D001`** (was `SUPPORTED_BY_D001` in R001): the executed D001 decomposed acquisition/reducer `ob_result` fields (`ob_mitigated`, `ob_outside_pd_zone`, `ob_invalidated`, `ob_no_displacement`, `ob_aligned`), not the preregistered canonical `evaluate_order_block` lifecycle (`BlockState`, failure reasons, co-occurrence counts). Observed counts retained as `VALID_UNPLANNED_DESCRIPTIVE_EVIDENCE — NOT THE PREREGISTERED H002 TEST`. H002 remains open for a future dedicated diagnostic; no D001 rerun.
+- **H003:** `NOT_TESTED_BY_D001` (unchanged).
+- **H004 registered:** `Canonical FVG Attrition Bottleneck` — the zero canonical FVG observation should be attributable to specific FVG-generation/retention stages rather than total absence of three-candle imbalance structure. Status OPEN.
+- **D002 preregistered:** `phase8-v2-D002` — `Canonical FVG Attrition Decomposition`; status `REGISTERED_NOT_EXECUTED`; spec `docs/PHASE8_V2_DIAGNOSTIC_D002.md` (SHA-256 `ad271d85d4af95724c6f7081529c1bdb0017e21bdd034b88ce683ead1bddf2ea`); linked H004; preregistered stages A–G; Stage G must reconcile with the D001 zero-FVG observation; execution will consume `2 / 12`.
+- **No new empirical read occurred** in this governance task; diagnostic budget remains `1 / 12`; strategy variants `0 / 8`; numeric trials `0 / 4`; result lock untriggered; Folds 02–04 reserved; holdout untouched. D002 execution awaits separate authorization (two-phase tooling freeze, then empirical barrier).

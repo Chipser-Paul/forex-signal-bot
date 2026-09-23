@@ -2,6 +2,64 @@
   "schema_version": 1,
   "register_kind": "phase8_v2_hypothesis_register",
   "created_utc": "2026-09-21T00:00:00Z",
+  "supervisory_qualification_records": [
+    {
+      "record_id": "phase8-v2-D001-Q001",
+      "record_type": "SUPERVISORY_INTERPRETATION_QUALIFICATION",
+      "created_utc": "2026-09-23T10:45:02Z",
+      "supervisory_review": true,
+      "references": {
+        "diagnostic": "phase8-v2-D001",
+        "result_record": "phase8-v2-D001-R001",
+        "execution_tooling_commit": "1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf",
+        "result_publication_commit": "0019ef30a1bd1a67bc23b204dfce47d22fa23d5b",
+        "result_document": "docs/PHASE8_V2_DIAGNOSTIC_D001_RESULT.md"
+      },
+      "status_assignment": "EXECUTED_WITH_INTERPRETATION_QUALIFICATIONS",
+      "immutability": {
+        "r001_unchanged": true,
+        "r001_original_classifications_preserved": [
+          "SUPPORTED_BY_D001",
+          "SUPPORTED_BY_D001"
+        ],
+        "qualification_is_append_only": true,
+        "note": "R001 remains the exact historical record of what the D001 execution reported. This record supersedes the scientific interpretation only; no counts, hashes, timestamps or output identities are altered."
+      },
+      "h001_supervisory_disposition": {
+        "supersedes": "SUPPORTED_BY_D001",
+        "authoritative_disposition": "INCONCLUSIVE_D001",
+        "h001_status": "OPEN",
+        "reason": "D001 observed canonical FVG present = 0 in every reducer decision, OB/FVG co-existing pair count = 0 and overlap geometry observations = 0, so there was no empirical population on which the strictness of the OB/FVG overlap relationship itself could be evaluated. Nonzero OB availability, zero FVG availability and zero overlap show materially different structural availability, but do not distinguish an overlap rule that is too restrictive from FVG generation/retention eliminating all FVGs upstream.",
+        "required_statement": "D001 identified an upstream FVG-availability bottleneck. It did not test whether canonical overlap tolerance is too strict because no canonical OB/FVG pair existed.",
+        "h001_not_classified_false": true
+      },
+      "h002_supervisory_disposition": {
+        "supersedes": "SUPPORTED_BY_D001",
+        "authoritative_disposition": "INCONCLUSIVE_D001",
+        "h002_status": "OPEN",
+        "reason": "The preregistered H002 metric surface required canonical lifecycle decomposition from bot/strategy/order_blocks.py::evaluate_order_block including canonical BlockState and failure reasons such as no_confirmed_block, block_expired, close_below_bullish_zone, close_above_bearish_zone, first_post_confirmation_retest, block_already_mitigated, confirmed_unmitigated_block, plus failure-reason co-occurrence counts. The executed D001 tooling instead decomposed the acquisition/reducer ob_result produced upstream and aggregated fields such as ob_mitigated, ob_outside_pd_zone, ob_invalidated, ob_no_displacement and ob_aligned. These observations are useful descriptive evidence but are not the exact preregistered canonical evaluate_order_block lifecycle decomposition, and the preregistered failure-reason co-occurrence counts were not established in the published compact result.",
+        "observed_ob_acquisition_counts_classification": "VALID_UNPLANNED_DESCRIPTIVE_EVIDENCE — NOT THE PREREGISTERED H002 TEST",
+        "observed_counts_retained_not_discarded": true,
+        "no_d001_rerun_to_fix": true
+      },
+      "valid_retained_d001_findings": [
+        "exact decision accounting (13,269 = 7,316 + 4,815 + 1,138)",
+        "gate funnel",
+        "zero canonical FVG availability under frozen semantics",
+        "OB acquisition-side reason distribution",
+        "zero OB/FVG pair population",
+        "zero overlap geometry observations",
+        "H003 NOT_TESTED_BY_D001"
+      ],
+      "no_strategy_conclusion_follows": true,
+      "budget": {
+        "diagnostics_executed": "1 / 12",
+        "budget_refunded": false,
+        "strategy_variants_observed": "0 / 8",
+        "numeric_parameter_trials": "0 / 4"
+      }
+    }
+  ],
   "charter": {
     "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
     "sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
@@ -114,6 +172,22 @@
       "status": "REGISTERED",
       "result": null,
       "disposition": null
+    },
+    {
+      "hypothesis_id": "phase8-v2-H004",
+      "title": "Canonical FVG Attrition Bottleneck",
+      "status": "OPEN",
+      "registered_utc": "2026-09-23T10:45:02Z",
+      "statement": "The absence of canonical FVGs observed in D001 is produced by one or more specific stages of the existing FVG-generation/retention pipeline, rather than demonstrating that three-candle imbalance structure is entirely absent from Fold 01.",
+      "economic_rationale": "The frozen pipeline applies several conceptually distinct conditions before a zone appears in the final fvgs list: (1) sufficient causal M5 history; (2) valid ATR; (3) middle-candle displacement-body threshold; (4) three-candle geometric gap; (5) direction filtering; (6) fill-status filtering. These stages encode different economic concepts and should be decomposed before any FVG semantic change is proposed.",
+      "relevant_production_paths": [
+        "bot/analysis/fvg_engine.py",
+        "bot/state/gate_inputs.py::build_gate_inputs"
+      ],
+      "known_frozen_behavior": "get_unfilled_fvgs(entry, timeframe='M5', direction=htf_bias) ultimately uses the existing FVG detector and returns only unfilled zones aligned with the requested direction.",
+      "expected_diagnostic_implication": "If H004 is relevant, the zero final FVG list should be attributable to one or more concentrated pipeline stages rather than every underlying prerequisite simultaneously being absent.",
+      "no_strategy_rule_change_implied": true,
+      "linked_diagnostic": "phase8-v2-D002"
     }
   ],
   "diagnostics": [
@@ -128,6 +202,42 @@
       "linked_hypotheses": ["phase8-v2-H001", "phase8-v2-H002"],
       "referenced_later_directions": ["phase8-v2-H003"],
       "fold_boundary": ["2024-04-01T00:00:00Z", "2024-06-08T00:00:00Z"]
+    },
+    {
+      "diagnostic_id": "phase8-v2-D002",
+      "title": "Canonical FVG Attrition Decomposition",
+      "status": "REGISTERED_NOT_EXECUTED",
+      "budget_classification": "DIAGNOSTIC_INVESTIGATION",
+      "registered_utc": "2026-09-23T10:45:02Z",
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D002.md",
+      "specification_sha256": "ad271d85d4af95724c6f7081529c1bdb0017e21bdd034b88ce683ead1bddf2ea",
+      "linked_hypothesis": "phase8-v2-H004",
+      "references_unresolved_downstream_motivation": "phase8-v2-H001",
+      "must_not_claim_to_test": "overlap strictness",
+      "scientific_question": "Under unchanged frozen V1 semantics in Fold 01, at which canonical FVG-generation or retention stage does the final same-direction unfilled FVG list become empty?",
+      "diagnostic_type": "EXPLANATORY_DECOMPOSITION_ONLY",
+      "fold_boundary": "[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)",
+      "preregistered_stages": [
+        "A_sufficient_fvg_detector_input",
+        "B_atr_valid_three_candle_opportunities",
+        "C_displacement_body_threshold",
+        "D_geometric_fvg",
+        "E_direction_filter",
+        "F_fill_status_filter",
+        "G_final_canonical_list"
+      ],
+      "stage_g_reconciliation": "final canonical FVG presence must reproduce the D001 observation of 0; mismatch is a stop condition",
+      "unique_identity_rule": "unique FVG identity defined deterministically from canonical record attributes before execution; omitted with documented reason if an unambiguous identity is not definable",
+      "prohibitions": [
+        "no threshold or multiplier search",
+        "no alternative candidate counts",
+        "no counterfactual overlap or fill logic",
+        "no fills, trades or profitability",
+        "no unregistered metric"
+      ],
+      "h002_boundary": "phase8-v2-H002 remains OPEN — requires separately preregistered canonical OrderBlock lifecycle diagnostic; D003 not registered yet",
+      "budget_consumption_upon_first_empirical_execution": "2 / 12",
+      "two_phase_discipline": "Phase A synthetic-only tooling committed and pushed before any Fold-01 access; Phase B only after the remote resolves to the frozen tooling commit"
     }
   ],
   "result_records": [

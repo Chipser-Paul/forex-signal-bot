@@ -101,3 +101,71 @@ No strategy variant was executed; no numeric parameter trial occurred; no perfor
 ## 8. Next step
 
 Requires supervisory review before any D002 preregistration or Variant 1 authorization. The next diagnostic, if approved, must receive a new ID and preregistration before execution (budget remaining: 11 of 12).
+---
+
+## D001 QUALIFIED AND SUPERSEDED (APPEND-ONLY) — Supervisory qualification, 2026-09-23
+
+**Record:** `phase8-v2-D001-Q001` · `SUPERVISORY_INTERPRETATION_QUALIFICATION`
+**References:** `phase8-v2-D001`, `phase8-v2-D001-R001`, execution tooling commit
+`1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf`, result publication commit
+`0019ef30a1bd1a67bc23b204dfce47d22fa23d5b`.
+**D001 overall status:** `EXECUTED_WITH_INTERPRETATION_QUALIFICATIONS`.
+
+The R001 record above remains the exact historical record of what the D001
+execution reported; its counts, hashes, timestamps, output identity and
+original classifications are unchanged. This section supersedes **scientific
+interpretation only**.
+
+### H001 — supervisory disposition: `INCONCLUSIVE_D001` (was `SUPPORTED_BY_D001` in R001)
+
+D001 observed canonical FVG present = 0 in every reducer decision, OB/FVG
+co-existing pair count = 0, and overlap geometry observations = 0. There was
+therefore **no empirical population** on which the strictness of the OB/FVG
+overlap relationship itself could be evaluated. The fact that OB availability
+was nonzero, FVG availability was zero, and overlap was zero shows materially
+different structural availability, but it does **not** distinguish "overlap
+rule too restrictive" from "FVG generation/retention eliminates all FVGs
+upstream".
+
+> D001 identified an upstream FVG-availability bottleneck. It did not test
+> whether canonical overlap tolerance is too strict because no canonical
+> OB/FVG pair existed.
+
+H001 is not classified as false; it remains an **open** hypothesis.
+
+### H002 — supervisory disposition: `INCONCLUSIVE_D001` (was `SUPPORTED_BY_D001` in R001)
+
+The preregistered H002 metric surface required canonical lifecycle
+decomposition from `bot/strategy/order_blocks.py::evaluate_order_block`,
+including canonical `BlockState` and failure reasons such as
+`no_confirmed_block`, `block_expired`, `close_below_bullish_zone`,
+`close_above_bearish_zone`, `first_post_confirmation_retest`,
+`block_already_mitigated`, `confirmed_unmitigated_block`, plus failure-reason
+co-occurrence counts. The executed D001 tooling instead decomposed the
+acquisition/reducer `ob_result` produced upstream and aggregated fields such as
+`ob_mitigated`, `ob_outside_pd_zone`, `ob_invalidated`, `ob_no_displacement`,
+`ob_aligned`. These observations are useful descriptive evidence but are
+**not** the exact preregistered canonical `evaluate_order_block` lifecycle
+decomposition; the preregistered failure-reason co-occurrence counts were also
+not established in the published compact result.
+
+The observed OB acquisition counts are retained and classified:
+`VALID_UNPLANNED_DESCRIPTIVE_EVIDENCE — NOT THE PREREGISTERED H002 TEST`.
+
+H002 remains **open** for a future dedicated diagnostic. D001 is **not** rerun
+to fix this.
+
+### Valid retained D001 findings
+
+Exact decision accounting (13,269 = 7,316 + 4,815 + 1,138); gate funnel; zero
+canonical FVG availability under frozen semantics; OB acquisition-side reason
+distribution; zero OB/FVG pair population; zero overlap geometry observations;
+H003 = `NOT_TESTED_BY_D001`. **No strategy conclusion follows.**
+
+### Budget and boundaries (unchanged)
+
+Diagnostic budget remains `1 / 12` (not refunded); strategy variants remain
+`0 / 8`; numeric parameter trials remain `0 / 4`; variant-budget result lock
+untriggered. Fold 01 boundary `[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)`;
+Folds 02–04 reserved and untouched; holdout untouched; no new empirical read
+occurred in this qualification task.
