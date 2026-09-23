@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd  # pyright: ignore[reportMissingModuleSource]
 
-from utils.indicators import calculate_atr
+from bot.strategy.regime import atr_series
 
 
 def _mark_fill_status(df: pd.DataFrame, start_index: int, zone_top: float, zone_bottom: float) -> bool:
@@ -22,12 +22,24 @@ def detect_fvgs(
     """
     Detect bullish/bearish FVGs with displacement and fill tracking.
     Returns a list of standardized zone dictionaries.
+
+    V001 (phase6-development-v2-V001, hypothesis phase8-v2-H005, audit
+    phase8-v2-S001): the per-window ATR dependency is supplied by the
+    canonical rolling helper ``bot.strategy.regime.atr_series`` so the
+    detector evaluates every candidate window. The previous implementation
+    derived its ATR from the scalar ``utils.indicators.calculate_atr``
+    surface and skipped every window because a scalar float has no
+    ``.iloc``. Windows without an available (non-NaN, positive) rolling ATR
+    at the displacement candle are skipped, preserving the frozen
+    ``atr_val <= 0`` availability intent across the ATR warm-up head. All
+    thresholds (``atr_period = 14``, ``displacement_mult = 1.5``), gap
+    geometry, fill status, direction filtering and ``source_index = i - 1``
+    attribution are unchanged.
     """
     if df is None or len(df) < atr_period + 3:
         return []
 
-    atr = calculate_atr(df, atr_period)
-    atr_series = atr if hasattr(atr, "iloc") else None
+    atr_values = atr_series(df, atr_period)
     fvgs: list[dict[str, object]] = []
 
     for i in range(2, len(df)):
@@ -35,12 +47,13 @@ def detect_fvgs(
         c2 = df.iloc[i - 1]
         c3 = df.iloc[i]
 
-        if atr_series is None or i - 1 >= len(atr_series):
+        if i - 1 >= len(atr_values):
             continue
 
-        atr_val = float(atr_series.iloc[i - 1])
-        if atr_val <= 0:
+        atr_val = atr_values.iloc[i - 1]
+        if pd.isna(atr_val) or float(atr_val) <= 0:
             continue
+        atr_val = float(atr_val)
 
         displacement_body = abs(float(c2["close"]) - float(c2["open"]))
         if displacement_body < atr_val * displacement_mult:
@@ -89,4 +102,3 @@ def get_unfilled_fvgs(df: pd.DataFrame, timeframe: str, direction: str | None = 
     if direction in ("bullish", "bearish"):
         zones = [zone for zone in zones if zone["direction"] == direction]
     return zones
-
