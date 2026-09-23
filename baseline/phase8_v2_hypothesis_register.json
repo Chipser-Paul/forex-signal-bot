@@ -165,7 +165,56 @@
       },
       "no_result_record_created": true,
       "measurement_rerun_requires": "separate supervisory authorization after tooling review"
-    }  ],
+    },
+    {
+      "record_id": "phase6-development-v2-V001-MR002",
+      "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
+      "created_utc": "2026-09-23T18:53:15Z",
+      "variant_id": "phase6-development-v2-V001",
+      "linked_hypothesis": "phase8-v2-H005",
+      "disposition": "MEASUREMENT_STATE_SEED_OMISSION_REPAIRED_POST_EXPOSURE",
+      "defect_class": "MEASUREMENT_TOOLING_DECISION_LOOP_SEED_OMISSION",
+      "supersedes_nothing": true,
+      "mr001_record_unchanged": "phase6-development-v2-V001-MR001",
+      "original_frozen_tooling_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e",
+      "mr001_repair_commit": "a193702c4d26cbae7e5121950fa66574b860a69d",
+      "exposure_timestamp_utc": "2026-09-23T15:23:28.661013+00:00",
+      "first_blockage_artifact_sha256": "55a382dce5f00752e70ed03cb244db5f1277a471b78b43055819b3f118a03432",
+      "second_blockage_artifact_sha256": "a02b59cb227fbc1d41f6036bb1d3fd2e9a6601af143ae447139ce44d202fda74",
+      "exact_defect": "run_v001_evaluation initialized the sequential cell-local setup-state chain with None while production (empirical_input_pipeline.py:698) and the frozen D001 diagnostic (d001.py:591, documented in its module docstring) both seed record_from_state(StrategyState(event_time=2024-01-01Z), event_at=seed). None reached state_from_record(None) (AttributeError) and the canonical adapter classified every ok-path row as action=error/orchestrator_input_unsafe; the tool then fail-closed at its own ReconciliationError before any observation.",
+      "structural_metrics_successfully_emitted": 0,
+      "diagnostic_row_counts_are_tooling_failure_evidence_only": {
+        "scheduled_snapshots": 13269,
+        "missing_history": 4815,
+        "unavailable_input": 1138,
+        "ok_path": 7316,
+        "ok_path_orchestration_errors": 7316,
+        "eligibility_reached": 0,
+        "reconciliation_reached": 0,
+        "not_v001_structural_metrics": true
+      },
+      "strategy_semantics_unchanged": true,
+      "store_remains_valid_and_preserved": {
+        "store_name": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22"
+      },
+      "repair_scope": "State seed/carry only in backtests/phase8_v2_variant_v001_eval.py: canonical seed _seed_state_record() = record_from_state(StrategyState(event_time=datetime(2024,1,1,tzinfo=UTC)), event_at=seed); loop carry now matches D001 exactly (advance only on non-error rows; error rows keep the prior valid record). Metric surface, observer, boundary checks, density target, outcome classifications and H005 rules unchanged.",
+      "blockage_status_language_correction": "The second blockage was never an empirical result; correct historical status is 'V001 EMPIRICAL MEASUREMENT BLOCKED \u2014 MR002 TOOLING REPAIR REQUIRED \u2014 NO R001 RESULT'. No tracked repository document contained the erroneous success-style footer (verified by scan at MR002 time); the footer appeared only in the assistant's conversational report of the failed attempt, and the sealed external blockage artifact is immutable and preserved unchanged.",
+      "additional_diagnostic_budget_consumed": 0,
+      "additional_strategy_variant_budget_consumed": 0,
+      "additional_numeric_parameter_trials_consumed": 0,
+      "budget_after_repair": {
+        "diagnostics_executed": "1 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE"
+      },
+      "r001_exists": false,
+      "measurement_rerun_requires": "separate supervisory authorization after MR002 review"
+    }
+  ],
   "charter": {
     "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
     "sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",

@@ -708,6 +708,29 @@ def _snapshot_rows(store: Any):
         yield _snapshot_from_row(raw)
 
 
+def _seed_state_record() -> Any:
+    """MR002: canonical setup-state seed (production/D001 contract).
+
+    The measurement loop must initialize the sequential cell-local
+    setup-state chain exactly as the empirical reference pipeline
+    (``empirical_input_pipeline``) and the frozen D001 diagnostic do:
+    ``record_from_state(StrategyState(event_time=2024-01-01Z),
+    event_at=seed)``.  Seeding with ``None`` made the production
+    orchestrator's ``restore_setup_for_evaluation`` fail on
+    ``state_from_record(None)`` for every ok-path decision, collapsing
+    the whole run into ``action=error`` rows before any observation.
+    """
+    from bot.strategy.setup_state import (  # noqa: PLC0415
+        StrategyState,
+        record_from_state,
+    )
+
+    seed_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    return record_from_state(
+        StrategyState(event_time=seed_time), event_at=seed_time,
+    )
+
+
 def run_v001_evaluation(
     store: Any,
     *,
@@ -734,10 +757,16 @@ def run_v001_evaluation(
     from bot.analysis.fvg_engine import detect_fvgs as _production  # noqa: F401, PLC0415
 
     rows = []
-    state_record = None
+    state_record = _seed_state_record()
     started = datetime.now(timezone.utc).isoformat()
     for snapshot in _snapshot_rows(store):
-        row, state_record = observe_decision(snapshot, state_record)
+        row, next_record = observe_decision(snapshot, state_record)
+        if row.get("action") == "error":
+            # Failed evaluation: keep the prior valid state record so
+            # subsequent decisions continue from the same carried state
+            # (D001 semantics: an error must never poison the chain).
+            continue
+        state_record = next_record
         rows.append(row)
     finished = datetime.now(timezone.utc).isoformat()
     aggregate = aggregate_v001(rows)
