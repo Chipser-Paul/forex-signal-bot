@@ -1,5 +1,5 @@
 {
-  "schema_version": "phase8v2.cost-policy-canonical-attestation.v1",
+  "schema_version": "phase8v2.cost-policy-canonical-attestation.v2",
   "classification": "PROSPECTIVE_V2_COMPATIBILITY_ATTESTATION \u2014 NOT A REWRITE OF HISTORICAL POLICY",
   "research_identity": "phase6-development-v2",
   "historical_cost_policy": {
@@ -13,25 +13,33 @@
   },
   "prospective_verification": {
     "fingerprint_contract": "canonical_git_blob_v1",
+    "attestation_anchor_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e",
     "execution_model_modules": [
       "bot/backtesting/costs.py",
       "bot/backtesting/models.py",
       "bot/backtesting/engine.py"
     ],
     "module_blob_shas": {
+      "bot/backtesting/costs.py": "237235dbe2b21cf840d40e6f8324c8bb2177b3f8ec21b9300a22d96d7658f131",
+      "bot/backtesting/engine.py": "6b56aed5669627d1a664b0aa0b8c13cafbe740305224393bbf45452cfba301dd",
+      "bot/backtesting/models.py": "895b89d3db474291cb83876462c5a17852c91ffe0817aed9aef30cc08956abd4"
+    },
+    "module_git_blob_ids": {
       "bot/backtesting/costs.py": "4a4b640a15d53d5d47e1e3a97c549e4f463ad23b",
       "bot/backtesting/engine.py": "bfc0f89a9b62b107d7eadc6c394e7d573e53336f",
       "bot/backtesting/models.py": "135efaeca7ca3650d1089bc7bb9307c1355a1ead"
     },
-    "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108",
-    "canonical_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e"
+    "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108"
   },
   "v001_lineage": {
     "implementation_commit": "b4a1b0e6ab353f513a0df554840344f322e0964c",
-    "measurement_tooling_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e"
+    "measurement_tooling_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e",
+    "canonical_readiness_commits": [
+      "bf1196acc5f3349d5d0f6d7e4a239737afa9026f"
+    ]
   },
   "representation_drift_statement": "representation drift only; no execution-cost source-content drift",
   "cost_semantics_unchanged": true,
-  "created_utc": "2026-09-23T14:00:18.187601+00:00",
-  "attestation_fingerprint": "e0ab819054e2a65542f6dd4eac8891ec5cd554e72a5a36e7456380fcf7381206"
+  "created_utc": "2026-09-23T14:45:57.793386+00:00",
+  "attestation_fingerprint": "10e9a42e501b24b3cff3459a955cfef37c67d542dc76ef8300bcff596321ff42"
 }

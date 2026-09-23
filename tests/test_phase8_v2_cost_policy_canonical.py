@@ -358,7 +358,7 @@ def test_prospective_readiness_rejects_legacy_contract(tmp_path: Path) -> None:
             research_identity="phase6-development-v2",
             variant_id="phase6-development-v2-V001",
             fingerprint_contract="legacy_worktree_bytes_v0",
-            canonical_commit="1" * 40,
+            active_commit="1" * 40,
             attestation={"attestation_fingerprint": "x"},
         )
 
@@ -372,7 +372,7 @@ def test_prospective_readiness_rejects_unknown_contract(tmp_path: Path) -> None:
             research_identity="phase6-development-v2",
             variant_id="phase6-development-v2-V001",
             fingerprint_contract="some_new_contract",
-            canonical_commit="1" * 40,
+            active_commit="1" * 40,
             attestation={"attestation_fingerprint": "x"},
         )
 
@@ -386,7 +386,7 @@ def test_prospective_readiness_rejects_wrong_research_context(tmp_path: Path) ->
             research_identity="phase6-development-v1",
             variant_id="phase6-development-v2-V001",
             fingerprint_contract="canonical_git_blob_v1",
-            canonical_commit="1" * 40,
+            active_commit="1" * 40,
             attestation={"attestation_fingerprint": "x"},
         )
     with pytest.raises(dep.DevelopmentEvaluationPlanError, match="variant id"):
@@ -397,7 +397,7 @@ def test_prospective_readiness_rejects_wrong_research_context(tmp_path: Path) ->
             research_identity="phase6-development-v2",
             variant_id="phase6-development-v2-V01",
             fingerprint_contract="canonical_git_blob_v1",
-            canonical_commit="1" * 40,
+            active_commit="1" * 40,
             attestation={"attestation_fingerprint": "x"},
         )
 

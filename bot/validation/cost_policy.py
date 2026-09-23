@@ -31,7 +31,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from bot.acquisition.evidence_contracts import (
     DEVELOPMENT_ONLY_CLASSIFICATION,
@@ -626,11 +626,23 @@ LEGACY_FINGERPRINT_CONTRACT = "legacy_worktree_bytes_v0"
 PROSPECTIVE_FINGERPRINT_CONTRACT = "canonical_git_blob_v1"
 
 #: Schema for the prospective V2 compatibility attestation.
-PROSPECTIVE_ATTESTATION_SCHEMA_VERSION = "phase8v2.cost-policy-canonical-attestation.v1"
+#:
+#: v2 semantics: ``attestation_anchor_commit`` records where the attested
+#: execution-model blobs were established (provenance anchor only).  The
+#: LIVE verification commit is always caller-supplied (the active
+#: evidence/source commit) and must independently reproduce the attested
+#: canonical fingerprint — an anchor is never accepted as proof for
+#: different committed code (no stale-commit evasion).
+PROSPECTIVE_ATTESTATION_SCHEMA_VERSION = "phase8v2.cost-policy-canonical-attestation.v2"
 
 _PROSPECTIVE_ATTESTATION_CLASSIFICATION = (
     "PROSPECTIVE_V2_COMPATIBILITY_ATTESTATION — NOT A REWRITE OF HISTORICAL POLICY"
 )
+
+
+def _git_blob_id(content: bytes) -> str:
+    """Content-addressed Git blob object ID (SHA-1) for raw blob bytes."""
+    return hashlib.sha1(b"blob " + str(len(content)).encode("ascii") + b"\x00" + content).hexdigest()
 
 
 def build_prospective_attestation(
@@ -645,6 +657,7 @@ def build_prospective_attestation(
     module_blob_shas: Mapping[str, str],
     publication_anchor_commit: str,
     v001_implementation_commit: str,
+    canonical_readiness_commits: Sequence[str] = (),
     repo: Path | None = None,
     blob_source=None,
 ) -> dict[str, Any]:
@@ -661,8 +674,18 @@ def build_prospective_attestation(
     modules = list(_EXECUTION_MODEL_MODULES)
     if tuple(sorted(module_blob_shas)) != tuple(sorted(modules)):
         raise CostPolicyError("attestation module set must match the execution-model surface exactly")
+    source = blob_source if blob_source is not None else make_git_blob_source(root)
+    git_blob_ids: dict[str, str] = {}
+    for relative in modules:
+        blob = source(canonical_commit, relative)
+        observed = hashlib.sha256(blob).hexdigest()
+        if observed != str(module_blob_shas[relative]):
+            raise CostPolicyError(
+                f"module blob SHA does not recompute from committed content: {relative}"
+            )
+        git_blob_ids[relative] = _git_blob_id(blob)
     recomputed = execution_model_fingerprint_canonical(
-        canonical_commit, worktree=root, blob_source=blob_source
+        canonical_commit, worktree=root, blob_source=source
     )
     if recomputed != canonical_execution_model_fingerprint:
         raise CostPolicyError(
@@ -683,14 +706,16 @@ def build_prospective_attestation(
         },
         "prospective_verification": {
             "fingerprint_contract": PROSPECTIVE_FINGERPRINT_CONTRACT,
+            "attestation_anchor_commit": canonical_commit,
             "execution_model_modules": list(modules),
             "module_blob_shas": dict(sorted(module_blob_shas.items())),
+            "module_git_blob_ids": dict(sorted(git_blob_ids.items())),
             "canonical_execution_model_fingerprint": canonical_execution_model_fingerprint,
-            "canonical_commit": canonical_commit,
         },
         "v001_lineage": {
             "implementation_commit": v001_implementation_commit,
             "measurement_tooling_commit": tooling_commit,
+            "canonical_readiness_commits": list(canonical_readiness_commits),
         },
         "representation_drift_statement": (
             "representation drift only; no execution-cost source-content drift"
@@ -717,9 +742,11 @@ def verify_cost_policy_prospective(
     Full historical policy-content verification (cost values, acceptance
     semantics, restrictions — everything :func:`verify_cost_policy` checks)
     plus ``canonical_git_blob_v1`` execution-model binding against committed
-    blobs at ``commit`` and against a required compatibility attestation.
+    blobs at ``commit`` (the ACTIVE evidence/source commit) and against a
+    required compatibility attestation whose anchor must cover the same
+    blobs.  A stale anchor presented for drifted active code fails closed.
 
-    The caller must explicitly present the attestation and the canonical
+    The caller must explicitly present the attestation and the active
     commit; there is no automatic fallback from legacy verification.
     """
     if not isinstance(attestation, Mapping) or not attestation:
@@ -758,24 +785,32 @@ def verify_cost_policy_prospective(
     attested_blobs = prospective.get("module_blob_shas", {})
     if tuple(sorted(attested_blobs)) != tuple(sorted(modules)):
         raise CostPolicyError("attested module blob set drifted")
+    attested_canonical = str(prospective.get("canonical_execution_model_fingerprint", ""))
+    if not attested_canonical:
+        raise CostPolicyError("attestation must bind a canonical execution-model fingerprint")
 
     root = repo if repo is not None else Path(__file__).resolve().parents[2]
     source = blob_source if blob_source is not None else make_git_blob_source(root)
+    attested_git_ids = prospective.get("module_git_blob_ids", {})
+    if tuple(sorted(attested_git_ids)) != tuple(sorted(modules)):
+        raise CostPolicyError("attested module git blob id set drifted")
     for relative in modules:
         blob = source(commit, relative)
         if hashlib.sha256(blob).hexdigest() != str(attested_blobs[relative]):
             raise CostPolicyError(
                 f"execution-model module content drifted from attestation: {relative}"
             )
+        if _git_blob_id(blob) != str(attested_git_ids[relative]):
+            raise CostPolicyError(
+                f"execution-model module git blob id drifted from attestation: {relative}"
+            )
     recomputed = execution_model_fingerprint_canonical(
         commit, worktree=root, blob_source=source
     )
-    if recomputed != str(prospective.get("canonical_execution_model_fingerprint")):
+    if recomputed != attested_canonical:
         raise CostPolicyError(
             "canonical execution-model fingerprint drifted from attestation"
         )
-    if str(prospective.get("canonical_commit")) != str(commit):
-        raise CostPolicyError("verification commit does not match the attested canonical commit")
 
     # Full historical policy-content verification (cost values and
     # acceptance semantics are NOT relaxed for V2).  The artifact's

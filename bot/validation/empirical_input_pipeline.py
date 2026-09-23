@@ -267,6 +267,7 @@ def resolve_input_bindings(
     research_identity: str | None = None,
     variant_id: str | None = None,
     canonical_commit: str | None = None,
+    active_commit: str | None = None,
     cost_policy_attestation: Mapping[str, Any] | None = None,
 ) -> EmpiricalInputBindings:
     """Resolve and verify every empirical input through the frozen registry.
@@ -276,6 +277,9 @@ def resolve_input_bindings(
     must explicitly pass ``fingerprint_contract="canonical_git_blob_v1"``
     together with the V2 research context and a compatibility attestation;
     there is no automatic fallback, and unknown contracts fail closed.
+    ``active_commit`` is the ACTIVE evidence/source commit governing the
+    current build; ``canonical_commit`` is retained only as a deprecated
+    alias that must agree with ``active_commit`` when both are supplied.
     """
     # Imported lazily to keep the import graph acyclic for tests.
     from bot.validation.development_evaluation_plan import (  # noqa: PLC0415
@@ -296,14 +300,14 @@ def resolve_input_bindings(
             research_identity=str(research_identity),
             variant_id=str(variant_id),
             fingerprint_contract=fingerprint_contract,
-            canonical_commit=str(canonical_commit),
+            active_commit=str(active_commit),
             attestation=dict(cost_policy_attestation or {}),
         )
     elif fingerprint_contract == "legacy_worktree_bytes_v0":
-        if any((research_identity, variant_id, canonical_commit, cost_policy_attestation)):
+        if any((research_identity, variant_id, canonical_commit, active_commit, cost_policy_attestation)):
             raise EmpiricalPipelineError(
                 "legacy binding contract must not carry prospective V2 context"
-        )
+            )
         readiness = verify_input_readiness(
             data_root=Path(evidence_root).parent,
             worktree=Path(worktree),

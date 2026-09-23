@@ -72,6 +72,50 @@ def _load_evidence(evidence_root: Path, package_id: str, expected_kind: str) -> 
     return package
 
 
+def _verify_prospective_historical_identity(
+    *,
+    evidence_root: Path,
+    package_id: str,
+    content: Mapping[str, Any],
+    attestation: Mapping[str, Any],
+) -> str:
+    """Enforce the attested historical cost-policy identity, fail closed.
+
+    Verifies, in the readiness layer (which knows the actual package id,
+    path and raw bytes), that the loaded package IS the attested immutable
+    historical artifact: exact package id, exact raw ``package.json``
+    SHA-256, and exact policy content fingerprint.  Returns the verified
+    raw artifact SHA-256 for the readiness report.
+    """
+    historical = attestation.get("historical_cost_policy", {})
+    attested_package_id = str(historical.get("package_id", ""))
+    attested_artifact_sha = str(historical.get("artifact_sha256", ""))
+    attested_policy_fp = str(historical.get("policy_fingerprint", ""))
+    if not attested_package_id or not attested_artifact_sha or not attested_policy_fp:
+        raise DevelopmentEvaluationPlanError(
+            "prospective attestation must bind the historical policy package id, artifact SHA and content fingerprint"
+        )
+    if package_id != attested_package_id:
+        raise DevelopmentEvaluationPlanError(
+            "historical cost-policy package id does not match prospective attestation"
+        )
+    artifact_path = Path(evidence_root) / attested_package_id / "package.json"
+    if not artifact_path.is_file():
+        raise DevelopmentEvaluationPlanError(
+            "historical cost-policy artifact is missing from the evidence root"
+        )
+    artifact_sha = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    if artifact_sha != attested_artifact_sha:
+        raise DevelopmentEvaluationPlanError(
+            "historical cost-policy artifact SHA does not match prospective attestation"
+        )
+    if str(content.get("policy_fingerprint", "")) != attested_policy_fp:
+        raise DevelopmentEvaluationPlanError(
+            "historical cost-policy content fingerprint does not match prospective attestation"
+        )
+    return artifact_sha
+
+
 def _broker_policy_fingerprint(worktree: Path) -> str:
     paths = (
         "bot/execution/broker/models.py",
@@ -337,14 +381,17 @@ def verify_input_readiness_prospective(
     research_identity: str,
     variant_id: str,
     fingerprint_contract: str,
-    canonical_commit: str,
+    active_commit: str,
     attestation: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Explicit prospective V2 input readiness (``canonical_git_blob_v1``).
 
-    Requires the caller to declare the V2 research context and to present a
-    cost-policy compatibility attestation; every other readiness check runs
-    identically to the historical verifier.  There is no automatic fallback
+    Requires the caller to declare the V2 research context, to present a
+    cost-policy compatibility attestation, and to declare the ACTIVE
+    evidence/source commit that governs the current build.  The attestation
+    anchor is provenance only; the active commit must independently
+    reproduce the attested canonical fingerprint, so presenting a stale
+    anchor for drifted code fails closed.  There is no automatic fallback
     from legacy verification, and unknown contracts fail closed.
     """
     import re  # noqa: PLC0415
@@ -373,14 +420,14 @@ def verify_input_readiness_prospective(
         fingerprint_contract="canonical_git_blob_v1",
         prospective_context={
             "attestation": attestation,
-            "canonical_commit": str(canonical_commit),
+            "active_commit": str(active_commit),
         },
     )
     report["prospective_binding"] = {
         "fingerprint_contract": "canonical_git_blob_v1",
         "research_identity": research_identity,
         "variant_id": variant_id,
-        "canonical_commit": str(canonical_commit),
+        "active_commit": str(active_commit),
         "attestation_fingerprint": str(attestation.get("attestation_fingerprint")),
     }
     return report
@@ -460,10 +507,16 @@ def _verify_input_readiness_impl(
         raise DevelopmentEvaluationPlanError("observed spread is not accepted for development")
     cost = _load_evidence(evidence_root, COST_POLICY_ID, "development_cost_policy")
     if fingerprint_contract == "canonical_git_blob_v1":
+        historical_artifact_sha256 = _verify_prospective_historical_identity(
+            evidence_root=evidence_root,
+            package_id=str(cost["manifest"]["package_id"]),
+            content=cost["content"],
+            attestation=prospective_context["attestation"],
+        )
         cost_report = cost_policy.verify_cost_policy_prospective(
             cost["content"],
             prospective_context["attestation"],
-            commit=prospective_context["canonical_commit"],
+            commit=prospective_context["active_commit"],
             repo=Path(worktree),
         )
     else:
@@ -484,10 +537,39 @@ def _verify_input_readiness_impl(
         raise DevelopmentEvaluationPlanError("Phase 8A preregistration template is missing")
     bindings = cost["content"]["bindings"]
     expected_strategy = cost_policy.strategy_fingerprint(StrategyConfig())
-    expected_execution = cost_policy.execution_model_fingerprint()
     expected_risk = cost_policy.risk_policy_fingerprint(RiskPolicy())
-    if (bindings["strategy_fingerprint"], bindings["execution_model_fingerprint"], bindings["risk_policy_fingerprint"]) != (expected_strategy, expected_execution, expected_risk):
-        raise DevelopmentEvaluationPlanError("strategy, execution, or risk fingerprint drifted from frozen cost policy")
+    if fingerprint_contract == "canonical_git_blob_v1":
+        # Prospective V2 binding: strategy/risk verified exactly as before;
+        # the LIVE execution identity comes from the successful prospective
+        # canonical verification (never from legacy working-tree bytes),
+        # while the historical legacy binding is preserved as metadata.
+        live_execution = str(cost_report["canonical_execution_model_fingerprint"])
+        historical_execution_legacy = str(
+            prospective_context["attestation"]["historical_cost_policy"][
+                "recorded_execution_model_fingerprint"
+            ]
+        )
+        if bindings["strategy_fingerprint"] != expected_strategy:
+            raise DevelopmentEvaluationPlanError("strategy fingerprint drifted from frozen cost policy")
+        if bindings["risk_policy_fingerprint"] != expected_risk:
+            raise DevelopmentEvaluationPlanError("risk fingerprint drifted from frozen cost policy")
+        if str(bindings["execution_model_fingerprint"]) != historical_execution_legacy:
+            raise DevelopmentEvaluationPlanError(
+                "historical execution-model binding changed; policy artifact tampering detected"
+            )
+        fingerprints = {
+            "strategy": expected_strategy,
+            "execution": live_execution,
+            "execution_contract": cost_policy.PROSPECTIVE_FINGERPRINT_CONTRACT,
+            "historical_execution_legacy": historical_execution_legacy,
+            "risk": expected_risk,
+            "broker_policy": _broker_policy_fingerprint(worktree),
+        }
+    else:
+        expected_execution = cost_policy.execution_model_fingerprint()
+        if (bindings["strategy_fingerprint"], bindings["execution_model_fingerprint"], bindings["risk_policy_fingerprint"]) != (expected_strategy, expected_execution, expected_risk):
+            raise DevelopmentEvaluationPlanError("strategy, execution, or risk fingerprint drifted from frozen cost policy")
+        fingerprints = {"strategy": expected_strategy, "execution": expected_execution, "risk": expected_risk, "broker_policy": _broker_policy_fingerprint(worktree)}
 
     return {
         "schema_version": "phase8m.input-readiness.v1",
@@ -504,10 +586,22 @@ def _verify_input_readiness_impl(
             "policy_fingerprint": metadata["content"]["policy_fingerprint"],
             "mandatory_scenarios": [item["scenario_id"] for item in metadata["content"]["mandatory_scenarios"]],
         },
-        "fingerprints": {"strategy": expected_strategy, "execution": expected_execution, "risk": expected_risk, "broker_policy": _broker_policy_fingerprint(worktree)},
+        "fingerprints": fingerprints,
         "session_time_rules": {"timezone": "UTC", "strategy_config_fingerprint": StrategyConfig().fingerprint(), "rollover": ["21:55", "22:10"]},
         "contamination_register": {"sha256": contamination_hash, "artifact_count": len(contamination.artifacts), "source": contamination.source},
         "phase8a_preregistration": {"path": "config/validation_plan.example.json", "sha256": _sha256_file(phase8a_template), "fold_count": 4, "purge_seconds": 86_400, "embargo_seconds": 86_400, "warmup_seconds": 2_419_200},
+        **(
+            {
+                "historical_identity": {
+                    "cost_policy_package_id": str(cost["manifest"]["package_id"]),
+                    "cost_policy_artifact_sha256": historical_artifact_sha256,
+                    "cost_policy_content_fingerprint": str(cost["content"]["policy_fingerprint"]),
+                },
+                "active_commit": str(prospective_context["active_commit"]),
+            }
+            if fingerprint_contract == "canonical_git_blob_v1"
+            else {}
+        ),
     }
 
 
