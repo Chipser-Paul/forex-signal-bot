@@ -97,6 +97,10 @@ BANNED_METRIC_SUBSTRINGS = (
 DEVELOPMENT_END_DATE = date(2024, 12, 31)
 HOLDOUT_TOKENS = ("holdout", "hold_out", "final_validation", "validation_fold")
 FOLD_PREFIX_ALLOWED = ("fold-01",)
+# MR001: identity fields that genuinely carry filesystem paths. Every other
+# field (digests, fingerprints, package IDs, counts) is structured provenance
+# validated by _assert_source_dates_within_development, never path-scanned.
+PATH_VALUED_FIELD_SUFFIXES = ("_path", "_dir", "_root", "_file")
 
 
 class V001EvalError(RuntimeError):
@@ -171,6 +175,34 @@ def reject_holdout_path(path: str | Path) -> None:
         for token in re.findall(r"\d{4}", part):
             if int(token) >= 2025:
                 raise BoundaryError(f"2025+ evidence path refused: {path!r}")
+
+
+def _reject_holdout_identity_paths(
+    identity: Mapping[str, Any], label: str
+) -> None:
+    """Scan only genuine filesystem path-valued fields of an identity mapping.
+
+    MR001 repair of the frozen-tooling category error: stringifying a whole
+    provenance mapping turns SHA-256 digests into ordinary text, and hash-hex
+    fragments (``4600``, ``8871``, ``5804`` ...) are then misread as future
+    years by the path scanner. This validator applies ``reject_holdout_path``
+    exclusively to values that are (or are recursively contained within)
+    declared path-valued fields, never to digests, package IDs, fingerprints
+    or other scalar provenance. Holdout protection is not weakened: genuine
+    path references and structured ``year=``/ISO-2025+ markers are still
+    refused (paths here, structured markers by
+    ``_assert_source_dates_within_development``).
+    """
+    for name, value in sorted(identity.items()):
+        if not str(name).endswith(PATH_VALUED_FIELD_SUFFIXES):
+            continue
+        values: tuple[Any, ...] = value if isinstance(value, (list, tuple)) else (value,)
+        for item in values:
+            if not isinstance(item, str):
+                raise BoundaryError(
+                    f"{label}.{name} must be a filesystem path string"
+                )
+            reject_holdout_path(item)
 
 
 def _assert_source_dates_within_development(source_identities: Mapping[str, Any]) -> None:
@@ -689,8 +721,16 @@ def run_v001_evaluation(
     assert_no_historical_store(identity)
     check_store_boundary(identity)
     _assert_source_dates_within_development(raw_source_identities)
-    reject_holdout_path(str(raw_source_identities))
-    reject_holdout_path(str(rebuilt_store_identity))
+    # MR001 (post-exposure repair): provenance mappings are structured data,
+    # not filesystem paths. ``reject_holdout_path`` is a path scanner and
+    # misclassifies hash-hex fragments inside stringified SHA-256 digests as
+    # future-year tokens (e.g. "e460066f4..." -> "4600"), which deterministically
+    # refused every conforming store. Structured provenance is validated by the
+    # structured validator above (which by design never interprets digests as
+    # dates); ``reject_holdout_path`` remains reserved for genuine paths.
+    _reject_holdout_identity_paths(raw_source_identities, "raw_source_identities")
+    _reject_holdout_identity_paths(rebuilt_store_identity, "rebuilt_store_identity")
+    _assert_source_dates_within_development(rebuilt_store_identity)
     from bot.analysis.fvg_engine import detect_fvgs as _production  # noqa: F401, PLC0415
 
     rows = []
