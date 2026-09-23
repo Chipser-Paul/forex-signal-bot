@@ -317,9 +317,93 @@ def verify_input_readiness(
     contamination_path: Path,
     tick_verification_depth: str = "identity-chain",
 ) -> dict[str, Any]:
+    """Read and hash-verify every input (historical legacy binding contract)."""
+    return _verify_input_readiness_impl(
+        data_root=data_root,
+        worktree=worktree,
+        contamination_path=contamination_path,
+        tick_verification_depth=tick_verification_depth,
+        fingerprint_contract="legacy_worktree_bytes_v0",
+        prospective_context=None,
+    )
+
+
+def verify_input_readiness_prospective(
+    *,
+    data_root: Path,
+    worktree: Path,
+    contamination_path: Path,
+    tick_verification_depth: str = "identity-chain",
+    research_identity: str,
+    variant_id: str,
+    fingerprint_contract: str,
+    canonical_commit: str,
+    attestation: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Explicit prospective V2 input readiness (``canonical_git_blob_v1``).
+
+    Requires the caller to declare the V2 research context and to present a
+    cost-policy compatibility attestation; every other readiness check runs
+    identically to the historical verifier.  There is no automatic fallback
+    from legacy verification, and unknown contracts fail closed.
+    """
+    import re  # noqa: PLC0415
+
+    if fingerprint_contract != "canonical_git_blob_v1":
+        raise DevelopmentEvaluationPlanError(
+            "prospective readiness requires the explicit canonical_git_blob_v1 contract"
+        )
+    if research_identity != "phase6-development-v2":
+        raise DevelopmentEvaluationPlanError(
+            "prospective readiness requires the phase6-development-v2 research identity"
+        )
+    if not re.fullmatch(r"phase6-development-v2-V\d{3}", str(variant_id)):
+        raise DevelopmentEvaluationPlanError(
+            "prospective readiness requires a registered phase6-development-v2 variant id"
+        )
+    if not isinstance(attestation, Mapping) or not attestation:
+        raise DevelopmentEvaluationPlanError(
+            "prospective readiness requires a compatibility attestation"
+        )
+    report = _verify_input_readiness_impl(
+        data_root=data_root,
+        worktree=worktree,
+        contamination_path=contamination_path,
+        tick_verification_depth=tick_verification_depth,
+        fingerprint_contract="canonical_git_blob_v1",
+        prospective_context={
+            "attestation": attestation,
+            "canonical_commit": str(canonical_commit),
+        },
+    )
+    report["prospective_binding"] = {
+        "fingerprint_contract": "canonical_git_blob_v1",
+        "research_identity": research_identity,
+        "variant_id": variant_id,
+        "canonical_commit": str(canonical_commit),
+        "attestation_fingerprint": str(attestation.get("attestation_fingerprint")),
+    }
+    return report
+
+
+def _verify_input_readiness_impl(
+    *,
+    data_root: Path,
+    worktree: Path,
+    contamination_path: Path,
+    tick_verification_depth: str,
+    fingerprint_contract: str,
+    prospective_context: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     """Read and hash-verify every input required by the frozen 2024 plan."""
     if tick_verification_depth not in ("identity-chain", "deep-stream"):
         raise DevelopmentEvaluationPlanError("unknown tick verification depth")
+    if fingerprint_contract not in ("legacy_worktree_bytes_v0", "canonical_git_blob_v1"):
+        raise DevelopmentEvaluationPlanError("unknown fingerprint contract")
+    if fingerprint_contract == "canonical_git_blob_v1" and not prospective_context:
+        raise DevelopmentEvaluationPlanError(
+            "prospective contract requires attestation context"
+        )
     data_root = Path(data_root)
     evidence_root = data_root / "evidence"
     year_root = data_root / "exness-tick-history" / "processed" / "year-packages" / "exness-xauusdm-2024-development-b2a0234a470dd397"
@@ -375,7 +459,15 @@ def verify_input_readiness(
     if spread["content"].get("status") != "ACCEPTED_DEVELOPMENT_ONLY":
         raise DevelopmentEvaluationPlanError("observed spread is not accepted for development")
     cost = _load_evidence(evidence_root, COST_POLICY_ID, "development_cost_policy")
-    cost_report = cost_policy.verify_cost_policy(cost["content"])
+    if fingerprint_contract == "canonical_git_blob_v1":
+        cost_report = cost_policy.verify_cost_policy_prospective(
+            cost["content"],
+            prospective_context["attestation"],
+            commit=prospective_context["canonical_commit"],
+            repo=Path(worktree),
+        )
+    else:
+        cost_report = cost_policy.verify_cost_policy(cost["content"])
     metadata = _load_evidence(evidence_root, METADATA_POLICY_ID, "development_metadata_bounds")
     verify_development_metadata_bounds(metadata["content"])
     if metadata["content"].get("development_evaluation_sufficient") is not True:

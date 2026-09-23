@@ -29,6 +29,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -37,6 +38,7 @@ from bot.acquisition.evidence_contracts import (
     EvidenceError,
     canonical_hash,
 )
+from bot.scientific.canonical_bytes import make_git_blob_source
 from bot.strategy.config import StrategyConfig
 from bot.execution.risk.models import RiskPolicy
 
@@ -479,7 +481,32 @@ def canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
 
 
 def verify_cost_policy(content: Mapping[str, Any]) -> dict[str, Any]:
-    """Full readback verification.  Raises CostPolicyError on any violation."""
+    """Full readback verification (historical legacy binding contract)."""
+    return _verify_cost_policy_impl(
+        content,
+        execution_binding_contract=LEGACY_FINGERPRINT_CONTRACT,
+        prospective_ctx=None,
+    )
+
+
+def _verify_cost_policy_impl(
+    content: Mapping[str, Any],
+    *,
+    execution_binding_contract: str,
+    prospective_ctx: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Full policy readback; execution-model binding per explicit contract.
+
+    ``execution_binding_contract`` selects — explicitly, with no automatic
+    fallback — how the artifact's execution-model binding is verified:
+
+    * ``legacy_worktree_bytes_v0``: historical working-tree-byte comparison
+      (unchanged historical semantics, including its checkout dependence);
+    * ``canonical_git_blob_v1``: the artifact's recorded historical binding
+      must be preserved verbatim as metadata while the live verification is
+      performed by :func:`verify_cost_policy_prospective` against committed
+      blobs.
+    """
     if str(content.get("schema_version")) != POLICY_SCHEMA_VERSION:
         raise CostPolicyError("policy schema version mismatch")
     if str(content.get("policy_state")) != "PREREGISTERED_INACTIVE":
@@ -554,10 +581,23 @@ def verify_cost_policy(content: Mapping[str, Any]) -> dict[str, Any]:
         value = str(bindings.get(field, ""))
         if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
             raise CostPolicyError(f"binding {field} must be a SHA-256 fingerprint")
-    if str(bindings["execution_model_fingerprint"]) != execution_model_fingerprint():
+    if execution_binding_contract == LEGACY_FINGERPRINT_CONTRACT:
+        if str(bindings["execution_model_fingerprint"]) != execution_model_fingerprint():
+            raise CostPolicyError(
+                "execution-model fingerprint drifted from the committed cost surface; "
+                "the policy must be re-preregistered under a new revision"
+            )
+    elif execution_binding_contract == PROSPECTIVE_FINGERPRINT_CONTRACT:
+        historical_fp = str((prospective_ctx or {}).get("historical_execution_model_fingerprint", ""))
+        if not historical_fp:
+            raise CostPolicyError("prospective binding requires the attested historical fingerprint")
+        if str(bindings["execution_model_fingerprint"]) != historical_fp:
+            raise CostPolicyError(
+                "historical execution-model binding changed; policy artifact tampering detected"
+            )
+    else:
         raise CostPolicyError(
-            "execution-model fingerprint drifted from the committed cost surface; "
-            "the policy must be re-preregistered under a new revision"
+            f"unknown execution binding contract: {execution_binding_contract!r}"
         )
     for binding_name in ("broker_support_revision", "observed_spread_evidence"):
         digest = str(
@@ -575,3 +615,185 @@ def verify_cost_policy(content: Mapping[str, Any]) -> dict[str, Any]:
         "policy_state": str(content["policy_state"]),
         "schema_version": POLICY_SCHEMA_VERSION,
     }
+
+
+# ---------------------------------------------------------------------------
+# Prospective V2 canonical verification (canonical_git_blob_v1)
+# ---------------------------------------------------------------------------
+
+#: Fingerprint contracts.
+LEGACY_FINGERPRINT_CONTRACT = "legacy_worktree_bytes_v0"
+PROSPECTIVE_FINGERPRINT_CONTRACT = "canonical_git_blob_v1"
+
+#: Schema for the prospective V2 compatibility attestation.
+PROSPECTIVE_ATTESTATION_SCHEMA_VERSION = "phase8v2.cost-policy-canonical-attestation.v1"
+
+_PROSPECTIVE_ATTESTATION_CLASSIFICATION = (
+    "PROSPECTIVE_V2_COMPATIBILITY_ATTESTATION — NOT A REWRITE OF HISTORICAL POLICY"
+)
+
+
+def build_prospective_attestation(
+    *,
+    canonical_commit: str,
+    tooling_commit: str,
+    policy_package_id: str,
+    policy_artifact_sha256: str,
+    policy_content_fingerprint: str,
+    recorded_legacy_execution_model_fingerprint: str,
+    canonical_execution_model_fingerprint: str,
+    module_blob_shas: Mapping[str, str],
+    publication_anchor_commit: str,
+    v001_implementation_commit: str,
+    repo: Path | None = None,
+    blob_source=None,
+) -> dict[str, Any]:
+    """Build the prospective V2 cost-policy compatibility attestation.
+
+    Records — without rewriting — that the immutable historical cost-policy
+    artifact binds its execution-model surface under the historical
+    ``legacy_worktree_bytes_v0`` contract, and that the prospective V2
+    verification contract for the identical frozen cost surface is
+    ``canonical_git_blob_v1`` over the committed module blobs at
+    ``canonical_commit``.
+    """
+    root = repo if repo is not None else Path(__file__).resolve().parents[2]
+    modules = list(_EXECUTION_MODEL_MODULES)
+    if tuple(sorted(module_blob_shas)) != tuple(sorted(modules)):
+        raise CostPolicyError("attestation module set must match the execution-model surface exactly")
+    recomputed = execution_model_fingerprint_canonical(
+        canonical_commit, worktree=root, blob_source=blob_source
+    )
+    if recomputed != canonical_execution_model_fingerprint:
+        raise CostPolicyError(
+            "canonical execution-model fingerprint does not recompute from committed blobs"
+        )
+    attestation: dict[str, Any] = {
+        "schema_version": PROSPECTIVE_ATTESTATION_SCHEMA_VERSION,
+        "classification": _PROSPECTIVE_ATTESTATION_CLASSIFICATION,
+        "research_identity": "phase6-development-v2",
+        "historical_cost_policy": {
+            "package_id": policy_package_id,
+            "artifact_sha256": policy_artifact_sha256,
+            "policy_fingerprint": policy_content_fingerprint,
+            "immutable_historical_artifact": True,
+            "recorded_execution_model_fingerprint": recorded_legacy_execution_model_fingerprint,
+            "recorded_fingerprint_contract": LEGACY_FINGERPRINT_CONTRACT,
+            "publication_anchor_commit": publication_anchor_commit,
+        },
+        "prospective_verification": {
+            "fingerprint_contract": PROSPECTIVE_FINGERPRINT_CONTRACT,
+            "execution_model_modules": list(modules),
+            "module_blob_shas": dict(sorted(module_blob_shas.items())),
+            "canonical_execution_model_fingerprint": canonical_execution_model_fingerprint,
+            "canonical_commit": canonical_commit,
+        },
+        "v001_lineage": {
+            "implementation_commit": v001_implementation_commit,
+            "measurement_tooling_commit": tooling_commit,
+        },
+        "representation_drift_statement": (
+            "representation drift only; no execution-cost source-content drift"
+        ),
+        "cost_semantics_unchanged": True,
+        "created_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    attestation["attestation_fingerprint"] = hashlib.sha256(
+        canonical_json_bytes({k: v for k, v in attestation.items() if k != "attestation_fingerprint"})
+    ).hexdigest()
+    return attestation
+
+
+def verify_cost_policy_prospective(
+    content: Mapping[str, Any],
+    attestation: Mapping[str, Any],
+    *,
+    commit: str,
+    repo: Path | None = None,
+    blob_source=None,
+) -> dict[str, Any]:
+    """Explicit prospective V2 cost-policy verification.
+
+    Full historical policy-content verification (cost values, acceptance
+    semantics, restrictions — everything :func:`verify_cost_policy` checks)
+    plus ``canonical_git_blob_v1`` execution-model binding against committed
+    blobs at ``commit`` and against a required compatibility attestation.
+
+    The caller must explicitly present the attestation and the canonical
+    commit; there is no automatic fallback from legacy verification.
+    """
+    if not isinstance(attestation, Mapping) or not attestation:
+        raise CostPolicyError("prospective verification requires a compatibility attestation")
+    if attestation.get("schema_version") != PROSPECTIVE_ATTESTATION_SCHEMA_VERSION:
+        raise CostPolicyError("attestation schema version mismatch")
+    if attestation.get("classification") != _PROSPECTIVE_ATTESTATION_CLASSIFICATION:
+        raise CostPolicyError("attestation classification mismatch")
+    if attestation.get("research_identity") != "phase6-development-v2":
+        raise CostPolicyError("attestation research identity mismatch")
+    recorded_fp = attestation.get("attestation_fingerprint")
+    if not recorded_fp or hashlib.sha256(
+        canonical_json_bytes({k: v for k, v in attestation.items() if k != "attestation_fingerprint"})
+    ).hexdigest() != str(recorded_fp):
+        raise CostPolicyError("attestation fingerprint mismatch (tampering detected)")
+
+    prospective = attestation["prospective_verification"]
+    if prospective.get("fingerprint_contract") != PROSPECTIVE_FINGERPRINT_CONTRACT:
+        raise CostPolicyError(
+            "attestation must bind the canonical_git_blob_v1 contract"
+        )
+    historical = attestation["historical_cost_policy"]
+    if historical.get("recorded_fingerprint_contract") != LEGACY_FINGERPRINT_CONTRACT:
+        raise CostPolicyError("historical contract metadata must remain legacy_worktree_bytes_v0")
+    if historical.get("immutable_historical_artifact") is not True:
+        raise CostPolicyError("historical artifact must be declared immutable")
+    attested_policy_fp = historical.get("policy_fingerprint")
+    if not attested_policy_fp or str(attested_policy_fp) != str(content.get("policy_fingerprint")):
+        raise CostPolicyError("attestation does not bind the presented policy content")
+    if attestation.get("cost_semantics_unchanged") is not True:
+        raise CostPolicyError("attestation must declare cost semantics unchanged")
+
+    modules = list(_EXECUTION_MODEL_MODULES)
+    if list(prospective.get("execution_model_modules", [])) != modules:
+        raise CostPolicyError("attested execution-model module set drifted")
+    attested_blobs = prospective.get("module_blob_shas", {})
+    if tuple(sorted(attested_blobs)) != tuple(sorted(modules)):
+        raise CostPolicyError("attested module blob set drifted")
+
+    root = repo if repo is not None else Path(__file__).resolve().parents[2]
+    source = blob_source if blob_source is not None else make_git_blob_source(root)
+    for relative in modules:
+        blob = source(commit, relative)
+        if hashlib.sha256(blob).hexdigest() != str(attested_blobs[relative]):
+            raise CostPolicyError(
+                f"execution-model module content drifted from attestation: {relative}"
+            )
+    recomputed = execution_model_fingerprint_canonical(
+        commit, worktree=root, blob_source=source
+    )
+    if recomputed != str(prospective.get("canonical_execution_model_fingerprint")):
+        raise CostPolicyError(
+            "canonical execution-model fingerprint drifted from attestation"
+        )
+    if str(prospective.get("canonical_commit")) != str(commit):
+        raise CostPolicyError("verification commit does not match the attested canonical commit")
+
+    # Full historical policy-content verification (cost values and
+    # acceptance semantics are NOT relaxed for V2).  The artifact's
+    # historical legacy binding is verified verbatim as preserved metadata;
+    # the live execution-model check is the canonical blob verification above.
+    report = _verify_cost_policy_impl(
+        content,
+        execution_binding_contract=PROSPECTIVE_FINGERPRINT_CONTRACT,
+        prospective_ctx={
+            "historical_execution_model_fingerprint": str(
+                historical["recorded_execution_model_fingerprint"]
+            ),
+        },
+    )
+    report["execution_binding_contract"] = PROSPECTIVE_FINGERPRINT_CONTRACT
+    report["canonical_execution_model_fingerprint"] = recomputed
+    report["attestation_fingerprint"] = str(recorded_fp)
+    report["historical_execution_model_fingerprint_preserved"] = str(
+        historical["recorded_execution_model_fingerprint"]
+    )
+    return report

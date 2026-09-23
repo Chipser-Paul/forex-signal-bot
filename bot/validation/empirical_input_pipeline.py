@@ -263,8 +263,20 @@ def resolve_input_bindings(
     contamination_path: Path,
     plan: Mapping[str, Any],
     tick_verification_depth: str = "identity-chain",
+    fingerprint_contract: str = "legacy_worktree_bytes_v0",
+    research_identity: str | None = None,
+    variant_id: str | None = None,
+    canonical_commit: str | None = None,
+    cost_policy_attestation: Mapping[str, Any] | None = None,
 ) -> EmpiricalInputBindings:
-    """Resolve and verify every empirical input through the frozen registry."""
+    """Resolve and verify every empirical input through the frozen registry.
+
+    The default binding contract is the historical
+    ``legacy_worktree_bytes_v0`` execution-model verification.  V2 callers
+    must explicitly pass ``fingerprint_contract="canonical_git_blob_v1"``
+    together with the V2 research context and a compatibility attestation;
+    there is no automatic fallback, and unknown contracts fail closed.
+    """
     # Imported lazily to keep the import graph acyclic for tests.
     from bot.validation.development_evaluation_plan import (  # noqa: PLC0415
         METADATA_POLICY_ID,
@@ -272,14 +284,36 @@ def resolve_input_bindings(
         OBSERVED_SPREAD_ID,
         _load_evidence,
         verify_input_readiness,
+        verify_input_readiness_prospective,
     )
 
-    readiness = verify_input_readiness(
-        data_root=Path(evidence_root).parent,
-        worktree=Path(worktree),
-        contamination_path=Path(contamination_path),
-        tick_verification_depth=tick_verification_depth,
-    )
+    if fingerprint_contract == "canonical_git_blob_v1":
+        readiness = verify_input_readiness_prospective(
+            data_root=Path(evidence_root).parent,
+            worktree=Path(worktree),
+            contamination_path=Path(contamination_path),
+            tick_verification_depth=tick_verification_depth,
+            research_identity=str(research_identity),
+            variant_id=str(variant_id),
+            fingerprint_contract=fingerprint_contract,
+            canonical_commit=str(canonical_commit),
+            attestation=dict(cost_policy_attestation or {}),
+        )
+    elif fingerprint_contract == "legacy_worktree_bytes_v0":
+        if any((research_identity, variant_id, canonical_commit, cost_policy_attestation)):
+            raise EmpiricalPipelineError(
+                "legacy binding contract must not carry prospective V2 context"
+        )
+        readiness = verify_input_readiness(
+            data_root=Path(evidence_root).parent,
+            worktree=Path(worktree),
+            contamination_path=Path(contamination_path),
+            tick_verification_depth=tick_verification_depth,
+        )
+    else:
+        raise EmpiricalPipelineError(
+            f"unknown fingerprint contract: {fingerprint_contract!r}"
+        )
     bound_readiness = plan.get("input_readiness", {})
     if bound_readiness.get("ticks", {}).get("canonical_sha256") != readiness["ticks"]["canonical_sha256"]:
         raise EmpiricalPipelineError("plan tick identity does not match the verified registry")

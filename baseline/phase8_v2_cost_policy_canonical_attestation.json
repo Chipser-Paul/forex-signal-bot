@@ -1,0 +1,37 @@
+{
+  "schema_version": "phase8v2.cost-policy-canonical-attestation.v1",
+  "classification": "PROSPECTIVE_V2_COMPATIBILITY_ATTESTATION \u2014 NOT A REWRITE OF HISTORICAL POLICY",
+  "research_identity": "phase6-development-v2",
+  "historical_cost_policy": {
+    "package_id": "evidence-development_cost_policy-v1-6b1a986b1f8d7b81",
+    "artifact_sha256": "b6f35858bda12f8d9419836c3c152e5857e5c342b339e73c343b2acc9a63c0b4",
+    "policy_fingerprint": "aa0ccc9368c0cf55b4775b4295f0424d4bdb0e5fd6cbfaf27137763be58e9404",
+    "immutable_historical_artifact": true,
+    "recorded_execution_model_fingerprint": "b1736e397248bbac57da0a87ba6a5b43988d89b998b1beb7c69185230026ee97",
+    "recorded_fingerprint_contract": "legacy_worktree_bytes_v0",
+    "publication_anchor_commit": "1c593f5e14597b6b25a8abe702457e71a10e545c"
+  },
+  "prospective_verification": {
+    "fingerprint_contract": "canonical_git_blob_v1",
+    "execution_model_modules": [
+      "bot/backtesting/costs.py",
+      "bot/backtesting/models.py",
+      "bot/backtesting/engine.py"
+    ],
+    "module_blob_shas": {
+      "bot/backtesting/costs.py": "4a4b640a15d53d5d47e1e3a97c549e4f463ad23b",
+      "bot/backtesting/engine.py": "bfc0f89a9b62b107d7eadc6c394e7d573e53336f",
+      "bot/backtesting/models.py": "135efaeca7ca3650d1089bc7bb9307c1355a1ead"
+    },
+    "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108",
+    "canonical_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e"
+  },
+  "v001_lineage": {
+    "implementation_commit": "b4a1b0e6ab353f513a0df554840344f322e0964c",
+    "measurement_tooling_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e"
+  },
+  "representation_drift_statement": "representation drift only; no execution-cost source-content drift",
+  "cost_semantics_unchanged": true,
+  "created_utc": "2026-09-23T14:00:18.187601+00:00",
+  "attestation_fingerprint": "e0ab819054e2a65542f6dd4eac8891ec5cd554e72a5a36e7456380fcf7381206"
+}
