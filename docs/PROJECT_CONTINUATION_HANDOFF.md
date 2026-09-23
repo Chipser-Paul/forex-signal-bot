@@ -271,6 +271,36 @@ demo/live trading is authorized.
   so the 8-variant/4-parameter budget lock has not yet been
   triggered.
 
+**V2 D001 execution record (2026-09-23).**
+
+- D001 was executed on Fold 01 using the frozen Phase-A tooling at
+  commit `1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf` (tooling tests
+  32/32 plus 25/25 canonical-machinery regression tests passed before
+  any data access; the remote resolved to the tooling commit at the
+  hard barrier).
+- Diagnostic budget is now `1 / 12 executed`; strategy variants
+  remain `0 / 8 observed` and numeric parameter trials `0 / 4` —
+  the budget result-lock has still not triggered.
+- Result record `phase8-v2-D001-R001` is appended to
+  `baseline/phase8_v2_hypothesis_register.json`; raw structured
+  output lives outside Git under
+  `evidence/v2_diagnostics/phase8-v2-D001-R001/` (SHA-256
+  `af03bfbe688b010deb70261eabe2240336e16bbff07d519ea20a8ccbc3b99c10`,
+  read-back verified). Compact report:
+  `docs/PHASE8_V2_DIAGNOSTIC_D001_RESULT.md`.
+- H001 `SUPPORTED_BY_D001`; H002 `SUPPORTED_BY_D001`; H003
+  `NOT_TESTED_BY_D001`. Key structural facts: FVG present in 0 of
+  7,316 reducer decisions; the exact-overlap condition was never
+  evaluable (0/526); valid-OB failures concentrate in mitigation
+  (307/526), premium/discount placement (79), invalidation (75) and
+  displacement (61). The run exactly reproduces the known V1
+  diagnostic evidence (13,269 scheduled; 5,827 wait; 7,273 skip).
+- No strategy variant was selected; no profitability conclusion is
+  drawn; D001 by itself supports no rule change.
+- Next step requires supervisory review before D002 preregistration
+  or Variant 1 authorization. Folds 02-04 remain reserved; holdout
+  untouched.
+
 ## 14. Acceptance requirement
 
 The evaluation plan requires **at least 30 closed trades per fold**

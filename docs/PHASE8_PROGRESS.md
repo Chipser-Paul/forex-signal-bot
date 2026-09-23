@@ -1711,3 +1711,25 @@ against the GitHub authoritative publication timestamp); the
 superseded for chronology only. No empirical observation occurred
 before the correction; the diagnostic budget remains `0 / 12
 executed`; D001 remains `REGISTERED_NOT_EXECUTED`.
+
+V2 diagnostic D001 execution record (2026-09-23): executed on Fold 01
+with frozen tooling '1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf'
+(Phase-A: 32/32 tooling tests + 25/25 regression; hard barrier: remote
+resolved to the tooling commit; store 'fold-01-1d710826193a6767'
+integrity verified over all 13,269 rows). Budget now '1 / 12'
+diagnostics; variants '0 / 8'; parameter trials '0 / 4' (result-lock
+not triggered). Result record 'phase8-v2-D001-R001' appended to the
+register; raw output external under
+'evidence/v2_diagnostics/phase8-v2-D001-R001/' (SHA-256
+'af03bfbe688b010deb70261eabe2240336e16bbff07d519ea20a8ccbc3b99c10',
+4,901 bytes, read-back verified); compact report
+'docs/PHASE8_V2_DIAGNOSTIC_D001_RESULT.md'. Dispositions: H001
+'SUPPORTED_BY_D001' (FVG present 0/7,316 - overlap never evaluable),
+H002 'SUPPORTED_BY_D001' (valid-OB failure concentrated: mitigation
+307/526 = 58.4%, outside-PD 79, invalidated 75, no-displacement 61,
+aligned 4), H003 'NOT_TESTED_BY_D001'. Decision accounting reconciles
+exactly (13,269 = 7,316 + 4,815 + 1,138) and reproduces the known V1
+evidence (wait 5,827; skip 7,273 incl. 169 news-blocked; scores
+522x5/8 + 4x7/8). No strategy variant selected; no profitability
+metric emitted; Folds 02-04 remain reserved; holdout untouched. Next
+step: supervisory review before D002 or Variant 1.

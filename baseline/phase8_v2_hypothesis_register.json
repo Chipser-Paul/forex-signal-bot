@@ -130,7 +130,96 @@
       "fold_boundary": ["2024-04-01T00:00:00Z", "2024-06-08T00:00:00Z"]
     }
   ],
-  "result_records": [],
+  "result_records": [
+    {
+      "result_id": "phase8-v2-D001-R001",
+      "diagnostic_id": "phase8-v2-D001",
+      "executed": true,
+      "execution_tooling_commit": "1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf",
+      "canonical_source_commit_used": "1f2f997c1763f7a6e50f7d02e35d88bcdd568ebf",
+      "executed_utc": "2026-09-23T00:13:49Z",
+      "tooling_fingerprint_sha256": "5b687b3603698d18684b9d26af2cc5409ab63ac1c8e17ff8757411c1e5c637b0",
+      "output": {
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/evidence/v2_diagnostics/phase8-v2-D001-R001/phase8-v2-D001_result.json",
+        "sha256": "af03bfbe688b010deb70261eabe2240336e16bbff07d519ea20a8ccbc3b99c10",
+        "bytes": 4901,
+        "read_back_verified": true
+      },
+      "fold01_boundary": ["2024-04-01T00:00:00+00:00", "2024-06-08T00:00:00+00:00"],
+      "input_provenance": {
+        "fold_store": "fold-01-1d710826193a6767",
+        "fold_store_sha256": "1d710826193a67671e99f968160b2f8d586444f749a7f39e94c3ce6c04b0255e",
+        "fold_store_identity_sha256": "1d710826193a67671e99f968160b2f8d586444f749a7f39e94c3ce6c04b0255e",
+        "row_integrity": "verify_rows=True passed over all 13269 rows",
+        "index_sha256_recorded_in_store": "247432c8d30d2bf2347d05016ee36eff5b6506f438825afa6a1a8e23fdf83c5b",
+        "provenance_note": "Store resolved by direct identity verification (all nine frozen identity fields independently reproduced) because the store was built at 42c0956 in the historical build worktree and binds the pre-adapter pipeline fingerprint 765b19d7; the canonical-byte adapter publication 94b278a post-dates the store build and legitimately changed the legacy fingerprint surface. Evaluation semantics are byte-identical across c38f9dc..1f2f997."
+      },
+      "decision_accounting": {
+        "scheduled": 13269,
+        "reducer_classified": 7316,
+        "missing_history": 4815,
+        "unavailable_input": 1138,
+        "evaluation_error": 0,
+        "reconciles": true
+      },
+      "preregistered_structural_summaries": {
+        "actions": {"skip": 1489, "wait": 5827},
+        "reasons": {"displacement_missing": 2118, "internal_structure_missing": 963, "liquidity_sweep_missing": 3709, "score_below_threshold": 526},
+        "gate_funnel": {
+          "gate_8_liquidity": {"entered": 7316, "passed": 3607, "failed": 3709, "pass_rate": 0.493029},
+          "gate_9_displacement": {"entered": 3607, "passed": 1489, "failed": 2118, "pass_rate": 0.412808},
+          "gate_10_internal_structure": {"entered": 1489, "passed": 526, "failed": 963, "pass_rate": 0.353257},
+          "gate_11_confluence_score": {"entered": 526, "passed": 0, "failed": 526, "pass_rate": 0.0}
+        },
+        "ob_reason_counts": {"None": 6790, "ob_aligned": 4, "ob_invalidated": 75, "ob_mitigated": 307, "ob_no_displacement": 61, "ob_outside_pd_zone": 79},
+        "ob_type_counts": {"None": 6790, "order_block": 526},
+        "ob_direction_counts": {"bearish": 2576, "bullish": 4740},
+        "ob_condition_counts": {"mitigated_true": 382, "in_pd_zone_true": 4},
+        "fvg_direction_counts": {"None": 7316},
+        "score_distribution": {"5": 522, "7": 4},
+        "score_check_pass_counts": {
+          "HTF bias aligns with trade direction": {"passed": 526, "failed": 0},
+          "Price located in premium/discount zone": {"passed": 526, "failed": 0},
+          "Valid order block present": {"passed": 4, "failed": 522},
+          "FVG overlaps the order block zone": {"passed": 0, "failed": 526},
+          "Liquidity sweep occurred before entry": {"passed": 526, "failed": 0}
+        },
+        "direction_consistency": {"same": 526, "opposite": 0, "undefined_no_ob": 6790},
+        "ob_x_fvg_x_overlap_counts": {
+          "valid_ob=False/fvg_present=False/overlap=False": 7312,
+          "valid_ob=True/fvg_present=False/overlap=False": 4
+        },
+        "overlap_true_decisions": 0,
+        "overlap_geometry_observations": 0
+      },
+      "historical_v1_reproduction": {
+        "scheduled_decisions_13269": true,
+        "wait_5827": true,
+        "skip_7273_incl_news_169": true,
+        "news_blocked_169": true,
+        "scored_526_522x5_4x7_0x8": true,
+        "fvg_ob_overlap_failed_526_of_526": true,
+        "valid_ob_failed_522_of_526": true,
+        "reproduces_known_v1_diagnostic_evidence": true
+      },
+      "h001_classification": "SUPPORTED_BY_D001",
+      "h001_evidence": "FVG availability failed 7316/7316 (FVGs list empty in every reducer decision) while OB presence failed at a materially different rate (526/7316 present, 6790/7316 absent) and exact-overlap availability failed 526/526 where both stages were reached. Availability of the two structures differs materially, exactly the preregistered diagnostic implication of H001. D001 computed no alternative-overlap candidate counts.",
+      "h002_classification": "SUPPORTED_BY_D001",
+      "h002_evidence": "Among the 526 decisions with OB present, failure concentrates in specific subpredicates: ob_mitigated 307 (58.4%), ob_outside_pd_zone 79 (15.0%), ob_invalidated 75 (14.3%), ob_no_displacement 61 (11.6%); only 4 reached ob_aligned (0.8%). Individual lifecycle/structural subconditions occur at materially different rates while their conjunction (ob_aligned with valid=True) is rare, exactly the preregistered diagnostic implication of H002. D001 removed or weakened no OB condition.",
+      "h003_status": "NOT_TESTED_BY_D001",
+      "diagnostic_budget_after_execution": "1 / 12",
+      "no_strategy_variant_executed": true,
+      "no_numeric_parameter_trial": true,
+      "no_performance_metric_emitted": true,
+      "reserved_folds_untouched": true,
+      "holdout_untouched": true,
+      "unplanned_observations": [
+        "UNPLANNED_OBSERVATION — REQUIRES FUTURE PREREGISTRATION: premium/discount placement failed for 522/526 OB-present decisions (in_pd_zone_true = 4 across the fold), a concentration not named by any preregistered hypothesis. Recorded without analysis into any strategy rule."
+      ]
+    }
+  ],
   "provenance_corrections": [
     {
       "correction_id": "phase8-v2-PC001",
