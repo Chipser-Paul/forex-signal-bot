@@ -60,6 +60,74 @@
       }
     }
   ],
+  "governance_records": [
+    {
+      "record_id": "phase8-v2-S001",
+      "record_type": "STATIC_IMPLEMENTATION_AUDIT",
+      "title": "Frozen FVG ATR Interface Incompatibility",
+      "created_utc": "2026-09-23T11:05:30Z",
+      "source_commit": "3d2cfd2496663118a4ffcacad4c7c1fe7b5bf814",
+      "source_tree": "994e6cc08afac629268f255e3e697770ef9fc3f3",
+      "bound_source_blobs": {
+        "utils/indicators.py": "5324ae9e1b1be9dc578c187f05216141bd32c5bb",
+        "bot/analysis/fvg_engine.py": "ceec93a76e64297b844c92c1f63cd87aa083f3f8",
+        "bot/strategy/regime.py": "4ffa993f176eee23db237aecf5c389259cafe3ea"
+      },
+      "static_proof": {
+        "calculate_atr_public_surface": "scalar: returns 0.0 for invalid/insufficient input, otherwise float(atr_series.iloc[-1]) (utils/indicators.py lines 5-19)",
+        "detect_fvgs_consumption": "bot/analysis/fvg_engine.py line 29: atr = calculate_atr(df, atr_period); line 30: atr_series = atr if hasattr(atr, 'iloc') else None; line 38: if atr_series is None or i - 1 >= len(atr_series): continue",
+        "consequence": "A scalar float has no .iloc, so atr_series is always None; every detector iteration skips every candidate window and detect_fvgs returns [] for every frame long enough to enter the loop. Short frames (len(df) < atr_period + 3) also return []. Therefore the current frozen detect_fvgs implementation cannot produce an FVG for any input through this path.",
+        "classification": "deterministic implementation/interface defect"
+      },
+      "evidence_class": "STATIC_SOURCE_PROOF — NOT EMPIRICAL MARKET EVIDENCE",
+      "no_empirical_read": true,
+      "no_strategy_execution": true,
+      "no_diagnostic_budget_consumption": true,
+      "global_calculate_atr_change_prohibited": "the first repair must not change the existing scalar public behavior of utils.indicators.calculate_atr; other callers may depend on it; the defect must be repaired locally in the FVG detector path",
+      "canonical_atr_series_helper": {
+        "path": "bot/strategy/regime.py::atr_series",
+        "returns": "rolling pd.Series true-range mean (high-low, abs(high-previous_close), abs(low-previous_close), row-wise maximum true range, rolling mean with the supplied period, min_periods=period)",
+        "equivalence_requirement": "before use in a strategy variant, mathematical equivalence to the scalar helper's ATR definition must be proven by tests on multiple valid deterministic frames, at minimum float(atr_series(frame, period).iloc[-1]) == calculate_atr(frame, period) within an explicit numerical tolerance"
+      }
+    },
+    {
+      "record_id": "phase8-v2-D002-X001",
+      "record_type": "DIAGNOSTIC_DISPOSITION",
+      "created_utc": "2026-09-23T11:05:30Z",
+      "diagnostic_id": "phase8-v2-D002",
+      "disposition": "BLOCKED_BEFORE_EXECUTION — DETERMINISTIC_FVG_ATR_INTERFACE_DEFECT",
+      "reason": "D002's Stage-B attrition is already deterministically fixed at zero by the source defect recorded in phase8-v2-S001. Executing D002 under unchanged frozen semantics would consume a diagnostic trial without adding meaningful scientific information about downstream Stages C-G.",
+      "execution_count_remains_zero": true,
+      "consumes_no_diagnostic_budget": true,
+      "no_result_record_exists": true,
+      "no_raw_empirical_output_exists": true,
+      "specification_retained_unchanged": "docs/PHASE8_V2_DIAGNOSTIC_D002.md (append-only disposition section added)",
+      "historically_preregistered": true
+    },
+    {
+      "record_id": "phase8-v2-H004-X001",
+      "record_type": "HYPOTHESIS_INTERPRETATION",
+      "created_utc": "2026-09-23T11:05:30Z",
+      "hypothesis_id": "phase8-v2-H004",
+      "disposition": "SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT",
+      "narrow_meaning": "The zero canonical FVG availability observed in D001 is explained by a deterministic implementation-stage defect and therefore cannot be interpreted as evidence that three-candle imbalance structure is entirely absent from Fold 01.",
+      "supported_scope": "pipeline causation of the canonical zero only",
+      "explicitly_not_established": [
+        "that Fold 01 contains any particular number of real FVGs",
+        "that any FVG would survive the 1.5x ATR rule",
+        "that any FVG would be same-direction",
+        "that any FVG would remain unfilled",
+        "that any FVG would overlap an OB",
+        "that any candidate would be created",
+        "that profitability improves"
+      ],
+      "references": {
+        "static_audit": "phase8-v2-S001",
+        "diagnostic": "phase8-v2-D001",
+        "result_record": "phase8-v2-D001-R001"
+      }
+    }
+  ],
   "charter": {
     "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
     "sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
@@ -188,6 +256,28 @@
       "expected_diagnostic_implication": "If H004 is relevant, the zero final FVG list should be attributable to one or more concentrated pipeline stages rather than every underlying prerequisite simultaneously being absent.",
       "no_strategy_rule_change_implied": true,
       "linked_diagnostic": "phase8-v2-D002"
+    },
+    {
+      "hypothesis_id": "phase8-v2-H005",
+      "title": "FVG ATR-Series Interface Repair",
+      "status": "OPEN",
+      "registered_utc": "2026-09-23T11:05:30Z",
+      "statement": "The frozen canonical FVG detector's zero-output behavior is caused by an interface mismatch between scalar calculate_atr() and the detector's expectation of an indexable ATR series. Supplying a mathematically equivalent rolling ATR series to the detector, while preserving all existing FVG thresholds and downstream filtering semantics, should restore the detector's ability to evaluate canonical FVG windows without introducing a new trading threshold.",
+      "economic_rationale": "This is a correctness repair to allow the already-declared FVG definition to execute as written. It does not assert that relaxing the FVG definition is profitable or desirable.",
+      "expected_qualitative_effect": [
+        "Stage-B detector windows become evaluable after ATR warm-up",
+        "later existing stages C-G may finally produce empirical observations",
+        "final candidate frequency may remain zero"
+      ],
+      "no_numerical_candidate_prediction_preregistered": true,
+      "relevant_production_paths": [
+        "bot/analysis/fvg_engine.py",
+        "utils/indicators.py",
+        "bot/strategy/regime.py::atr_series"
+      ],
+      "linked_static_audit": "phase8-v2-S001",
+      "linked_variant": "phase6-development-v2-V001",
+      "no_strategy_rule_change_beyond_local_repair_implied": true
     }
   ],
   "diagnostics": [
@@ -238,6 +328,72 @@
       "h002_boundary": "phase8-v2-H002 remains OPEN — requires separately preregistered canonical OrderBlock lifecycle diagnostic; D003 not registered yet",
       "budget_consumption_upon_first_empirical_execution": "2 / 12",
       "two_phase_discipline": "Phase A synthetic-only tooling committed and pushed before any Fold-01 access; Phase B only after the remote resolves to the frozen tooling commit"
+    }
+  ],
+  "strategy_variants": [
+    {
+      "variant_id": "phase6-development-v2-V001",
+      "title": "Canonical FVG ATR-Series Compatibility Repair",
+      "status": "REGISTERED_NOT_IMPLEMENTED",
+      "registered_utc": "2026-09-23T11:05:30Z",
+      "budget_classification": "STRATEGY_VARIANT",
+      "specification_document": "docs/PHASE8_V2_VARIANT_V001.md",
+      "specification_sha256": "0b1d5ec57c68746f7c346c4b576220460d0dad54d218a2add34dbe6e2adbf8fb",
+      "linked_hypothesis": "phase8-v2-H005",
+      "linked_static_audit": "phase8-v2-S001",
+      "change_boundary": {
+        "may_modify": "only what is necessary for the FVG detector to consume a valid rolling ATR series",
+        "calculate_atr_unchanged": true,
+        "preferred_design": "use the existing canonical bot.strategy.regime.atr_series(frame, period) inside the FVG detector, or a proven mathematically equivalent local adapter",
+        "preserved_unchanged": [
+          "atr_period = 14",
+          "displacement_mult = 1.5",
+          "bullish geometric gap definition",
+          "bearish geometric gap definition",
+          "fill-status semantics",
+          "same-direction filtering",
+          "source-index semantics",
+          "timeframe semantics"
+        ],
+        "no_changes_to": [
+          "Gate 8",
+          "Gate 9 displacement threshold",
+          "OB semantics",
+          "confluence score",
+          "overlap tolerance",
+          "8/8",
+          "session rules",
+          "news rules",
+          "DXY logic",
+          "risk",
+          "execution",
+          "broker safeguards"
+        ]
+      },
+      "one_concept_rule": "make the existing FVG detector's intended rolling ATR dependency executable; no bundling with threshold, period, fill, direction, geometric, persistence, overlap, OB or confluence changes",
+      "atr_equivalence_requirement": "float(atr_series(frame, period).iloc[-1]) == calculate_atr(frame, period) within an explicit numerical tolerance, proven on multiple valid deterministic frames before empirical execution",
+      "two_phase_discipline": "Phase A implementation/test freeze committed and pushed before any Fold-01 access; Phase B only after the remote resolves to the frozen implementation commit",
+      "fold_boundary": "[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)",
+      "reserved_evidence": "Folds 02-04, 2025+ data and holdout remain inaccessible; Folds 02-04 remain reserved sequential confirmation evidence",
+      "allowed_metric_surface": "see docs/PHASE8_V2_VARIANT_V001.md section 8 (structural counts and descriptive statistics only; no performance metrics)",
+      "prohibitions": [
+        "P&L",
+        "win rate",
+        "profit factor",
+        "expectancy",
+        "drawdown",
+        "Sharpe",
+        "hypothetical alternative multipliers",
+        "candidate-count-versus-multiplier curves",
+        "alternative ATR periods",
+        "altered overlap thresholds",
+        "7/8 candidate counts",
+        "H003 temporal alternatives"
+      ],
+      "interpretation_rule": "possible outcomes: FUNCTIONAL_REPAIR_WITH_ADEQUATE_DENSITY, FUNCTIONAL_REPAIR_WITH_INSUFFICIENT_DENSITY, FUNCTIONAL_REPAIR_NO_CANDIDATES, IMPLEMENTATION_REPAIR_FAILED, EMPIRICAL_EXECUTION_BLOCKED; a functioning FVG detector is not automatically a good strategy; selection requires supervisory review",
+      "budget_consumption_upon_first_empirical_result": "1 / 8 strategy variants observed",
+      "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
+      "numeric_parameter_trials_consumed": 0
     }
   ],
   "result_records": [

@@ -185,3 +185,28 @@ output.
 `phase8-v2-H002` remains OPEN and is not touched by D002: it requires a
 separately preregistered canonical `evaluate_order_block` lifecycle diagnostic
 (a potential later D003). D002 does not repair or approximate it.
+
+---
+
+## DISPOSITION APPEND-ONLY: `BLOCKED_BEFORE_EXECUTION — DETERMINISTIC_FVG_ATR_INTERFACE_DEFECT`
+
+Appended 2026-09-23 from a supervisory static source audit
+(`phase8-v2-S001`, `STATIC_IMPLEMENTATION_AUDIT`, source commit
+`3d2cfd2496663118a4ffcacad4c7c1fe7b5bf814`).
+
+D002 is **blocked before execution**. The header above remains the historical
+preregistration state (`REGISTERED_NOT_EXECUTED` at preregistration time).
+D002's Stage-B attrition is already deterministically fixed at zero by the
+source-level defect recorded in S001: the frozen `detect_fvgs` never evaluates
+any candidate window because scalar `calculate_atr()` produces no `.iloc`
+series, so `atr_series` is always `None`. Executing D002 under unchanged
+frozen semantics would consume a diagnostic trial without adding meaningful
+scientific information about downstream Stages C–G.
+
+* execution count remains **zero**;
+* D002 consumes **no diagnostic budget**;
+* no D002 result record exists;
+* D002 raw empirical output does not exist.
+
+The specification above is retained unchanged as the historical preregistration.
+Diagnostic budget remains `1 / 12 executed`.
