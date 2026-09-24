@@ -238,12 +238,100 @@ def canonical_ob_lifecycle(
     }
 
 
+def _reconcile_decision_render(
+    row: Mapping[str, Any],
+    decision_result_record: Any,
+    checks: Mapping[str, bool],
+) -> dict[str, Any]:
+    """Reconcile the CURRENT decision's canonical persisted render against
+    the frozen D001 row before any flattened-away field is used (TC003 §9).
+
+    Read-only.  ``decision_result_record`` is the successful ``next_record``
+    of THIS decision — a concept strictly separate from the causal
+    ``prior_state_record`` (TC001), which alone drives consumed-id and
+    lifecycle semantics.  This render may only supply fields the flattened
+    D001 row contract does not retain (per-check awarded points, raw
+    first-FVG geometry, ATR).  Any disagreement fails closed.
+    """
+    decision_id = row.get("decision_id")
+    data = decision_result_record.data()
+    if data.get("last_event_id") != decision_id:
+        raise D003Error(
+            f"current-decision render event mismatch at {decision_id!r}: "
+            f"{data.get('last_event_id')!r}"
+        )
+    rendered = data.get("last_result")
+    if not rendered:
+        raise D003Error(f"current-decision render missing at {decision_id!r}")
+    gate = json.loads(rendered)
+    context = gate.get("context") or {}
+
+    for name, value in (row.get("gate_results") or {}).items():
+        rendered_gate = (gate.get("gate_results") or {}).get(name)
+        if rendered_gate is not None and bool(rendered_gate.get("pass")) != value:
+            raise D003Error(f"render gate disagreement at {decision_id!r}: {name}")
+
+    render_score = context.get("score") or {}
+    row_score = row.get("score") or {}
+    for field in ("score", "max_score", "passes_threshold"):
+        if render_score.get(field) != row_score.get(field):
+            raise D003Error(
+                f"render score {field} disagreement at {decision_id!r}"
+            )
+    render_checks = {
+        str(check.get("label")): bool(check.get("passed"))
+        for check in (render_score.get("checks") or [])
+    }
+    if render_checks != dict(checks):
+        raise D003Error(f"render scorer checks disagreement at {decision_id!r}")
+    if bool(render_checks.get(OVERLAP_LABEL)) != bool(
+        (row.get("overlap") or {}).get("canonical_fvg_in_ob")
+    ):
+        raise D003Error(f"render overlap disagreement at {decision_id!r}")
+    points = {
+        str(check.get("label")): int(check.get("points", 0))
+        for check in (render_score.get("checks") or [])
+    }
+
+    render_ob = context.get("ob") or {}
+    if bool(render_ob.get("valid")) != bool((row.get("ob") or {}).get("valid")):
+        raise D003Error(f"render OB validity disagreement at {decision_id!r}")
+
+    render_fvgs = list(context.get("fvgs") or [])
+    row_fvg = row.get("fvg") or {}
+    if bool(render_fvgs) != bool(row_fvg.get("present")):
+        raise D003Error(f"render FVG presence disagreement at {decision_id!r}")
+    if len(render_fvgs) != int(row_fvg.get("count") or 0):
+        raise D003Error(f"render FVG count disagreement at {decision_id!r}")
+    if render_fvgs:
+        render_direction = (
+            render_fvgs[0].get("direction")
+            if isinstance(render_fvgs[0], dict) else None
+        )
+        if render_direction != row_fvg.get("direction"):
+            raise D003Error(f"render FVG direction disagreement at {decision_id!r}")
+
+    render_bias = str(
+        (context.get("bias_resolution") or {}).get("direction") or ""
+    )
+    row_direction = str((row.get("ob") or {}).get("direction") or "")
+    if render_bias and row_direction and render_bias != row_direction:
+        raise D003Error(f"render bias/direction disagreement at {decision_id!r}")
+
+    return {
+        "awarded_points": points,
+        "raw_fvgs": render_fvgs,
+        "atr": float((gate.get("market_conditions") or {}).get("atr") or 0.0),
+    }
+
+
 def observe_decision(
     row: Mapping[str, Any],
     prior_state_record: Any,
     *,
     snapshot: Any,
     config: Any,
+    decision_result_record: Any,
 ) -> dict[str, Any]:
     """Augment one successful D001 row with the D003 decomposition.
 
@@ -255,6 +343,18 @@ def observe_decision(
     read-only relative to strategy evaluation: the canonical lifecycle
     call observes already-persisted causal inputs and never mutates the
     setup-state chain.
+
+    TC003 extraction contract: every preregistered surface is read from
+    the FROZEN flattened D001 row (``row['score']``, ``row['ob']``,
+    ``row['fvg']``, ``row['overlap']``, ``row['direction']``) — never
+    from a ``gate_context`` key, which the D001 row contract does not
+    publish.  ``decision_result_record`` is the successful ``next_record``
+    of the CURRENT decision, used READ-ONLY after §9 reconciliation to
+    recover fields flattened away by D001 (awarded points, raw FVG
+    geometry, ATR); it is never used for consumed-id or lifecycle
+    semantics, which remain bound exclusively to ``prior_state_record``.
+    A Gate-11 entrant with a missing/degenerate score surface (the
+    attempt-1 artifact) fails closed instead of emitting constants.
     """
     gate_results = row.get("gate_results") or {}
     gate_11_entered = "gate_11_confluence_score" in gate_results
@@ -267,28 +367,70 @@ def observe_decision(
     if not gate_11_entered:
         return observation
 
-    gate_context = row.get("gate_context") or {}
-    score = gate_context.get("score") or {}
-    checks = {
-        str(check.get("label")): bool(check.get("passed"))
-        for check in (score.get("checks") or [])
-    }
-    points = {
-        str(check.get("label")): int(check.get("points", 0))
-        for check in (score.get("checks") or [])
-    }
-    ob = gate_context.get("ob") or {}
-    htf_bias = str((gate_context.get("bias_resolution") or {}).get("direction"))
-    fvgs = gate_context.get("fvgs") or []
-    final_fvg_present = bool(fvgs)
-    first_fvg = fvgs[0] if fvgs else None
-    final_fvg_direction = (
-        first_fvg.get("direction") if isinstance(first_fvg, dict) else None
-    )
+    # --- frozen D001 row surfaces (TC003): never a fictional gate_context --
+    score = row.get("score")
+    if (
+        not isinstance(score, Mapping)
+        or score.get("score") is None
+        or score.get("max_score") is None
+        or score.get("passes_threshold") is None
+    ):
+        raise D003Error(
+            "degenerate Gate-11 score surface at "
+            f"{row.get('decision_id')!r}: frozen row score is missing or "
+            "non-numeric (attempt-1 pattern must never be emitted)"
+        )
+    checks: dict[str, bool] = {}
+    for label in SCORE_LABELS:
+        value = (score.get("checks_passed") or {}).get(label)
+        if value is None:
+            raise D003Error(
+                "degenerate Gate-11 score surface at "
+                f"{row.get('decision_id')!r}: frozen check {label!r} missing"
+            )
+        checks[label] = bool(value)
+    if bool(gate_results.get("gate_11_confluence_score")) != bool(
+        score.get("passes_threshold")
+    ):
+        raise D003Error(
+            "Gate-11 self-consistency violation at "
+            f"{row.get('decision_id')!r}: gate pass boolean disagrees with "
+            "the persisted score threshold boolean"
+        )
 
-    pd_flag = bool(checks.get(SCORE_LABELS[1]))
-    ob_flag = bool(checks.get(SCORE_LABELS[2]))
-    overlap_flag = bool(checks.get(OVERLAP_LABEL))
+    ob = row.get("ob") or {}
+    fvg = row.get("fvg") or {}
+    overlap = row.get("overlap") or {}
+    final_fvg_present = bool(fvg.get("present"))
+    final_fvg_direction = fvg.get("direction")
+    htf_bias = str(ob.get("direction") or "")
+    if htf_bias not in ("bullish", "bearish"):
+        raise D003Error(
+            "Gate-11 entrant at "
+            f"{row.get('decision_id')!r} lacks a resolved canonical OB "
+            f"direction ({ob.get('direction')!r}); refusing to map to FLAT"
+        )
+
+    pd_flag = bool(checks[SCORE_LABELS[1]])
+    ob_flag = bool(checks[SCORE_LABELS[2]])
+    overlap_flag = bool(checks[OVERLAP_LABEL])
+    if overlap_flag != bool(overlap.get("canonical_fvg_in_ob")):
+        raise D003Error(
+            f"overlap reconciliation failure at {row.get('decision_id')!r}: "
+            "scorer FVG-in-OB check disagrees with the frozen D001 "
+            "canonical_fvg_in_ob boolean"
+        )
+    if ob_flag != bool(ob.get("valid")):
+        raise D003Error(
+            f"legacy OB reconciliation failure at {row.get('decision_id')!r}: "
+            "scorer valid-OB check disagrees with row['ob']['valid']"
+        )
+
+    # --- current-decision render: ONLY for fields flattened away by D001 ---
+    render = _reconcile_decision_render(row, decision_result_record, checks)
+    points = render["awarded_points"]
+    raw_fvgs = render["raw_fvgs"]
+    first_fvg = raw_fvgs[0] if raw_fvgs else None
 
     lifecycle = canonical_ob_lifecycle(
         snapshot,
@@ -300,15 +442,16 @@ def observe_decision(
     if lifecycle.get("eligible") and lifecycle.get("zone_low") is not None:
         canonical_zone = (lifecycle["zone_low"], lifecycle["zone_high"])
     _, canonical_geometry = mirror_fvg_in_ob(
-        first_fvg, canonical_zone, float(row.get("atr") or 0.0)
+        first_fvg, canonical_zone, float(render.get("atr") or 0.0)
     )
 
     observation["score"] = {
         "score": score.get("score"),
         "max_score": score.get("max_score"),
         "grade": score.get("grade"),
+        "min_score_to_trade": score.get("min_score_to_trade"),
         "passes_threshold": bool(score.get("passes_threshold")),
-        "checks_passed": {label: checks.get(label, False) for label in SCORE_LABELS},
+        "checks_passed": {label: checks[label] for label in SCORE_LABELS},
         "awarded_points": {label: points.get(label, 0) for label in SCORE_LABELS},
     }
     observation["contingency"] = {
@@ -316,7 +459,7 @@ def observe_decision(
         "legacy_ob_valid": ob_flag,
         "legacy_fvg_in_ob": overlap_flag,
         "legacy_ob": {
-            "present": bool(ob),
+            "present": bool(ob.get("present")),
             "valid": bool(ob.get("valid")),
             "direction": ob.get("direction"),
             "type": ob.get("type"),
@@ -330,7 +473,7 @@ def observe_decision(
     # carried for context; the preregistered §18 canonical-pair geometry is
     # computed with the same frozen mirror function over the canonical
     # lifecycle zone (read-only, separation geometry only).
-    observation["overlap_mirror"] = dict(row.get("overlap") or {})
+    observation["overlap_mirror"] = dict(overlap)
     observation["canonical_pair_geometry"] = canonical_geometry
     return observation
 
@@ -653,11 +796,16 @@ def run_d003(
         # Read-only D003 augmentation of the successful decision; the
         # observer receives the exact causal PRIOR state record consumed by
         # the reducer for this decision — never the post-decision
-        # ``next_record`` — so canonical consumed IDs reflect only blocks
-        # consumed before this decision.
+        # ``next_record`` — for lifecycle/consumed-id semantics.  The
+        # CURRENT decision's ``next_record`` is passed separately (TC003
+        # §8) and is used read-only for flattened-field recovery only.
         observations.append(
             observe_decision(
-                row, prior_state_record, snapshot=snapshot, config=config,
+                row,
+                prior_state_record,
+                snapshot=snapshot,
+                config=config,
+                decision_result_record=next_record,
             )
         )
         state_record = next_record

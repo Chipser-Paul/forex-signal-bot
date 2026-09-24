@@ -245,64 +245,45 @@ def test_consumed_ids_derivation_matches_reducer_contract():
     assert blocked.state is BlockState.CONSUMED
 
 
-class _RowStub:
-    """Minimal canonical D001 row for observation/aggregation tests."""
+def _real_adapter_row(monkeypatch, *, at=None, failed=None):
+    """A REAL frozen-D001-adapter row built from synthetic data only.
 
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __init__(self, *, decision_id="d1", score=8, checks=None, points=None,
-                 ob_valid=True, ob_direction="bullish", fvgs=None, atr=1.0,
-                 gate_10=True, gate_11=True):
-        self.gate_results = {}
-        if gate_11:
-            self.gate_results["gate_10_internal_structure"] = gate_10
-            self.gate_results["gate_11_confluence_score"] = True
-        self.gate_context = {
-            "score": {
-                "score": score, "max_score": 8, "grade": "A+",
-                "passes_threshold": True,
-                "checks": [
-                    {"label": label, "passed": flag, "points": pts}
-                    for label, flag, pts in zip(
-                        d001.SCORE_LABELS,
-                        checks or [True, True, True, True, True],
-                        points or [2, 1, 2, 1, 2],
-                    )
-                ],
-            },
-            "ob": {"valid": ob_valid, "zone": [97.0, 99.0], "type": "order_block",
-                   "reason": "ob_aligned", "distance_atr": 1.0, "mitigated": False,
-                   "in_pd_zone": True, "direction": ob_direction}
-            if ob_valid else {},
-            "fvgs": fvgs if fvgs is not None else [
-                {"bottom": 98.0, "top": 99.0, "direction": "bullish"}],
-            "bias_resolution": {"direction": "bullish"},
-        }
-        self.overlap = {"canonical_fvg_in_ob": True}
-        self.atr = atr
-        self.decision_id = decision_id
+    Runs ``backtests.phase8_v2_diagnostic_d001.evaluate_orchestration_decision``
+    (the production orchestrator path) over the proven mocked synthetic
+    snapshot, returning ``(row, next_record, snapshot)``.  This is the
+    authoritative row shape; hand-built row stubs are prohibited (TC003 §18).
+    ``failed`` selects the D001 fixture's engine-failure variant (e.g.
+    ``"ob"`` -> Gate-11 fail, ``"displacement"`` -> Gate-11 never entered).
+    """
+    at = at or datetime(2024, 4, 8, tzinfo=timezone.utc)
+    snapshot = _mocked_ok_snapshot(monkeypatch, at=at, failed=failed)
+    row, next_record = d001.evaluate_orchestration_decision(
+        snapshot, _seed_record(),
+    )
+    return row, next_record, snapshot
 
 
-class _SnapshotStub:
-    def __init__(self, payload):
-        self.gate_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        self.available_at_ms = int(AT.timestamp() * 1000)
+def _award_map():
+    """Frozen scorer weights as actually awarded on the passing fixture."""
+    return {
+        "HTF bias aligns with trade direction": 2,
+        "Price located in premium/discount zone": 1,
+        "Valid order block present": 2,
+        "FVG overlaps the order block zone": 1,
+        "Liquidity sweep occurred before entry": 2,
+    }
 
 
-def test_observe_decision_and_aggregation_surfaces():
-    snapshot = _SnapshotStub({
-        "entry_rows": [
-            {"open_time": "2024-04-01T00:00:00+00:00", "available_at": "2024-04-01T00:05:00+00:00",
-             "open": 100.0, "high": 102.0, "low": 98.0, "close": 100.0, "timeframe": "M5"},
-        ],
-    })
-    row = _RowStub()
+def test_observe_decision_and_aggregation_surfaces(monkeypatch):
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
     observation = d003.observe_decision(
         row, _seed_record(), snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
     )
     assert observation["gate_11_entered"] is True
-    assert observation["canonical_lifecycle"]["state"] in ("ELIGIBLE", "RETEST_ELIGIBLE", "UNAVAILABLE")
+    assert observation["canonical_lifecycle"]["state"] in (
+        "ELIGIBLE", "RETEST_ELIGIBLE", "UNAVAILABLE",
+    )
     aggregate = d003.aggregate_d003([observation])
     assert aggregate["gate11_entrants"] == 1
     for key in (
@@ -320,10 +301,12 @@ def test_observe_decision_and_aggregation_surfaces():
     assert sum(v for k, v in cells.items() if k.startswith("legacy_")) == 1
 
 
-def test_gate11_non_entrants_are_excluded():
-    row = _RowStub(gate_11=False)
+def test_gate11_non_entrants_are_excluded(monkeypatch):
+    row, next_record, snapshot = _real_adapter_row(monkeypatch, failed="displacement")
+    assert "gate_11_confluence_score" not in row["gate_results"]
     observation = d003.observe_decision(
-        row, None, snapshot=_SnapshotStub({"entry_rows": []}), config=StrategyConfig(),
+        row, None, snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
     )
     assert observation["gate_11_entered"] is False
     assert observation["canonical_lifecycle"] is None
@@ -608,9 +591,12 @@ def _run_with_spies(monkeypatch, store):
     observer_records: list = []
     real_observer = d003.observe_decision
 
-    def observer_spy(row, prior_state_record, *, snapshot, config):
+    def observer_spy(row, prior_state_record, *, snapshot, config, decision_result_record):
         observer_records.append(prior_state_record)
-        return real_observer(row, prior_state_record, snapshot=snapshot, config=config)
+        return real_observer(
+            row, prior_state_record, snapshot=snapshot, config=config,
+            decision_result_record=decision_result_record,
+        )
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
     doc, rendered = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
@@ -655,18 +641,26 @@ def test_tc001_consumed_ids_come_from_prior_state_only(monkeypatch):
     captured: list = []
     real_observer = d003.observe_decision
 
-    def observer_spy(row, prior_state_record, *, snapshot, config):
-        captured.append((prior_state_record, real_observer(
-            row, prior_state_record, snapshot=snapshot, config=config,
-        )))
-        return captured[-1][1]
+    def observer_spy(row, prior_state_record, *, snapshot, config, decision_result_record):
+        captured.append((
+            prior_state_record,
+            decision_result_record,
+            real_observer(
+                row, prior_state_record, snapshot=snapshot, config=config,
+                decision_result_record=decision_result_record,
+            ),
+        ))
+        return captured[-1][2]
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
     doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
 
     assert doc["decision_accounting"]["reducer_classified"] == 1
     assert len(captured) == 1
-    record, observation = captured[0]
+    prior_record, result_record, observation = captured[0]
+    # TC003 §8 separation: the current-decision render record is a distinct
+    # concept from the causal prior record and must never alias it.
+    assert result_record is not prior_record
     lifecycle = observation.get("canonical_lifecycle")
     assert lifecycle is not None, "Gate-11 entrant must carry a lifecycle observation"
     derived = set(lifecycle.get("consumed_ids_derived") or [])
@@ -753,9 +747,12 @@ def test_tc001_error_preserves_prior_state_for_next_observation(monkeypatch):
     observer_records: list = []
     real_observer = d003.observe_decision
 
-    def observer_spy(row, prior_state_record, *, snapshot, config):
+    def observer_spy(row, prior_state_record, *, snapshot, config, decision_result_record):
         observer_records.append(prior_state_record)
-        return real_observer(row, prior_state_record, snapshot=snapshot, config=config)
+        return real_observer(
+            row, prior_state_record, snapshot=snapshot, config=config,
+            decision_result_record=decision_result_record,
+        )
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
     store = _store_with_rows(monkeypatch, rows)
@@ -973,6 +970,247 @@ def test_tc002_run_d003_provenance_binds_committed_blob(tmp_path, monkeypatch):
     assert provenance["tooling_fingerprint"] == hashlib.sha256(
         blob_source(commit, "backtests/phase8_v2_diagnostic_d003.py")
     ).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# TC003 — observer extraction against the REAL frozen D001 row contract.
+#
+# Attempt 1 produced a bogus document because observe_decision read a
+# nonexistent row["gate_context"] key while every loop-level test stubbed
+# the observer boundary.  These regressions exercise the REAL
+# ``evaluate_orchestration_decision`` adapter row (synthetic data only) and
+# prove extraction, reconciliation, Gate-11 self-consistency, and
+# fail-closed behavior on every preregistered mismatch.
+# ---------------------------------------------------------------------------
+
+
+def _tamper_render(record, mutator):
+    """Rebuild a SetupStateRecord whose persisted last_result is mutated by
+    ``mutator(gate_dict)`` (full production re-validation on read)."""
+    from bot.strategy.setup_consumption import canonical
+    from bot.strategy.setup_state import SetupStateRecord
+
+    data = record.data()
+    gate = json.loads(data["last_result"])
+    mutator(gate)
+    data["last_result"] = json.dumps(gate, sort_keys=True, separators=(",", ":"))
+    rebuilt = SetupStateRecord(canonical(data))
+    rebuilt.data()
+    return rebuilt
+
+
+def test_tc003_real_adapter_row_contract(monkeypatch):
+    """§18: the REAL frozen D001 adapter row has NO gate_context key and
+    carries the flattened canonical surfaces; D003 extracts every
+    preregistered surface from it successfully.  A hand-built stub is
+    prohibited — this row comes from the production orchestrator path."""
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
+    assert "gate_context" not in row, (
+        "the frozen D001 row contract must not publish gate_context"
+    )
+    for key in (
+        "action", "reason", "state_name", "decision_id", "available_at_ms",
+        "gate_results", "ob", "fvg", "score", "overlap", "direction",
+    ):
+        assert key in row, f"frozen row contract key missing: {key}"
+    observation = d003.observe_decision(
+        row, _seed_record(), snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
+    )
+    assert observation["gate_11_entered"] is True
+    assert observation["score"]["score"] == row["score"]["score"]
+    assert observation["score"]["checks_passed"] == row["score"]["checks_passed"]
+
+
+def test_tc003_real_adapter_gate11_pass_surface(monkeypatch):
+    """§19 pass case: through the real adapter, a Gate-11 entrant with a
+    passing frozen score yields a non-degenerate Surface B that reproduces
+    the row's score/check surface with the frozen scorer weights."""
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
+    assert row["gate_results"]["gate_11_confluence_score"] is True
+    assert row["score"]["score"] is not None
+    assert set(row["score"]["checks_passed"]) == set(d001.SCORE_LABELS)
+
+    observation = d003.observe_decision(
+        row, _seed_record(), snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
+    )
+    surface = observation["score"]
+    assert surface["score"] == row["score"]["score"]
+    assert surface["max_score"] == row["score"]["max_score"]
+    assert surface["checks_passed"] == row["score"]["checks_passed"]
+    assert surface["awarded_points"] == _award_map()
+    assert bool(row["gate_results"]["gate_11_confluence_score"]) == bool(
+        row["score"]["passes_threshold"]
+    )
+
+
+def test_tc003_real_adapter_gate11_fail_surface(monkeypatch):
+    """§19 fail case: a real-adapter decision that enters Gate 11 but fails
+    it (distant FVG -> overlap check false -> score 7 < 8) is extracted
+    consistently: gate pass False == passes_threshold False, and the
+    overlap/valid-OB checks agree with the row surfaces."""
+    from bot.state import gate_inputs as gi
+    from tests.test_phase8_v2_d001_tooling import _ok_snapshot, _patch_engines
+
+    at = datetime(2024, 4, 8, tzinfo=timezone.utc)
+    _patch_engines(monkeypatch)
+    monkeypatch.setattr(gi, "get_unfilled_fvgs", lambda *a, **kw: [{
+        "bottom": 120.0, "top": 121.0, "direction": "bullish",
+        "type": "bullish_fvg", "filled": False,
+    }])
+    snapshot = _ok_snapshot(at)
+    row, next_record = d001.evaluate_orchestration_decision(
+        snapshot, _seed_record(),
+    )
+    assert "gate_11_confluence_score" in row["gate_results"], row["gate_results"]
+    assert row["gate_results"]["gate_11_confluence_score"] is False
+    assert row["score"]["passes_threshold"] is False
+    assert row["score"]["score"] < row["score"]["min_score_to_trade"]
+
+    observation = d003.observe_decision(
+        row, _seed_record(), snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
+    )
+    assert observation["gate_11_entered"] is True
+    assert observation["score"]["checks_passed"][d001.OVERLAP_LABEL] is False
+    assert observation["contingency"]["legacy_fvg_in_ob"] is False
+    assert observation["contingency"]["legacy_ob_valid"] is bool(row["ob"]["valid"])
+    assert bool(row["gate_results"]["gate_11_confluence_score"]) == bool(
+        row["score"]["passes_threshold"]
+    )
+
+
+def test_tc003_attempt1_degeneracy_fails_closed():
+    """§20: the attempt-1 pattern — Gate-11 entered and passed with a
+    missing/degenerate score surface — must raise, never emit score=None
+    with zero passes."""
+    degenerate = {
+        "decision_id": "attempt-1-shape",
+        "gate_results": {
+            "gate_10_internal_structure": True,
+            "gate_11_confluence_score": True,
+        },
+        "score": None,
+    }
+    with pytest.raises(d003.D003Error, match="degenerate Gate-11 score surface"):
+        d003.observe_decision(
+            degenerate, None, snapshot=None, config=StrategyConfig(),
+            decision_result_record=None,
+        )
+    missing_label = {
+        "decision_id": "attempt-1-shape",
+        "gate_results": {
+            "gate_10_internal_structure": True,
+            "gate_11_confluence_score": True,
+        },
+        "score": {
+            "score": 8, "max_score": 8, "passes_threshold": True,
+            "checks_passed": {
+                label: True for label in d001.SCORE_LABELS[:-1]
+            },
+        },
+    }
+    with pytest.raises(d003.D003Error, match="degenerate Gate-11 score surface"):
+        d003.observe_decision(
+            missing_label, None, snapshot=None, config=StrategyConfig(),
+            decision_result_record=None,
+        )
+
+
+def test_tc003_render_mismatches_fail_closed(monkeypatch):
+    """§21: every current-decision-render disagreement with the frozen row
+    fails closed — no silent aggregation."""
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
+    prior = _seed_record()
+
+    def _score_scalar(gate):
+        gate["context"]["score"]["score"] = 7
+
+    def _checks(gate):
+        gate["context"]["score"]["checks"][0]["passed"] = False
+
+    def _gate_pass(gate):
+        gate["gate_results"]["gate_11_confluence_score"]["pass"] = False
+
+    def _ob_valid(gate):
+        gate["context"]["ob"]["valid"] = False
+
+    def _fvg_presence(gate):
+        gate["context"]["fvgs"] = []
+
+    def _bias(gate):
+        gate["context"]["bias_resolution"]["direction"] = "bearish"
+
+    for mutator in (_score_scalar, _checks, _gate_pass, _ob_valid, _fvg_presence, _bias):
+        tampered = _tamper_render(next_record, mutator)
+        with pytest.raises(d003.D003Error, match="disagreement"):
+            d003.observe_decision(
+                row, prior, snapshot=snapshot, config=StrategyConfig(),
+                decision_result_record=tampered,
+            )
+
+
+def test_tc003_row_surface_mismatches_fail_closed(monkeypatch):
+    """§21: inconsistent row surfaces (gate pass vs threshold, scorer vs
+    OB validity, scorer vs overlap, unresolved direction) fail closed."""
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
+    prior = _seed_record()
+
+    def _run(bad_row):
+        return d003.observe_decision(
+            bad_row, prior, snapshot=snapshot, config=StrategyConfig(),
+            decision_result_record=next_record,
+        )
+
+    threshold_flip = dict(row)
+    threshold_flip["score"] = {
+        **row["score"], "passes_threshold": not row["score"]["passes_threshold"],
+    }
+    with pytest.raises(d003.D003Error, match="self-consistency violation"):
+        _run(threshold_flip)
+
+    ob_flip = dict(row)
+    ob_flip["ob"] = {**row["ob"], "valid": not row["ob"]["valid"]}
+    with pytest.raises(d003.D003Error, match="legacy OB reconciliation failure"):
+        _run(ob_flip)
+
+    overlap_flip = dict(row)
+    overlap_flip["overlap"] = {
+        **row["overlap"],
+        "canonical_fvg_in_ob": not row["overlap"]["canonical_fvg_in_ob"],
+    }
+    with pytest.raises(d003.D003Error, match="overlap reconciliation failure"):
+        _run(overlap_flip)
+
+    no_direction = dict(row)
+    no_direction["ob"] = {**row["ob"], "direction": None}
+    with pytest.raises(d003.D003Error, match="refusing to map to FLAT"):
+        _run(no_direction)
+
+
+def test_tc003_decision_result_record_never_drives_lifecycle(monkeypatch):
+    """§22: the current-decision render record is never supplied to the
+    canonical lifecycle/consumed-id path; only the causal prior record is."""
+    row, next_record, snapshot = _real_adapter_row(monkeypatch)
+    seen: dict = {}
+    real_lifecycle = d003.canonical_ob_lifecycle
+
+    def lifecycle_spy(snapshot_arg, *, htf_bias, prior_state_record, config):
+        seen["prior"] = prior_state_record
+        return real_lifecycle(
+            snapshot_arg, htf_bias=htf_bias,
+            prior_state_record=prior_state_record, config=config,
+        )
+
+    monkeypatch.setattr(d003, "canonical_ob_lifecycle", lifecycle_spy)
+    prior = _seed_record()
+    d003.observe_decision(
+        row, prior, snapshot=snapshot, config=StrategyConfig(),
+        decision_result_record=next_record,
+    )
+    assert seen["prior"] is prior
+    assert seen["prior"] is not next_record
 
 
 def test_write_result_refuses_overwrite(tmp_path, monkeypatch):
