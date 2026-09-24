@@ -115,6 +115,11 @@ PROVENANCE = {
 
 REJECTED_D003_METRIC_KEY = "prohibited metric key"
 
+# Repository root and tooling identity path for canonical_git_blob_v1
+# fingerprints (established backtests convention: parents[1] of this file).
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_TOOLING_RELPATH = "backtests/phase8_v2_diagnostic_d003.py"
+
 # §30 banned-output guard: exact keys + counterfactual-family substrings,
 # in the established V001 style (honest negation keys still pass).
 BANNED_METRIC_KEYS = frozenset(
@@ -504,24 +509,54 @@ def _gate_funnel(rows: list[Mapping[str, Any]]) -> dict[str, dict[str, int]]:
     return funnel
 
 
+def _canonical_blob_source():
+    """Production committed-byte source: real Git plumbing on this repo."""
+    from bot.scientific.canonical_bytes import make_git_blob_source  # noqa: PLC0415
+
+    return make_git_blob_source(_REPO_ROOT)
+
+
 def provenance(
     *,
     canonical_commit: str,
     tooling_commit: str,
     store_identity: Mapping[str, Any],
     generated_at: str | None = None,
+    blob_source=None,
 ) -> dict[str, Any]:
-    """Provenance block bound to this tooling run (fail closed)."""
+    """Provenance block bound to this tooling run (fail closed).
+
+    ``tooling_fingerprint`` is the SHA-256 of the committed Git blob of this
+    tooling file at ``tooling_commit`` under the declared
+    ``canonical_git_blob_v1`` contract — checkout-independent, never
+    worktree bytes (TC002).  Any unresolvable commit/path/blob fails
+    closed with :class:`D003Error`; there is no worktree or normalized
+    fallback.  ``blob_source`` injects an alternative committed-byte
+    reader (synthetic tests); production resolves via real Git plumbing.
+    """
+    from bot.scientific.canonical_bytes import canonical_file_digest  # noqa: PLC0415
+
     if not canonical_commit or len(canonical_commit) != 40:
         raise D003Error("canonical source commit identity invalid")
     if not tooling_commit or len(tooling_commit) != 40:
         raise D003Error("tooling commit identity invalid")
+    try:
+        tooling_fingerprint = canonical_file_digest(
+            _TOOLING_RELPATH,
+            commit=tooling_commit,
+            repo=_REPO_ROOT,
+            blob_source=(
+                blob_source if blob_source is not None else _canonical_blob_source()
+            ),
+        )
+    except Exception as exc:  # fail closed: no worktree/normalized fallback
+        raise D003Error(f"D003 tooling fingerprint unresolvable: {exc}") from exc
     blob = json.dumps(store_identity, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return {
         **PROVENANCE,
         "canonical_source_commit_used": canonical_commit,
         "tooling_commit": tooling_commit,
-        "tooling_fingerprint": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "tooling_fingerprint": tooling_fingerprint,
         "fold_store_identity_sha256": hashlib.sha256(blob.encode("utf-8")).hexdigest(),
         "generated_at_utc": generated_at or _iso(datetime.now(timezone.utc)),
     }
@@ -552,6 +587,7 @@ def run_d003(
     *,
     canonical_commit: str,
     tooling_commit: str,
+    blob_source=None,
 ) -> tuple[dict[str, Any], bytes]:
     """Execute preregistered D003 over a loaded Fold-01 ``FoldFeatureStore``.
 
@@ -559,6 +595,9 @@ def run_d003(
     adapter, seed, carry, boundary-enforced snapshot iteration and
     accounting verbatim.  Fails closed on boundary, accounting or
     structural violations.  Returns ``(document, canonical_json_bytes)``.
+    ``blob_source`` optionally injects the committed-byte reader used for
+    the canonical tooling fingerprint (tests use a pure-Python Git object
+    store; production resolves through real Git plumbing).
     """
     from bot.strategy.config import StrategyConfig  # noqa: PLC0415
     from bot.strategy.setup_state import (  # noqa: PLC0415
@@ -641,6 +680,7 @@ def run_d003(
             canonical_commit=canonical_commit,
             tooling_commit=tooling_commit,
             store_identity=dict(identity),
+            blob_source=blob_source,
         ),
         "fold01_boundary": [FOLD01_START, FOLD01_END],
         "bucket_semantics": {

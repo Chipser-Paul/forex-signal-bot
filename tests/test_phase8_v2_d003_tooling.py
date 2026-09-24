@@ -396,7 +396,7 @@ def _d003_boundary_store(monkeypatch):
 def test_run_d003_accounting_and_surfaces(monkeypatch):
     store = _d003_boundary_store(monkeypatch)
     doc, rendered = d003.run_d003(
-        store, canonical_commit="c" * 40, tooling_commit="t" * 40,
+        store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source(),
     )
     accounting = doc["decision_accounting"]
     assert accounting["scheduled"] == 4
@@ -408,7 +408,7 @@ def test_run_d003_accounting_and_surfaces(monkeypatch):
     # Deterministic output: same store -> byte-identical canonical render
     # apart from the wall-clock provenance timestamp.
     doc2, rendered2 = d003.run_d003(
-        store, canonical_commit="c" * 40, tooling_commit="t" * 40,
+        store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source(),
         # generated_at pinned via provenance patch would be intrusive; the
         # canonical render is otherwise deterministic, so compare shapes.
     )
@@ -422,11 +422,11 @@ def test_run_d003_rejects_wrong_fold_and_coverage(monkeypatch):
     store = _d003_boundary_store(monkeypatch)
     store.identity = {**store.identity, "fold_id": "fold-02"}
     with pytest.raises(d001.BoundaryError):
-        d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+        d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
     store2 = _d003_boundary_store(monkeypatch)
     store2.identity = {**store2.identity, "coverage": "stride-4"}
     with pytest.raises(d001.BoundaryError):
-        d003.run_d003(store2, canonical_commit="c" * 40, tooling_commit="t" * 40)
+        d003.run_d003(store2, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
 
 
 # ---------------------------------------------------------------------------
@@ -613,7 +613,7 @@ def _run_with_spies(monkeypatch, store):
         return real_observer(row, prior_state_record, snapshot=snapshot, config=config)
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
-    doc, rendered = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+    doc, rendered = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
     return doc, rendered, adapter_records, observer_records
 
 
@@ -662,7 +662,7 @@ def test_tc001_consumed_ids_come_from_prior_state_only(monkeypatch):
         return captured[-1][1]
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
-    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
 
     assert doc["decision_accounting"]["reducer_classified"] == 1
     assert len(captured) == 1
@@ -759,7 +759,7 @@ def test_tc001_error_preserves_prior_state_for_next_observation(monkeypatch):
 
     monkeypatch.setattr(d003, "observe_decision", observer_spy)
     store = _store_with_rows(monkeypatch, rows)
-    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source())
 
     accounting = doc["decision_accounting"]
     assert accounting["evaluation_error"] == 1
@@ -783,9 +783,201 @@ def test_tc001_error_preserves_prior_state_for_next_observation(monkeypatch):
     )
 
 
+_TOOLING_IDENTITY: tuple[str, object] | None = None
+
+
+def _tooling_identity():
+    """Synthetic committed-blob fixture for the D003 tooling file (built once).
+
+    Creates a real (pure-Python) Git object store containing the current
+    D003 tooling source bytes at the canonical repository path and returns
+    ``(commit_sha, blob_source)``.  Tests must never launch processes, so
+    the production git-plumbing blob source is not used here; the store
+    layout is byte-compatible with real Git (proven by the canonical-byte
+    suite, including ``git fsck`` interop).
+    """
+    global _TOOLING_IDENTITY
+    if _TOOLING_IDENTITY is None:
+        import tempfile
+
+        from tests.test_canonical_byte_contract import GitObjectStore
+
+        source = Path(d003.__file__).read_bytes()
+        store = GitObjectStore(Path(tempfile.mkdtemp(prefix="d003-tooling-")))
+        commit = store.commit_files(
+            {"backtests/phase8_v2_diagnostic_d003.py": source},
+            "D003 tooling fixture commit",
+        )
+        _TOOLING_IDENTITY = (commit, store.blob_bytes)
+    return _TOOLING_IDENTITY
+
+
+def _tooling_commit():
+    return _tooling_identity()[0]
+
+
+def _tooling_blob_source():
+    return _tooling_identity()[1]
+
+
+# ---------------------------------------------------------------------------
+# TC002 — canonical_git_blob_v1 tooling fingerprint regressions (§13–§16).
+#
+# The tooling fingerprint must be the SHA-256 of the committed Git blob of
+# the D003 tooling file at the supplied tooling commit — checkout-
+# independent and commit-content-sensitive, never worktree bytes.
+# ---------------------------------------------------------------------------
+
+
+def _tooling_source_bytes():
+    commit, blob_source = _tooling_identity()
+    return blob_source(commit, "backtests/phase8_v2_diagnostic_d003.py")
+
+
+def _materialize(source_bytes: bytes, root: Path, *, eol: str) -> Path:
+    target = root / "backtests"
+    target.mkdir(parents=True, exist_ok=True)
+    data = source_bytes if eol == "lf" else source_bytes.replace(b"\n", b"\r\n")
+    (target / "phase8_v2_diagnostic_d003.py").write_bytes(data)
+    return root
+
+
+def test_tc002_fingerprint_independent_of_worktree_newlines(tmp_path, monkeypatch):
+    """§13: the same committed blob produces the same fingerprint whether
+    the working tree materializes LF or CRLF — and the fingerprint equals
+    the committed-blob digest, not either worktree materialization.
+
+    Fails under the replaced ``sha256(Path(__file__).read_bytes())``
+    behavior, which tracks worktree bytes and diverges between checkouts.
+    """
+    import hashlib
+
+    from bot.scientific.canonical_bytes import canonical_file_digest
+
+    commit, blob_source = _tooling_identity()
+    source_bytes = _tooling_source_bytes()
+    lf_root = _materialize(source_bytes, tmp_path / "wt-lf", eol="lf")
+    crlf_root = _materialize(source_bytes, tmp_path / "wt-crlf", eol="crlf")
+    expected = hashlib.sha256(source_bytes).hexdigest()
+
+    # Legacy worktree hashing WOULD diverge between the two checkouts.
+    assert hashlib.sha256((lf_root / "backtests" / "phase8_v2_diagnostic_d003.py").read_bytes()).hexdigest() == expected
+    crlf_worktree_digest = hashlib.sha256(
+        (crlf_root / "backtests" / "phase8_v2_diagnostic_d003.py").read_bytes()
+    ).hexdigest()
+    assert crlf_worktree_digest != expected
+
+    # Canonical identity is identical from both materializations.
+    for root in (lf_root, crlf_root):
+        assert canonical_file_digest(
+            "backtests/phase8_v2_diagnostic_d003.py",
+            commit=commit, repo=root, blob_source=blob_source,
+        ) == expected
+    # ...and provenance (run from a CRLF materialized repo root) agrees.
+    monkeypatch.setattr(d003, "_REPO_ROOT", crlf_root)
+    doc = d003.provenance(
+        canonical_commit="c" * 40, tooling_commit=commit,
+        store_identity={}, blob_source=blob_source,
+    )
+    assert doc["fingerprint_contract"] == "canonical_git_blob_v1"
+    assert doc["tooling_fingerprint"] == expected
+
+
+def test_tc002_fingerprint_is_commit_content_sensitive(tmp_path):
+    """§14: different committed blob content at a different synthetic
+    commit changes the fingerprint; identical content reproduces it.  The
+    identity is checkout-independent and commit-content-sensitive."""
+    import hashlib
+    import tempfile
+
+    from tests.test_canonical_byte_contract import GitObjectStore
+
+    source_bytes = _tooling_source_bytes()
+    store = GitObjectStore(Path(tempfile.mkdtemp(prefix="d003-tc002-")))
+    relpath = "backtests/phase8_v2_diagnostic_d003.py"
+    commit_v1 = store.commit_files({relpath: source_bytes}, "v1")
+    commit_v2 = store.commit_files(
+        {relpath: source_bytes + b"\n# tc002 sensitivity probe\n"}, "v2"
+    )
+    commit_v1_again = store.commit_files({relpath: source_bytes}, "v1 again")
+
+    fingerprint_v1 = d003.provenance(
+        canonical_commit="c" * 40, tooling_commit=commit_v1,
+        store_identity={}, blob_source=store.blob_bytes,
+    )["tooling_fingerprint"]
+    fingerprint_v2 = d003.provenance(
+        canonical_commit="c" * 40, tooling_commit=commit_v2,
+        store_identity={}, blob_source=store.blob_bytes,
+    )["tooling_fingerprint"]
+    fingerprint_v1_again = d003.provenance(
+        canonical_commit="c" * 40, tooling_commit=commit_v1_again,
+        store_identity={}, blob_source=store.blob_bytes,
+    )["tooling_fingerprint"]
+
+    assert fingerprint_v1 != fingerprint_v2
+    assert fingerprint_v1 == fingerprint_v1_again
+    assert fingerprint_v1 == hashlib.sha256(source_bytes).hexdigest()
+
+
+def test_tc002_fail_closed_on_unresolvable_commit_or_path():
+    """§15: malformed commits, unknown commits and untracked paths fail
+    closed as D003Error — no worktree, normalized or local-file fallback."""
+    import hashlib
+
+    commit, blob_source = _tooling_identity()
+    unknown = "f" * 40  # well-formed, but not present in the object store
+    for bad_commit in ("short", "g" * 40, unknown):
+        try:
+            d003.provenance(
+                canonical_commit="c" * 40, tooling_commit=bad_commit,
+                store_identity={}, blob_source=blob_source,
+            )
+        except d003.D003Error:
+            pass
+        else:
+            pytest.fail(f"expected D003Error for tooling commit {bad_commit!r}")
+
+    # A commit that exists but does not track the tooling path fails closed.
+    import tempfile
+
+    from tests.test_canonical_byte_contract import GitObjectStore
+
+    store = GitObjectStore(Path(tempfile.mkdtemp(prefix="d003-tc002-miss-")))
+    other_commit = store.commit_files({"other/file.txt": b"x\n"}, "no tooling file")
+    with pytest.raises(d003.D003Error, match="unresolvable"):
+        d003.provenance(
+            canonical_commit="c" * 40, tooling_commit=other_commit,
+            store_identity={}, blob_source=store.blob_bytes,
+        )
+    # And the legacy local-file hash is NOT accepted as a fallback shape:
+    # the error path never consults Path(__file__).read_bytes().
+    legacy = hashlib.sha256(Path(d003.__file__).read_bytes()).hexdigest()
+    assert legacy != unknown
+
+
+def test_tc002_run_d003_provenance_binds_committed_blob(tmp_path, monkeypatch):
+    """§16: a full synthetic run_d003 emits fingerprint_contract
+    canonical_git_blob_v1 and a tooling_fingerprint equal to the canonical
+    committed-blob digest supplied by the injected blob source."""
+    import hashlib
+
+    commit, blob_source = _tooling_identity()
+    store = _d003_boundary_store(monkeypatch)
+    doc, _ = d003.run_d003(
+        store, canonical_commit="c" * 40, tooling_commit=commit,
+        blob_source=blob_source,
+    )
+    provenance = doc["provenance"]
+    assert provenance["fingerprint_contract"] == "canonical_git_blob_v1"
+    assert provenance["tooling_commit"] == commit
+    assert provenance["tooling_fingerprint"] == hashlib.sha256(
+        blob_source(commit, "backtests/phase8_v2_diagnostic_d003.py")
+    ).hexdigest()
+
+
 def test_write_result_refuses_overwrite(tmp_path, monkeypatch):
     doc, rendered = d003.run_d003(
-        _d003_boundary_store(monkeypatch), canonical_commit="c" * 40, tooling_commit="t" * 40,
+        _d003_boundary_store(monkeypatch), canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source(),
     )
     target, digest = d003.write_result(doc, rendered, tmp_path)
     assert Path(target).exists()
