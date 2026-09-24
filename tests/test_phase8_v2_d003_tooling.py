@@ -429,6 +429,360 @@ def test_run_d003_rejects_wrong_fold_and_coverage(monkeypatch):
         d003.run_d003(store2, canonical_commit="c" * 40, tooling_commit="t" * 40)
 
 
+# ---------------------------------------------------------------------------
+# TC001 — causal prior-state wiring regressions (§8–§11).
+#
+# The lifecycle observer must receive the exact SetupStateRecord consumed by
+# ``evaluate_orchestration_decision`` for the SAME decision — never the
+# post-decision ``next_record``.  All fixtures are synthetic.
+# ---------------------------------------------------------------------------
+
+
+def _consumed_history(block_id, *, setup_suffix):
+    """A production-valid consumption history containing one consumed block
+    with ``block_id`` (full binding + event hash chain via the production
+    constructors; ``SetupStateRecord`` re-validates on every read)."""
+    import json
+    from datetime import timedelta as _td
+
+    from bot.execution.lifecycle.entry import new_entry_intent
+    from bot.execution.lifecycle.models import Direction, ReadinessStyle
+    from bot.execution.lifecycle.serialization import entry_intent_to_payload
+    from bot.strategy.setup_consumption import (
+        SetupConsumptionEvent,
+        SetupEntryBinding,
+        canonical,
+        register_binding,
+    )
+    from strategies.smc_engine.strategy_state import StrategyState as _SS
+
+    setup_id = f"s8n1_tc001{setup_suffix}"
+    intent = new_entry_intent(
+        symbol="XAUUSDm", direction=Direction("buy"), source_timeframe="M5",
+        source_candle_open_time=AT, signal_available_at=AT,
+        requested_trigger=100.0, stop_loss=90.0, final_target=130.0,
+        readiness_style=ReadinessStyle.IMMEDIATE,
+    )
+    binding = SetupEntryBinding(
+        setup_id=setup_id,
+        decision_id=f"tc001-decision-{setup_suffix}",
+        decision_payload=canonical({
+            "setup_id": setup_id, "decision_id": f"tc001-decision-{setup_suffix}",
+            "symbol": "XAUUSDm", "side": "buy", "sources": {"m5": "synthetic"},
+            "available_at": AT.isoformat(),
+            "requested_trigger": intent.requested_trigger,
+            "config": f"tc001-config-{setup_suffix}",
+            "evidence": f"tc001-evidence-{setup_suffix}",
+            "action": "candidate_ready",
+        }),
+        intent_id=intent.signal_id,
+        intent_payload=canonical(entry_intent_to_payload(intent)),
+        action_id=f"tc001-action-{setup_suffix}",
+        trade_id=f"tc001-trade-{setup_suffix}",
+        symbol="XAUUSDm",
+        side="buy",
+        available_at=AT.isoformat(),
+        entry_event_id=f"tc001-entry-event-{setup_suffix}",
+        entry_event_at=(AT + _td(seconds=1)).isoformat(),
+        entry_tolerance=0.0,
+        source_identities=(("m5", "synthetic"),),
+        config_fingerprint=f"tc001-config-{setup_suffix}",
+        evidence_id=f"tc001-evidence-{setup_suffix}",
+        block_id=block_id,
+    )
+    registered = register_binding(
+        record_from_state(_SS(event_time=AT), event_at=AT), binding,
+    )
+    data = registered.data()
+    event = SetupConsumptionEvent(
+        binding=binding, fill_id=f"tc001-fill-{setup_suffix}",
+        executed_volume=0.02, timestamp=(AT + _td(seconds=1)).isoformat(),
+    ).to_dict()
+    data["consumption"]["events"][setup_id] = json.loads(canonical(event))
+    data["consumption"].pop("blocked", None)
+    data["consumption"]["blocked"] = {}
+    return data["consumption"]
+
+
+def _consumed_prior_record():
+    """A production-valid SetupStateRecord whose consumption history already
+    contains one consumed block (``prior-block")."""
+    from bot.strategy.setup_consumption import canonical
+    from bot.strategy.setup_state import SetupStateRecord
+
+    data = _seed_record().data()
+    data["consumption"] = _consumed_history("prior-block", setup_suffix="prior")
+    final = SetupStateRecord(canonical(data))
+    final.data()  # full production validation of the complete history
+    return final
+
+
+def _stamp_consumption_on_advance(monkeypatch, prior):
+    """Make the reducer's ADVANCE path produce a state whose consumed
+    surface is the causal prior surface PLUS ``current-decision-block`` —
+    the decision's own consumption — while ``run_d003``'s seed stays pure.
+
+    Only the advance/rebuild constructors used inside snapshot evaluation
+    (``bot.state.gate_reducer`` and ``bot.validation.market_feature_store``
+    module bindings, identified by a non-seed event time) are stamped; the
+    D003 loop's initial seed (event time == the canonical seed) delegates
+    untouched.  With the corrected loop the observer sees the PRE-advance
+    record ({"prior-block"}); with the 882b4c9 wiring it would see the
+    post-decision record (which also contains "current-decision-block").
+    """
+    from datetime import datetime as _dt
+    from datetime import timezone as _tz
+
+    from bot.state import gate_reducer as gate_reducer_mod
+    from bot.strategy import setup_state as setup_state_mod
+    from bot.strategy.setup_consumption import canonical
+    from bot.strategy.setup_state import SetupStateRecord
+    from bot.validation import market_feature_store as mfs
+
+    seed_time = _dt(2024, 1, 1, tzinfo=_tz.utc)
+    extended = dict(prior.data()["consumption"])
+    current = _consumed_history("current-decision-block", setup_suffix="current")
+    extended["bindings"] = {**extended["bindings"], **current["bindings"]}
+    extended["events"] = {**extended["events"], **current["events"]}
+    extended["blocked"] = {}
+    extended_record = SetupStateRecord(
+        canonical({**prior.data(), "consumption": extended})
+    )
+    extended_record.data()
+
+    def stamped_record_from_state(state, *, event_at, last_event_id=None, last_result=None):
+        record = real_record_from_state(
+            state, event_at=event_at,
+            last_event_id=last_event_id, last_result=last_result,
+        )
+        if event_at == seed_time:
+            # The D003 loop's canonical seed carries the causal PRIOR surface.
+            data = record.data()
+            data["consumption"] = prior.data()["consumption"]
+            stamped = SetupStateRecord(canonical(data))
+            stamped.data()
+            return stamped
+        data = record.data()
+        data["consumption"] = extended_record.data()["consumption"]
+        stamped = SetupStateRecord(canonical(data))
+        stamped.data()
+        return stamped
+
+    real_record_from_state = setup_state_mod.record_from_state
+    for module in (gate_reducer_mod, setup_state_mod, mfs):
+        monkeypatch.setattr(module, "record_from_state", stamped_record_from_state)
+
+
+def _store_with_rows(monkeypatch, rows):
+    identity = {
+        "fold_id": "fold-01", "coverage": "full", "decision_timeframe": "M5",
+        "evaluation_start_ms": FOLD01_START_MS, "evaluation_end_ms": FOLD01_END_MS,
+    }
+
+    class _Store:
+        pass
+
+    store = _Store()
+    store.identity = identity
+    store.table = _Table(rows)
+    store._rows = rows
+    return store
+
+
+def _run_with_spies(monkeypatch, store):
+    """Run ``run_d003`` with the D001 adapter wrapper and the D003 observer
+    both recorded; both delegates are the real production paths.  The loop
+    resolves both names from d003's module namespace (its top-level import),
+    so those bindings are the spy targets."""
+    import backtests.phase8_v2_diagnostic_d001 as d001_mod
+
+    adapter_records: list = []
+    real_adapter = d001_mod.evaluate_orchestration_decision
+
+    def adapter_spy(snapshot, record):
+        adapter_records.append(record)
+        return real_adapter(snapshot, record)
+
+    monkeypatch.setattr(d003, "evaluate_orchestration_decision", adapter_spy)
+
+    observer_records: list = []
+    real_observer = d003.observe_decision
+
+    def observer_spy(row, prior_state_record, *, snapshot, config):
+        observer_records.append(prior_state_record)
+        return real_observer(row, prior_state_record, snapshot=snapshot, config=config)
+
+    monkeypatch.setattr(d003, "observe_decision", observer_spy)
+    doc, rendered = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+    return doc, rendered, adapter_records, observer_records
+
+
+def test_tc001_observer_receives_prior_record_not_next(monkeypatch):
+    """§8: the observer receives the exact record object supplied to the
+    adapter for the same decision — not the post-decision next record.
+
+    Fails at 882b4c9: there ``state_record = next_record`` runs before the
+    observer call, so the identity assertions below break.
+    """
+    store = _d003_boundary_store(monkeypatch)
+    doc, _, adapter_records, observer_records = _run_with_spies(monkeypatch, store)
+
+    assert observer_records, "observer must run for successful decisions"
+    assert len(adapter_records) == len(observer_records)
+    for adapter_record, observer_record in zip(adapter_records, observer_records):
+        assert observer_record is adapter_record, (
+            "observer must receive the identical prior record consumed by "
+            "the adapter for the same decision"
+        )
+    assert doc["decision_accounting"]["reducer_classified"] >= 1
+
+
+def test_tc001_consumed_ids_come_from_prior_state_only(monkeypatch):
+    """§9: with a causal prior surface of exactly {"prior-block"}, the
+    lifecycle observation for the CURRENT decision derives consumed ids
+    from the PRIOR record only — the decision's own consumption
+    ("current-decision-block", added by the reducer's advance) is absent.
+
+    Fails at 882b4c9: the observer receives the post-decision next record,
+    whose consumed surface contains "current-decision-block".
+    """
+    prior = _consumed_prior_record()
+    _stamp_consumption_on_advance(monkeypatch, prior)
+    store = _store_with_rows(
+        monkeypatch, [_mocked_ok_snapshot(monkeypatch, at=datetime(2024, 4, 8, tzinfo=timezone.utc))],
+    )
+
+    captured: list = []
+    real_observer = d003.observe_decision
+
+    def observer_spy(row, prior_state_record, *, snapshot, config):
+        captured.append((prior_state_record, real_observer(
+            row, prior_state_record, snapshot=snapshot, config=config,
+        )))
+        return captured[-1][1]
+
+    monkeypatch.setattr(d003, "observe_decision", observer_spy)
+    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+
+    assert doc["decision_accounting"]["reducer_classified"] == 1
+    assert len(captured) == 1
+    record, observation = captured[0]
+    lifecycle = observation.get("canonical_lifecycle")
+    assert lifecycle is not None, "Gate-11 entrant must carry a lifecycle observation"
+    derived = set(lifecycle.get("consumed_ids_derived") or [])
+    assert derived == {"prior-block"}, (
+        "consumed ids must derive ONLY from the causal prior state record "
+        f"(got {sorted(derived)!r}; 'current-decision-block' must be absent)"
+    )
+
+
+def test_tc001_two_successive_decisions_causal_sequencing(monkeypatch):
+    """§10: decision 1 observes the seed record; after success the state
+    advances to record 1; decision 2 observes record 1 — not the seed and
+    not its own post-decision record 2."""
+    at1 = datetime(2024, 4, 8, tzinfo=timezone.utc)
+    rows = [
+        _mocked_ok_snapshot(monkeypatch, at=at1),
+        _mocked_ok_snapshot(monkeypatch, at=at1 + timedelta(minutes=5)),
+        _mocked_ok_snapshot(monkeypatch, at=at1 + timedelta(minutes=10)),
+    ]
+    store = _store_with_rows(monkeypatch, rows)
+    doc, _, adapter_records, observer_records = _run_with_spies(monkeypatch, store)
+
+    assert len(adapter_records) == 3 and len(observer_records) == 3
+    seed = _seed_record()
+    # Decision 1: the observer receives the seed record (equal payload —
+    # run_d003 constructs its own seed instance).
+    assert observer_records[0] == seed, (
+        "decision 1 must observe the seed (prior) record"
+    )
+    # Decision 2: the observer receives the record the sequential chain
+    # advanced to after decision 1 — not the seed and not decision 2's own
+    # post-decision record.
+    assert observer_records[1] is not seed
+    assert observer_records[1] is not observer_records[0]
+    # Three decisions, three distinct causal prior records.
+    assert len({id(record) for record in observer_records}) == 3
+    assert doc["decision_accounting"]["reducer_classified"] == 3
+
+
+def test_tc001_error_preserves_prior_state_for_next_observation(monkeypatch):
+    """§11: success → error → success.  The error row produces no
+    observation, advances nothing, and the next successful decision
+    observes the same prior record preserved across the error."""
+    from bot.validation import market_feature_store as mfs
+
+    at1 = datetime(2024, 4, 8, tzinfo=timezone.utc)
+    rows = [
+        _mocked_ok_snapshot(monkeypatch, at=at1),
+        _mocked_ok_snapshot(monkeypatch, at=at1 + timedelta(minutes=5)),
+        _mocked_ok_snapshot(monkeypatch, at=at1 + timedelta(minutes=10)),
+    ]
+    error_snapshot = rows[1]
+    error_available_ms = int(error_snapshot.available_at_ms)
+    real_orchestrator = mfs.evaluate_orchestration_from_features
+
+    def boom_once(*args, **kwargs):
+        raise ValueError("synthetic orchestrator failure")
+
+    import backtests.phase8_v2_diagnostic_d001 as d001_mod
+
+    real_adapter = d001_mod.evaluate_orchestration_decision
+    error_inputs: list = []
+    success_next: list = []
+
+    def adapter_spy(snapshot, record):
+        # _snapshot_rows reconstructs store rows, so key on the decision
+        # identity (available_at_ms), not fixture object identity.
+        if int(snapshot.available_at_ms) == error_available_ms:
+            monkeypatch.setattr(mfs, "evaluate_orchestration_from_features", boom_once)
+            try:
+                result = real_adapter(snapshot, record)
+            finally:
+                monkeypatch.setattr(mfs, "evaluate_orchestration_from_features", real_orchestrator)
+            assert result[0]["action"] == "error"
+            error_inputs.append((int(snapshot.available_at_ms), record))
+            return result
+        result = real_adapter(snapshot, record)
+        if result[0]["action"] != "error":
+            success_next.append((int(snapshot.available_at_ms), result[1]))
+        return result
+
+    monkeypatch.setattr(d003, "evaluate_orchestration_decision", adapter_spy)
+
+    observer_records: list = []
+    real_observer = d003.observe_decision
+
+    def observer_spy(row, prior_state_record, *, snapshot, config):
+        observer_records.append(prior_state_record)
+        return real_observer(row, prior_state_record, snapshot=snapshot, config=config)
+
+    monkeypatch.setattr(d003, "observe_decision", observer_spy)
+    store = _store_with_rows(monkeypatch, rows)
+    doc, _ = d003.run_d003(store, canonical_commit="c" * 40, tooling_commit="t" * 40)
+
+    accounting = doc["decision_accounting"]
+    assert accounting["evaluation_error"] == 1
+    assert accounting["reducer_classified"] == 2
+    assert len(observer_records) == 2, "the error row must produce no observation"
+    assert len(success_next) == 2 and len(error_inputs) == 1
+    at1_ms = int(at1.timestamp() * 1000)
+    first_success_next = next(
+        record for available_ms, record in success_next if available_ms == at1_ms
+    )
+    # The error was evaluated from exactly the state success #1 advanced to,
+    # and the error advanced/preserved nothing: decision #3 then observes
+    # that same carried record object as its causal prior.
+    assert error_inputs[0][1] is first_success_next, (
+        "the error decision must be evaluated from the state carried "
+        "forward after success #1"
+    )
+    assert observer_records[1] is first_success_next, (
+        "the decision after the error must observe the same prior state "
+        "preserved across the error — not a re-seeded or further-advanced state"
+    )
+
+
 def test_write_result_refuses_overwrite(tmp_path, monkeypatch):
     doc, rendered = d003.run_d003(
         _d003_boundary_store(monkeypatch), canonical_commit="c" * 40, tooling_commit="t" * 40,

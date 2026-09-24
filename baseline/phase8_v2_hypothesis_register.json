@@ -262,6 +262,31 @@
       },
       "r001_exists": false,
       "measurement_rerun_requires": "separate supervisory authorization after MR003 review"
+    },
+    {
+      "record_id": "phase8-v2-D003-TC001",
+      "record_type": "PRE_EMPIRICAL_TOOLING_CORRECTION",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO EMPIRICAL ACCESS",
+      "created_utc": "2026-09-24T18:43:06Z",
+      "diagnostic_id": "phase8-v2-D003",
+      "linked_hypothesis": "phase8-v2-H002",
+      "defect_class": "D003_PRE_EMPIRICAL_PRIOR_STATE_WIRING_DEFECT",
+      "preregistration_commit": "8b3a8bd1169fcd5f8fb0a15a089451c68d3e04b6",
+      "original_tooling_freeze_commit": "882b4c9468f032fb4ac30f0737afd0831e12206d",
+      "supersedes_nothing": true,
+      "empirical_execution_has_occurred": false,
+      "diagnostic_budget_status": "1 / 12 executed; D003 has consumed zero budget",
+      "exact_defect": "run_d003 advanced state_record = next_record before invoking observe_decision, so the canonical lifecycle observer received the post-decision next_record instead of the causal PRIOR SetupStateRecord consumed by evaluate_orchestration_decision for the same decision; canonical consumed block ids were therefore at risk of reflecting the decision's own consumption, violating the preregistered consumed-ids-from-prior-state-only rule",
+      "correction": "prior_state_record is bound before the orchestration call, passed to observe_decision, and the state advance now happens only after the observation; observer logic, lifecycle semantics, metric surface and all preregistered rules are unchanged",
+      "regression_proof": "four loop-level synthetic regressions in tests/test_phase8_v2_d003_tooling.py (test_tc001_*) pass against the corrected module and fail against the defective 882b4c9 module",
+      "metric_surface_unchanged": true,
+      "strategy_source_unchanged": true,
+      "d001_unchanged": true,
+      "v001_unchanged": true,
+      "empirical_store_status": "fold-01-a8b406884ab3525a untouched; Folds 02-04, holdout and 2025+ untouched",
+      "tooling_identity_rule": "the corrected commit is the ONLY tooling identity authorized for future D003 empirical execution; commit 882b4c9 is recorded as PRE_EMPIRICAL_SUPERSEDED_TOOLING \u2014 PRIOR_STATE_WIRING_DEFECT and must never be used for empirical D003 execution",
+      "d003_status_after_correction": "REGISTERED_NOT_EXECUTED",
+      "scope": "Pre-empirical implementation wiring only. The D003 scientific question, hypotheses, metric surface, population, disposition rules and prohibited outputs are unchanged."
     }
 
   ],

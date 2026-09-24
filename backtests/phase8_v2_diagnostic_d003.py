@@ -597,7 +597,10 @@ def run_d003(
             per_status = bucket_statuses.setdefault("evaluation_error", {})
             per_status["reference_check_failed"] = per_status.get("reference_check_failed", 0) + 1
             continue
-        row, next_record = evaluate_orchestration_decision(snapshot, state_record)
+        prior_state_record = state_record
+        row, next_record = evaluate_orchestration_decision(
+            snapshot, prior_state_record,
+        )
         if row["action"] == "error":
             # Failed evaluation: classify and keep the prior state record so
             # subsequent decisions continue from the same carried state.
@@ -607,15 +610,18 @@ def run_d003(
                 "error_type": row.get("error_type"),
             })
             continue
-        state_record = next_record
         rows.append(row)
         # Read-only D003 augmentation of the successful decision; the
-        # observer receives the state record now in effect at this decision.
+        # observer receives the exact causal PRIOR state record consumed by
+        # the reducer for this decision — never the post-decision
+        # ``next_record`` — so canonical consumed IDs reflect only blocks
+        # consumed before this decision.
         observations.append(
             observe_decision(
-                row, state_record, snapshot=snapshot, config=config,
+                row, prior_state_record, snapshot=snapshot, config=config,
             )
         )
+        state_record = next_record
     reconcile_accounting(
         scheduled=scheduled,
         classified=len(rows),
