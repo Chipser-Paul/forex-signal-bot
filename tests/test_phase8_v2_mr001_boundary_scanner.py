@@ -317,6 +317,11 @@ class _StubStore:
 class _StubSnapshot:
     gate_event_id = "stub-1"
     available_at_ms = 1711929600000
+    # MR003: the loop now classifies snapshots (D001 contract) before
+    # orchestration, so canonical stubs carry a reducer-path gate status.
+    gate_status = "ok"
+    gate_payload = "{}"
+    check_passes = True
 
 
 def test_run_v001_evaluation_accepts_conforming_digest_identities(monkeypatch):

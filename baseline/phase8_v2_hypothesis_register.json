@@ -213,7 +213,57 @@
       },
       "r001_exists": false,
       "measurement_rerun_requires": "separate supervisory authorization after MR002 review"
+    },
+    {
+      "record_id": "phase6-development-v2-V001-MR003",
+      "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
+      "created_utc": "2026-09-23T22:18:47Z",
+      "variant_id": "phase6-development-v2-V001",
+      "linked_hypothesis": "phase8-v2-H005",
+      "disposition": "SNAPSHOT_CLASSIFICATION_OMISSION_REPAIRED_POST_EXPOSURE",
+      "defect_class": "MEASUREMENT_TOOLING_SNAPSHOT_CLASSIFICATION_OMISSION",
+      "supersedes_nothing": true,
+      "mr001_record_unchanged": "phase6-development-v2-V001-MR001",
+      "mr002_record_unchanged": "phase6-development-v2-V001-MR002",
+      "original_frozen_tooling_commit": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e",
+      "mr001_repair_commit": "a193702c4d26cbae7e5121950fa66574b860a69d",
+      "mr002_repair_commit": "6e253dd81b41b1c95d085463673a7e8e11dfa16e",
+      "exposure_timestamp_utc": "2026-09-23T15:23:28.661013+00:00",
+      "blockage_artifact_shas": {
+        "first": "55a382dce5f00752e70ed03cb244db5f1277a471b78b43055819b3f118a03432",
+        "second": "a02b59cb227fbc1d41f6036bb1d3fd2e9a6601af143ae447139ce44d202fda74",
+        "third": "7a472a509c9bddd2a0100791a04e207a2ef7c33769b2d0f9e6da3184e31d89db"
+      },
+      "d001_classifier_parity_basis": "The V001 measurement loop now reuses the frozen D001 implementations verbatim by import: classify_snapshot, _reference_check_failed and reconcile_accounting (backtests/phase8_v2_diagnostic_d001.py). No gate-status interpretation exists outside D001. Canonical loop order: scheduled count -> classify_snapshot -> (bucket? account+skip, no orchestrator, no state change) -> _reference_check_failed -> (failed? account evaluation_error+skip) -> observe_decision -> (error? account, preserve prior state, exclude from structural rows) -> advance state and append structural row. reconcile_accounting fail-closes unless scheduled == classified + missing_history + unavailable_input + evaluation_error.",
+      "exact_defect": "run_v001_evaluation iterated every persisted snapshot directly into observe_decision, omitting the canonical D001 pre-classification stage. The store's 4815 early_exit and 1138 dxy_blocked rows (empty gate_event_id) reached evaluate_orchestration_from_features, which was never designed to receive them; the first dxy_blocked row (2024-04-01T16:00Z) produced a reducer decision whose persisted last_event_id mismatched the snapshot's empty id and the adapter's fail-closed state-continuity invariant raised D001Error out of the loop before any observation.",
+      "structural_metrics_successfully_emitted": 0,
+      "mr002_seed_and_error_carry_behaved_as_designed": true,
+      "strategy_semantics_unchanged": true,
+      "d001_module_unchanged": true,
+      "aggregate_v001_unchanged": true,
+      "preserved_store": {
+        "store_name": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "not_opened_during_mr003": true
+      },
+      "third_blockage_status_language": "V001 R001 MEASUREMENT BLOCKED \u2014 THIRD MEASUREMENT-TOOLING DEFECT \u2014 MR003 REQUIRED \u2014 NO R001 RESULT",
+      "no_new_strategy_exposure": true,
+      "additional_diagnostic_budget_consumed": 0,
+      "additional_strategy_variant_budget_consumed": 0,
+      "additional_numeric_parameter_trials_consumed": 0,
+      "budget_after_repair": {
+        "diagnostics_executed": "1 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE"
+      },
+      "r001_exists": false,
+      "measurement_rerun_requires": "separate supervisory authorization after MR003 review"
     }
+
   ],
   "charter": {
     "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",

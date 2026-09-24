@@ -56,7 +56,10 @@ if str(REPO_ROOT) not in sys.path:
 from backtests.phase8_v2_diagnostic_d001 import (  # noqa: E402
     FOLD01_END,
     FOLD01_START,
+    _reference_check_failed,
+    classify_snapshot,
     evaluate_orchestration_decision,
+    reconcile_accounting,
 )
 from bot.analysis.fvg_engine import detect_fvgs, get_unfilled_fvgs  # noqa: E402
 from bot.state.gate_inputs import displacement_tier_result  # noqa: E402
@@ -759,15 +762,44 @@ def run_v001_evaluation(
     rows = []
     state_record = _seed_state_record()
     started = datetime.now(timezone.utc).isoformat()
+    # MR003 (post-exposure repair): canonical D001 snapshot classification
+    # precedes orchestration.  Only ``ok`` snapshots that pass the
+    # scenario-invariant reference check are evaluable; classified rows are
+    # accounted and skipped WITHOUT calling the orchestrator and WITHOUT
+    # touching the setup-state chain — exactly the frozen D001 measurement
+    # loop contract (classify_snapshot / _reference_check_failed /
+    # reconcile_accounting are reused verbatim from the D001 module).
+    buckets = {
+        "missing_history": 0,
+        "unavailable_input": 0,
+        "evaluation_error": 0,
+    }
+    scheduled = 0
     for snapshot in _snapshot_rows(store):
+        scheduled += 1
+        bucket = classify_snapshot(snapshot)
+        if bucket is not None:
+            buckets[bucket[0]] += 1
+            continue
+        if _reference_check_failed(snapshot):
+            buckets["evaluation_error"] += 1
+            continue
         row, next_record = observe_decision(snapshot, state_record)
         if row.get("action") == "error":
             # Failed evaluation: keep the prior valid state record so
             # subsequent decisions continue from the same carried state
             # (D001 semantics: an error must never poison the chain).
+            buckets["evaluation_error"] += 1
             continue
         state_record = next_record
         rows.append(row)
+    reconcile_accounting(
+        scheduled=scheduled,
+        classified=len(rows),
+        missing_history=buckets["missing_history"],
+        unavailable_input=buckets["unavailable_input"],
+        evaluation_error=buckets["evaluation_error"],
+    )
     finished = datetime.now(timezone.utc).isoformat()
     aggregate = aggregate_v001(rows)
     if aggregate["decisions_total"] == 0:
