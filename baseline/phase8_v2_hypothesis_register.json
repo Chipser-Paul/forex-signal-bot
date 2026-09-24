@@ -465,6 +465,108 @@
       "h002_boundary": "phase8-v2-H002 remains OPEN — requires separately preregistered canonical OrderBlock lifecycle diagnostic; D003 not registered yet",
       "budget_consumption_upon_first_empirical_execution": "2 / 12",
       "two_phase_discipline": "Phase A synthetic-only tooling committed and pushed before any Fold-01 access; Phase B only after the remote resolves to the frozen tooling commit"
+    },
+    {
+      "diagnostic_id": "phase8-v2-D003",
+      "title": "Canonical Gate-11 and Order-Block Lifecycle Decomposition",
+      "diagnostic_type": "DIAGNOSTIC_INVESTIGATION",
+      "status": "REGISTERED_NOT_EXECUTED",
+      "registered_utc": "2026-09-24T11:45:05Z",
+      "linked_hypothesis": "phase8-v2-H002",
+      "h002_boundary": "H002 statement remains exactly the registered hypothesis concerning conjunctively restrictive canonical order-block conditions; not rewritten after V001. Disposition rule fixed in the specification BEFORE any empirical execution.",
+      "h001_boundary": "CONTEXTUAL_ONLY \u2014 H001 remains INCONCLUSIVE_D001; D003 reproduces OB/FVG pair and overlap counts descriptively and does not resolve H001 (no separately preregistered H001 decision rule precedes execution).",
+      "h003_boundary": "NOT_TESTED_BY_D003",
+      "h005_note": "SUPPORTED_BY_V001 \u2014 already disposed; not reopened by D003",
+      "scientific_question": "Among decisions that legitimately reach Gate 11, what is the exact frozen-score component composition, and how does the canonical order-block lifecycle (evaluate_order_block) classify the same decisions compared with the persisted legacy/acquisition ob_result.valid surface?",
+      "motivation_binding": "V001 R001 (result commit 72bdcb7c9b3a520c501efbc9b2aa2139cc0ba455; outcome FUNCTIONAL_REPAIR_NO_CANDIDATES; H005 SUPPORTED_BY_V001; candidate_ready 0; Gate-10 1489->526, Gate-11 526->1, final canonical 1->0; one persisted OB/FVG pair with canonical overlap true) motivates D003 but is NEVER a test oracle and establishes nothing about which lifecycle state dominates or that any threshold should change.",
+      "primary_population": "Decisions that (1) pass canonical snapshot classification, (2) pass the reference check, (3) evaluate successfully through the canonical orchestration path, (4) pass Gate 10, and (5) enter Gate 11 \u2014 derived naturally at execution time; no observed count may be encoded into tooling or tests.",
+      "preregistered_metric_surface": {
+        "A_accounting": [
+          "scheduled_snapshots",
+          "pre_evaluation_buckets (missing_history/unavailable_input/evaluation_error)",
+          "successful_structural_decisions",
+          "gate_8_entered_pass_fail",
+          "gate_9_entered_pass_fail",
+          "gate_10_entered_pass_fail",
+          "gate_11_entered_pass_fail"
+        ],
+        "B_frozen_score_components": [
+          "five frozen scorer checks with pass/fail counts and awarded points",
+          "exact frozen score distribution",
+          "exact five-boolean co-occurrence frequencies"
+        ],
+        "C_discriminating_component_contingency": [
+          "premium_or_discount x legacy ob_result.valid x persisted fvg_in_ob (all observed boolean combinations; descriptive only)"
+        ],
+        "D_canonical_ob_lifecycle": [
+          "complete BlockState distribution",
+          "complete canonical reason distribution",
+          "side/direction distribution",
+          "eligible_count (ELIGIBLE + RETEST_ELIGIBLE) and non_eligible_count",
+          "state x reason table where nonredundant",
+          "state x direction table"
+        ],
+        "E_acquisition_canonical_agreement": [
+          "ob_result.valid x OrderBlockResult.eligible four-cell contingency",
+          "direction agreement where both surfaces expose a meaningful side"
+        ],
+        "F_canonical_failure_reasons": [
+          "no_confirmed_block",
+          "confirmation_not_available",
+          "block_already_consumed",
+          "block_expired",
+          "close_below_bullish_zone",
+          "close_above_bearish_zone",
+          "first_post_confirmation_retest",
+          "block_already_mitigated",
+          "confirmed_unmitigated_block",
+          "data-unsafe reasons (invalid_decision_time, malformed_or_naive_candle_frame)"
+        ],
+        "G_contextual_fvg_coexistence": [
+          "canonical lifecycle eligible x final canonical FVG present",
+          "where both exist: pair count, direction agreement, canonical geometric overlap true/false, preregistered D001 mirror separation geometry only"
+        ],
+        "H_premium_discount_context": [
+          "premium/discount pass/fail among Gate-11 entrants",
+          "descriptive premium/discount x canonical-eligible OB x final FVG present contingency"
+        ]
+      },
+      "h002_disposition_rule": {
+        "SUPPORTED_BY_D003": "canonical lifecycle results show OB-like blocks exist with substantial concentration in one or more specific lifecycle failure states/reasons while canonical eligible OB availability is much rarer because of the current lifecycle conjunction; 'substantial' is argued from structural evidence and concentration description, never an arbitrary post-hoc percentage; no parameter change follows automatically",
+        "NOT_SUPPORTED_BY_D003": "canonical evaluation dominated by UNAVAILABLE/no_confirmed_block with little evidence of otherwise meaningful detected OB structure entering later lifecycle states",
+        "INCONCLUSIVE_D003": "data/tooling cannot distinguish the lifecycle, counts too sparse for meaningful structural interpretation, or acquisition/canonical semantic mismatch prevents a defensible lifecycle inference"
+      },
+      "prohibitions": [
+        "no score at 7/8 or 6/8",
+        "no candidates-if-condition-removed counterfactuals",
+        "no alternate OB expiry bars or displacement ATR",
+        "no alternate premium/discount semantics, overlap tolerances, partial overlap or proximity rules",
+        "no temporal association (H003 surface)",
+        "no optimizer or search",
+        "no profitability, fills, closed trades or account quantities",
+        "no strategy parameter or threshold change",
+        "no V002 creation"
+      ],
+      "canonical_inputs_rule": "canonical OB evaluation reconstructs inputs ONLY from already-persisted causal V001 snapshot data (M5 entry_rows, persisted htf_bias, decision timestamp, exact frozen StrategyConfig, causal prior setup-state consumption bindings intersected with events); no external candles, no later bars, no rebuilt market inputs; the lifecycle observer is READ-ONLY relative to strategy evaluation",
+      "acquisition_vs_canonical_rule": "persisted gate input ob_result (legacy detect_ob_breaker surface) and canonical evaluate_order_block lifecycle are measured separately; ob_result.valid is never treated as equivalent to OrderBlockResult.eligible; neither surface is modified",
+      "empirical_universe": {
+        "tier": "TIER_A_FOLD01",
+        "store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "prohibited_historical_store": "fold-01-1d710826193a6767",
+        "not_opened_during_registration_or_tooling": true
+      },
+      "fold_boundary": [
+        "2024-04-01T00:00:00+00:00",
+        "2024-06-08T00:00:00+00:00"
+      ],
+      "budget_classification": "registration and tooling freeze consume zero diagnostic budget",
+      "budget_consumption_upon_first_empirical_execution": "2 / 12",
+      "two_phase_discipline": "Phase A preregistration precedes tooling freeze; Phase B synthetic-tested tooling is committed and pushed before any Fold-01 access; empirical execution only under separate supervisory authorization after the remote resolves to the frozen tooling commit",
+      "no_v002": true,
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D003.md",
+      "specification_sha256": "2b5204925a700cc2faa817835e77d298d778138f811bdfb2ad06cfe9c007cc46"
     }
   ],
   "strategy_variants": [
