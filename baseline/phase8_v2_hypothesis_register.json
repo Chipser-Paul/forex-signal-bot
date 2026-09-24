@@ -397,7 +397,7 @@
     {
       "hypothesis_id": "phase8-v2-H005",
       "title": "FVG ATR-Series Interface Repair",
-      "status": "OPEN",
+      "status": "SUPPORTED_BY_V001",
       "registered_utc": "2026-09-23T11:05:30Z",
       "statement": "The frozen canonical FVG detector's zero-output behavior is caused by an interface mismatch between scalar calculate_atr() and the detector's expectation of an indexable ATR series. Supplying a mathematically equivalent rolling ATR series to the detector, while preserving all existing FVG thresholds and downstream filtering semantics, should restore the detector's ability to evaluate canonical FVG windows without introducing a new trading threshold.",
       "economic_rationale": "This is a correctness repair to allow the already-declared FVG definition to execute as written. It does not assert that relaxing the FVG definition is profitable or desirable.",
@@ -621,6 +621,164 @@
       "unplanned_observations": [
         "UNPLANNED_OBSERVATION — REQUIRES FUTURE PREREGISTRATION: premium/discount placement failed for 522/526 OB-present decisions (in_pd_zone_true = 4 across the fold), a concentration not named by any preregistered hypothesis. Recorded without analysis into any strategy rule."
       ]
+    },
+    {
+      "result_id": "phase6-development-v2-V001-R001",
+      "variant_id": "phase6-development-v2-V001",
+      "hypothesis_id": "phase8-v2-H005",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "executed": true,
+      "implementation_commit": "b4a1b0e6ab353f513a0df554840344f322e0964c",
+      "canonical_source_commit_used": "b4a1b0e6ab353f513a0df554840344f322e0964c",
+      "measurement_tooling_commit": "1a8e4b278dad1741c056ab0d44b8e61dbe36f497",
+      "evaluator_schema": "phase8_v2_v001_result_v1",
+      "fingerprint_contract": "canonical_git_blob_v1",
+      "complete_tooling_lineage": {
+        "original_frozen_tooling": "d87b71491203249e6ab3dd95bca4b9ee89cf3e9e",
+        "prospective_readiness": "d621aebcaae89b99d3727fb2fff02a3ada53b0ae",
+        "mr001": "a193702c4d26cbae7e5121950fa66574b860a69d",
+        "mr002": "6e253dd81b41b1c95d085463673a7e8e11dfa16e",
+        "mr003": "1a8e4b278dad1741c056ab0d44b8e61dbe36f497"
+      },
+      "governance_lineage": [
+        "phase6-development-v2-V001-MR001",
+        "phase6-development-v2-V001-MR002",
+        "phase6-development-v2-V001-MR003"
+      ],
+      "blockage_artifact_shas": {
+        "first": "55a382dce5f00752e70ed03cb244db5f1277a471b78b43055819b3f118a03432",
+        "second": "a02b59cb227fbc1d41f6036bb1d3fd2e9a6601af143ae447139ce44d202fda74",
+        "third": "7a472a509c9bddd2a0100791a04e207a2ef7c33769b2d0f9e6da3184e31d89db"
+      },
+      "exposure_timestamp_utc": "2026-09-23T15:23:28.661013+00:00",
+      "measurement_window_utc": {
+        "started": "2026-09-24T10:55:06.956274+00:00",
+        "finished": "2026-09-24T11:01:50.317442+00:00"
+      },
+      "input_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "plan_fingerprint": "adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09",
+        "pipeline_fingerprint": "b5a7ca17fd29aa593a5dce32e581cb4ff343b3a068142aace59a79da65d2065f",
+        "input_index_sha256": "e460066f4ebde8871eff44f874a6f7882a9a57524d5be358670c528e407846ba",
+        "fold01_boundary": [
+          "2024-04-01T00:00:00+00:00",
+          "2024-06-08T00:00:00+00:00"
+        ],
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767"
+      },
+      "outcome_classification": "FUNCTIONAL_REPAIR_NO_CANDIDATES",
+      "h005_disposition": "SUPPORTED_BY_V001",
+      "preregistered_structural_summaries": {
+        "snapshot_accounting": {
+          "scheduled": 13269,
+          "structural_decisions": 7316,
+          "missing_history": 4815,
+          "unavailable_input": 1138,
+          "evaluation_error": 0,
+          "reconciles": true
+        },
+        "detector_eligible_decisions": 1489,
+        "observer_reconciled_decisions": 1489,
+        "stage_a_fail_decisions": 0,
+        "attrition_stage_totals": {
+          "windows_total": 220372,
+          "atr_valid_windows": 202504,
+          "atr_warmup_windows": 17868,
+          "displacement_passes": 5355,
+          "gap_bullish": 2275,
+          "gap_bearish": 2212,
+          "gap_none": 868,
+          "zones_same_direction_all": 2788,
+          "zones_opposite_direction": 1699,
+          "zones_filled": 3782,
+          "zones_unfilled": 705
+        },
+        "final_fvg": {
+          "decisions_with_final_fvg": 455,
+          "total_final_fvg_count": 579,
+          "direction_counts": {
+            "bullish": 322,
+            "bearish": 257
+          },
+          "unique_identities": 65
+        },
+        "gate_funnel": {
+          "gate_8_liquidity": {
+            "entered": 7316,
+            "passed": 3607,
+            "failed": 3709
+          },
+          "gate_9_displacement": {
+            "entered": 3607,
+            "passed": 1489,
+            "failed": 2118
+          },
+          "gate_10_internal_structure": {
+            "entered": 1489,
+            "passed": 526,
+            "failed": 963
+          },
+          "gate_11_confluence": {
+            "entered": 526,
+            "passed": 1,
+            "failed": 525
+          },
+          "canonical_strategy": {
+            "entered": 1,
+            "passed": 0,
+            "failed": 1
+          }
+        },
+        "ob_fvg_coexistence": {
+          "decisions_with_valid_ob_and_fvg": 1,
+          "ob_fvg_zone_pairs": 1,
+          "canonical_overlap_true": 1,
+          "canonical_overlap_false": 0
+        },
+        "actions": {
+          "skip": 1489,
+          "wait": 5827
+        },
+        "reasons": {
+          "liquidity_sweep_missing": 3709,
+          "displacement_missing": 2118,
+          "internal_structure_missing": 963,
+          "score_below_threshold": 525,
+          "dxy_direction_conflict": 1
+        },
+        "candidate_ready": 0,
+        "research_density_target": 90
+      },
+      "output": {
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V001 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_variants/phase6-development-v2-V001/fold01/phase6-development-v2-V001_result.json",
+        "sha256": "63e3be0a73960a1189670afd17feb67061c5c75e351438dbd1afb7343f0d8d11",
+        "bytes": 7104,
+        "read_back_verified": true
+      },
+      "result_document": "docs/PHASE8_V2_VARIANT_V001_RESULT.md",
+      "no_profitability_metrics": true,
+      "no_parameter_counterfactuals": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      },
+      "budget_after_result": {
+        "diagnostics_executed": "1 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "R001 completes the already-consumed first variant; no additional variant consumed"
+      }
     }
   ],
   "provenance_corrections": [
