@@ -453,9 +453,9 @@
         "reference-population fate predicates for ELIGIBLE/RETEST_ELIGIBLE/MITIGATED/INVALIDATED (UNAVAILABLE count-only)"
       ],
       "implementation_required": false,
-      "status": "REGISTERED",
-      "result": null,
-      "disposition": null
+      "status": "SUPPORTED_BY_D004",
+      "result": "phase8-v2-D004-R001",
+      "disposition": "SUPPORTED_BY_D004"
     },
     {
       "hypothesis_id": "phase8-v2-H001",
@@ -1419,6 +1419,261 @@
         "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
         "note": "The TC004 rerun completes the already-consumed D003 diagnostic; no additional diagnostic consumed."
       }
+    },
+    {
+      "result_id": "phase8-v2-D004-R001",
+      "diagnostic_id": "phase8-v2-D004",
+      "hypothesis_id": "phase8-v2-H006",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "executed": true,
+      "preregistration_commit": "e37b522238ad1b7b2548da75055080832f4099b6",
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D004.md",
+      "specification_sha256": "cededb5f495d142d5713f691eec8c9b7efb604082ca4b722f6cfb72881a86392",
+      "canonical_source_commit_used": "b68d4e84e0ce475a311355f50748671feda53ba6",
+      "measurement_tooling_commit": "b68d4e84e0ce475a311355f50748671feda53ba6",
+      "fingerprint_contract": "canonical_git_blob_v1",
+      "tooling_fingerprint": "b71c2440c4bd8e7763e7c419d3210852ad473fe3c88d6ec2f65af12c38f82dae",
+      "void_attempt_history": {
+        "attempt1_classification": "VOID_ATTEMPT — DRIVER_PREFLIGHT_FAIL_CLOSED — NOT R001 — NO EMPIRICAL OBSERVATION",
+        "attempt1_timestamp_utc": "2026-09-25T13:51:26.755772+00:00",
+        "attempt1_blockage_artifact_sha256": "ad789aea9ca06ef8d6beb80dadbf3ca6c5246bee07daa85a3e4405ece4a8dcdd",
+        "attempt1_exact_cause": "the untracked execution driver's preflight identity assertion was mis-specified (it required the store identity SHA as a VALUE inside the identity JSON; the canonical identity SHA is the digest OF that JSON); the driver fail-closed before any snapshot was classified, evaluated or observed; the frozen D004 tooling never began executing; zero observations; nothing written",
+        "attempt1_observations_recorded": 0,
+        "frozen_tooling_modified_for_rerun": false,
+        "artifact_preserved_intact": true
+      },
+      "execution_window_utc": {
+        "budget_exposure_first_store_load": "2026-09-25T13:51:26.755772+00:00",
+        "valid_run_started": "2026-09-25T13:53:24.235052+00:00",
+        "valid_run_finished": "2026-09-25T13:56:20.480636+00:00",
+        "valid_run_seconds": 176.245584
+      },
+      "input_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "coverage": "fold-01/full",
+        "plan_fingerprint": "adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09",
+        "pipeline_fingerprint": "b5a7ca17fd29aa593a5dce32e581cb4ff343b3a068142aace59a79da65d2065f",
+        "input_index_sha256": "e460066f4ebde8871eff44f874a6f7882a9a57524d5be358670c528e407846ba",
+        "identity_verified_before_observation": true,
+        "rows_verify_sha256_passed": true,
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767"
+      },
+      "h006_disposition": "SUPPORTED_BY_D004",
+      "h006_disposition_basis": "Preregistered structural rule applied without any numeric cutoff: 57 of 133 frozen EXPIRED blocks (42.9 percent, the modal single fate) remain structurally untouched AND uninvalidated through the causal decision timestamp, so for these blocks fixed age is the ONLY lifecycle evidence against them; the same-direction final-FVG coexistence named by H006 strengthens the interpretation (42 of the 57 untouched blocks retain a final canonical FVG, 22 of them with canonical geometric overlap true; direction disagreement is 0 across the whole population). The registered hypothesis claims a MATERIAL SUBSET with exactly these properties, and that subset is observed. The counterweights are recorded honestly and temper any stronger claim: 76 of 133 (57.1 percent) show zone interaction (49 invalidation-like, 27 mitigation-like touches) and 78 of 133 lack final FVG context; that heterogeneous aggregate does not establish the NOT_SUPPORTED arm's 'predominantly stale' characterization over the modal untouched fate. EXPIRED_FIRST_RETEST_AT_DECISION is 0. No strategy change follows automatically; no alternate expiry was evaluated; the V002 decision requires separate supervisory interpretation of this record.",
+      "h002_not_reopened": true,
+      "h001_h003_h005_untouched": true,
+      "preregistered_structural_summaries": {
+        "decision_accounting": {
+          "scheduled": 13269,
+          "reducer_classified": 7316,
+          "missing_history": 4815,
+          "unavailable_input": 1138,
+          "evaluation_error": 0,
+          "missing_history_statuses": {
+            "early_exit": 4815
+          },
+          "unavailable_input_statuses": {
+            "dxy_blocked": 1138
+          },
+          "reconciles": true
+        },
+        "gate_funnel": {
+          "gate_8_liquidity": {
+            "entered": 7316,
+            "passed": 3607,
+            "failed": 3709
+          },
+          "gate_9_displacement": {
+            "entered": 3607,
+            "passed": 1489,
+            "failed": 2118
+          },
+          "gate_10_internal_structure": {
+            "entered": 1489,
+            "passed": 526,
+            "failed": 963
+          },
+          "gate_11_confluence_score": {
+            "entered": 526,
+            "passed": 1,
+            "failed": 525
+          },
+          "canonical_strategy": {
+            "entered": 1,
+            "passed": 0,
+            "failed": 1
+          }
+        },
+        "gate11_entrants": 526,
+        "expired_population": {
+          "count": 133,
+          "fate_predicate_counts": {
+            "blocks": 133,
+            "zone_overlap_before_decision": 76,
+            "no_zone_overlap": 57,
+            "invalidating_close": 49,
+            "untouched_through_decision": 57,
+            "first_retest_on_final_candle": 0
+          },
+          "fate_categories": {
+            "EXPIRED_UNTOUCHED": 57,
+            "EXPIRED_TOUCHED": 76,
+            "EXPIRED_INVALIDATED": 49,
+            "EXPIRED_FIRST_RETEST_AT_DECISION": 0
+          },
+          "age_surface": {
+            "count": 133,
+            "min": 31,
+            "max": 135,
+            "median": 68.0,
+            "quantiles": {
+              "p25": 41.0,
+              "p50": 68.0,
+              "p75": 90.0
+            },
+            "histogram_note": "exact integer-frequency histogram of post-confirmation bar counts is recorded verbatim in the sealed result document (78 distinct ages); sums to 133"
+          }
+        },
+        "fvg_context_summary": {
+          "expired_with_final_fvg": 55,
+          "expired_without_final_fvg": 78,
+          "direction_agreement": {
+            "agree": 55,
+            "disagree": 0,
+            "not_available": 78
+          },
+          "canonical_overlap_true": 22,
+          "canonical_overlap_false": 33
+        },
+        "fate_x_fvg_contingency": {
+          "untouched=False/touched=True/invalidated=False/first_retest_final=False/fvg_present=False/fvg_agreement=not_available/overlap=not_available": 24,
+          "untouched=False/touched=True/invalidated=False/first_retest_final=False/fvg_present=True/fvg_agreement=agree/overlap=false": 3,
+          "untouched=False/touched=True/invalidated=True/first_retest_final=False/fvg_present=False/fvg_agreement=not_available/overlap=not_available": 39,
+          "untouched=False/touched=True/invalidated=True/first_retest_final=False/fvg_present=True/fvg_agreement=agree/overlap=false": 10,
+          "untouched=True/touched=False/invalidated=False/first_retest_final=False/fvg_present=False/fvg_agreement=not_available/overlap=not_available": 15,
+          "untouched=True/touched=False/invalidated=False/first_retest_final=False/fvg_present=True/fvg_agreement=agree/overlap=false": 20,
+          "untouched=True/touched=False/invalidated=False/first_retest_final=False/fvg_present=True/fvg_agreement=agree/overlap=true": 22
+        },
+        "reference_populations": {
+          "ELIGIBLE": {
+            "blocks": 87,
+            "fate_predicates": {
+              "zone_overlap_before_decision": 0,
+              "no_zone_overlap": 87,
+              "invalidating_close": 0,
+              "untouched_through_decision": 87,
+              "first_retest_on_final_candle": 0
+            },
+            "age_summary": {
+              "min": 0,
+              "max": 30,
+              "median": 6.0,
+              "quantiles": {
+                "p25": 3.0,
+                "p50": 6.0,
+                "p75": 11.0
+              }
+            }
+          },
+          "RETEST_ELIGIBLE": {
+            "blocks": 0
+          },
+          "MITIGATED": {
+            "blocks": 28,
+            "fate_predicates": {
+              "zone_overlap_before_decision": 28,
+              "no_zone_overlap": 0,
+              "invalidating_close": 7,
+              "untouched_through_decision": 0,
+              "first_retest_on_final_candle": 0
+            },
+            "age_summary": {
+              "min": 3,
+              "max": 30,
+              "median": 18.5,
+              "quantiles": {
+                "p25": 11.75,
+                "p50": 18.5,
+                "p75": 25.25
+              }
+            }
+          },
+          "INVALIDATED": {
+            "blocks": 3,
+            "fate_predicates": {
+              "zone_overlap_before_decision": 3,
+              "no_zone_overlap": 0,
+              "invalidating_close": 3,
+              "untouched_through_decision": 0,
+              "first_retest_on_final_candle": 0
+            },
+            "age_summary": {
+              "min": 18,
+              "max": 24,
+              "median": 21.0,
+              "quantiles": {
+                "p25": 19.5,
+                "p50": 21.0,
+                "p75": 22.5
+              }
+            }
+          }
+        },
+        "count_only_states": {
+          "UNAVAILABLE": 275
+        },
+        "frozen_configuration": {
+          "order_block_expiry_bars": 30,
+          "evaluation_performed_only_at_frozen_threshold": true
+        }
+      },
+      "cross_surface_reconciliation": {
+        "decision_accounting_reconciles": true,
+        "gate_funnel_chains": true,
+        "age_histogram_sums_to_expired_count": true,
+        "expired_reference_countonly_partition_entrants": true,
+        "block_identity_zone_side_reconciled_all_decomposed": true,
+        "consumption_invariant_violations": 0,
+        "fvg_summary_partitions_expired": true,
+        "fvg_direction_categories_partition_observations": true,
+        "contingency_sums_to_expired": true,
+        "no_banned_output_key": true,
+        "reserved_evidence_flags_true": true,
+        "all_pass": true
+      },
+      "consumption_invariant_note": "The frozen evaluator checks consumed ids BEFORE its expiry short-circuit, so a returned-EXPIRED block cannot be consumed; the invariant is enforced FAIL-CLOSED per observation inside the frozen tooling and the run completed with all 133 EXPIRED blocks successfully decomposed, so violations = 0. The compact result document does not restate a summary flag; this note records the enforced-zero inference explicitly.",
+      "output": {
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_diagnostics/phase8-v2-D004/fold01/phase8-v2-D004_result.json",
+        "sha256": "6563a93d426045df5ab48d0554d96deff1b9b82132071192be815e46cd723c9d",
+        "bytes": 6984,
+        "read_back_verified": true
+      },
+      "result_document": "docs/PHASE8_V2_DIAGNOSTIC_D004_RESULT.md",
+      "no_profitability_metrics": true,
+      "no_parameter_counterfactuals": true,
+      "no_alternate_expiry_evaluated": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      },
+      "budget_after_result": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "D004 first empirical execution consumed the third diagnostic permanently; the attempt-1 preflight blockage consumed nothing additional."
+      },
+      "v002_status": "NOT CREATED — V002 DECISION REQUIRES SUPERVISORY INTERPRETATION OF D004 R001"
     }
   ],
   "provenance_corrections": [
