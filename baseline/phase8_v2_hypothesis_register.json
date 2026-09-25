@@ -948,7 +948,10 @@
     {
       "variant_id": "phase6-development-v2-V002",
       "title": "Canonical Structural OB/FVG Pair",
-      "status": "REGISTERED_NOT_OBSERVED",
+      "status": "OPPORTUNITY_INSUFFICIENT_TIER_A_FOLD01_OBSERVED",
+      "observed_result": "phase6-development-v2-V002-R001",
+      "observed_utc": "2026-09-25T21:44:00.712191+00:00",
+      "status_note": "observed Tier-A state per the preregistered success classification (0 < candidate_ready 61 < 90 = OPPORTUNITY_INSUFFICIENT); NOT validated, NOT profitable, NOT production-ready, NOT Tier-B accepted; the frozen interpretation_rule fields below remain the authoritative reading",
       "registered_utc": "2026-09-25T15:29:54Z",
       "budget_classification": "STRATEGY_VARIANT",
       "specification_document": "docs/PHASE8_V2_VARIANT_V002.md",
@@ -1984,6 +1987,133 @@
         "holdout": true,
         "data_2025_plus": true
       }
+    },
+    {
+      "result_id": "phase6-development-v2-V002-R001",
+      "record_type": "STRATEGY_VARIANT_RESULT",
+      "variant_id": "phase6-development-v2-V002",
+      "hypothesis_id": "phase8-v2-H007",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V002 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "lineage": {
+        "d004_result_baseline_commit": "cd7526260ac224facb5dbf993f6e98be25cb650d",
+        "phase_a_preregistration_commit": "3d910becf95ea3f0e9888241ec6f34af35fcfd42",
+        "implementation_freeze_commit": "4890dcbce8579f159224b653d94f634cc9017549",
+        "tc001_population_correction_commit": "c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb",
+        "tc002_candidate_ready_correction_commit": "cae8637adfbfae7338179d2e4d0888d81266e916",
+        "specification_document": "docs/PHASE8_V2_VARIANT_V002.md",
+        "specification_sha256_phase_a_preregistration": "f53f27c4e7700adf63194392e05f4c523d65312ecde7081dc427ec7347aa8703",
+        "specification_sha256_note": "the preregistered Phase-A scientific content is byte-identical under SHA f53f27c4...; the frozen document additionally carries the append-only Phase-B freeze record (section 25) published at the implementation freeze commit, so the committed blob hashes to 5c07fbe42253f13768d626b3db292e6c9f548ccb6af847f730dce01e62640a7d",
+        "implementation_commit": "4890dcbce8579f159224b653d94f634cc9017549",
+        "implementation_module": "bot/strategy/variant_v002.py",
+        "implementation_module_git_blob_sha256": "8272c28552c05067b6dc3ba039ee8df2dbbfb8b4",
+        "tooling_commit": "cae8637adfbfae7338179d2e4d0888d81266e916",
+        "tooling_fingerprint_sha256": "2151c2171c0c43d02bbfdd8f25208c0fd304e7406101eec2581093303786c6d7",
+        "fingerprint_contract": "canonical_git_blob_v1",
+        "corrections_recomputed_before_execution": "tooling fingerprint recomputed from the committed Git blob (not copied); implementation blob verified identical at the freeze commit and the execution baseline"
+      },
+      "executed": true,
+      "empirical_exposure_utc": "2026-09-25T21:44:00.712191+00:00",
+      "valid_run_started_utc": "2026-09-25T21:44:00.712191+00:00",
+      "valid_run_finished_utc": "2026-09-25T21:48:00.258693+00:00",
+      "valid_run_seconds": 239.546502,
+      "store_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "coverage": "fold-01/full",
+        "rows_rehashed_before_observation": "verify_rows=True full row-digest + gate-event-id re-derivation over all 13269 rows",
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767",
+        "store_compatibility_decision": "B — preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
+      },
+      "output": {
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V002 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_variants/phase6-development-v2-V002/fold01/phase6-development-v2-V002_result.json",
+        "sha256": "5addbb88e7885d8a604766d58e35a830478f519287d8e8a499ac219906b27a71",
+        "bytes": 12912,
+        "read_back_verified": true
+      },
+      "tc001_population": {
+        "rule": "all decisions that legitimately entered frozen Gate 11 (gate_11_confluence_score present); historical boolean descriptive only",
+        "gate11_entrants_observed": 526,
+        "frozen_gate11_entered": 526,
+        "reconciles": true,
+        "legacy_score_passed_count": 1,
+        "legacy_score_failed_count": 525
+      },
+      "structural_pair_surface": {
+        "v002_pair_state_counts": {"ACTIVE": 144, "INVALIDATED": 15, "MITIGATED": 92, "UNAVAILABLE": 275},
+        "h007_pair_state_reason_distribution": {
+          "block_already_mitigated": 92,
+          "close_above_bearish_zone": 6,
+          "close_below_bullish_zone": 9,
+          "no_confirmed_block": 275,
+          "structurally_active_block": 144
+        },
+        "v002_structurally_active_count": 144,
+        "v002_sides": {"LONG": 149, "SHORT": 102, "FLAT": 275},
+        "v002_associated_same_direction_fvg_count": 110,
+        "exact_overlap_descriptive_true": 67,
+        "exact_overlap_descriptive_false": 43,
+        "exact_overlap_descriptive_not_available": 0,
+        "v002_structural_active_age_summary": {
+          "count": 144, "min": 0, "max": 113, "median": 13.5,
+          "quantiles": {"p25": 5.8, "p50": 13.5, "p75": 41.2}
+        }
+      },
+      "v002_variant_funnel": {
+        "gate_11_v002": {"entered": 526, "passed": 102, "failed": 424},
+        "canonical_strategy_v002": {"entered": 102, "passed": 80, "failed": 22},
+        "gate_12_13_rr_entry_v002": {"entered": 80, "passed": 61, "failed": 19},
+        "funnel_chain_reconciles": "candidate_ready 61 <= strategy pass 80 <= gate11 pass 102 <= entrants 526; entered-chains verified fail-closed inside the tooling"
+      },
+      "candidate_surface": {
+        "candidate_ready": 61,
+        "candidate_rate": 0.11597,
+        "candidate_long_count": 41,
+        "candidate_short_count": 20,
+        "unique_candidate_setup_ids": 61,
+        "duplicate_candidate_setup_id_occurrences": 0,
+        "setup_id_reconciliation_holds": true,
+        "candidate_age_bars_min": 0,
+        "candidate_age_bars_max": 113,
+        "candidate_descriptive_overlap_true": 25,
+        "candidate_descriptive_overlap_false": 36,
+        "candidate_entry_modes_unique": ["conservative"],
+        "candidate_entry_types_unique": ["partial"],
+        "note": "full setup-ID and decision-ID lists are sealed verbatim in the external result JSON; counts and reconciliation only are restated here"
+      },
+      "opportunity_classification": "OPPORTUNITY_INSUFFICIENT",
+      "opportunity_classification_basis": "mechanical application of the preregistered rule: 0 < candidate_ready (61) < 90; no ranking above 90 and no optimization toward 90 was performed; 90 remains the frozen Tier-A research target",
+      "post_hoc_descriptive_comparisons": {
+        "h001_synthesis_motivation": "the 102/61/41 structural pair observations were motivation only; the empirical V002 Gate-11 pass count (102) and candidate_ready (61) derive independently from the tooling and are coincidentally near those motivation figures — no expectation was encoded anywhere in tooling or tests",
+        "historical_funnel_unchanged": "historical Gates 8-11 funnel reproduces D003/D004 exactly (7316 -> 3607 -> 1489 -> 526 -> 1), confirming the unchanged upstream reference pipeline",
+        "exact_overlap_descriptive": "43 of 110 associated same-direction FVG observations (39.1 percent) fail exact geometric overlap among V002-active structural pairs — directionally consistent with the H001 synthesis observation that exact overlap removes a substantial part of the pair surface"
+      },
+      "tc002_candidate_definition_honored": "candidate_ready equals gate_12_13_rr_entry_v002.passed (61), NOT canonical-strategy eligibility (80); the frozen determine_entry gate is inside the measured stage",
+      "no_counterfactuals_computed": "no candidate count with exact overlap restored, with expiry restored, without DXY, without Gate 12/13, at alternate thresholds (7/8, 6/8), at alternate age cutoffs, or with proximity/lag variants; no V003 created",
+      "no_profitability_metrics": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_release_requires_separate_supervisory_authorization": true
+      },
+      "result_document": "docs/PHASE8_V2_VARIANT_V002_RESULT.md",
+      "budget_after_result": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "the first real Fold-01 V002 strategy observation permanently consumed the second strategy-variant slot at the exposure timestamp 2026-09-25T21:44:00.712191+00:00"
+      },
+      "h007_binding": "H007 remains bound to this record as its primary formal empirical reference; the preregistered H007 statement is NOT rewritten and no post-hoc H007 disposition rule is invented; the formal outcome of R001 is the V002 opportunity classification OPPORTUNITY_INSUFFICIENT"
     }
   ],
   "provenance_corrections": [
