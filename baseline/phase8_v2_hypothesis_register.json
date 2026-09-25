@@ -432,6 +432,32 @@
   },
   "hypotheses": [
     {
+      "hypothesis_id": "phase8-v2-H006",
+      "title": "Fixed Order-Block Expiry May Preempt Structural Lifecycle Evidence",
+      "registered_utc": "2026-09-25T11:45:21Z",
+      "statement": "The canonical fixed order_block_expiry_bars rule may reject otherwise meaningful order-block structure solely because of age. A material subset of blocks currently classified EXPIRED may remain unmitigated and uninvalidated through the causal decision timestamp and may continue to coexist directionally with final canonical FVG evidence.",
+      "economic_rationale": "Structural zones are invalidated economically by price interaction or structural failure, not necessarily by elapsed bar count alone. A fixed-age cutoff may be a useful freshness safeguard, but if it fires before mitigation/invalidation evaluation it can collapse several distinct market states into EXPIRED.",
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "no_expiry_change_claim": "No claim is made that expiry should be removed, lengthened or parameterized differently.",
+      "failure_condition": "H006 is weakened/unsupported if most expired blocks are demonstrably already mitigated before the decision, already structurally invalidated, directionally inconsistent, devoid of relevant FVG context, or otherwise stale in a way independently captured by existing lifecycle evidence. A high EXPIRED count alone does NOT support H006.",
+      "linked_diagnostic": "phase8-v2-D004",
+      "data_permitted": [
+        "TIER_A_FOLD01"
+      ],
+      "metrics_permitted": [
+        "read-only expired-block fate predicates (confirmation/candidate/decision timestamps, post-confirmation bar counts, bars beyond the frozen expiry boundary, zone overlap presence/first-overlap index, invalidating close presence/first index, untouched-through-decision, first-retest-on-final-candle, side, zone)",
+        "preregistered expired fate categories (EXPIRED_UNTOUCHED, EXPIRED_TOUCHED, EXPIRED_INVALIDATED, EXPIRED_FIRST_RETEST_AT_DECISION) as raw predicate counts, overlap allowed",
+        "exact post-confirmation age histogram and count/min/max/median/preregistered quantiles",
+        "final canonical FVG context (present, direction agreement, count, frozen mirror overlap geometry, separation geometry) without redetection",
+        "expired fate x FVG presence x direction agreement x canonical overlap contingency counts",
+        "reference-population fate predicates for ELIGIBLE/RETEST_ELIGIBLE/MITIGATED/INVALIDATED (UNAVAILABLE count-only)"
+      ],
+      "implementation_required": false,
+      "status": "REGISTERED",
+      "result": null,
+      "disposition": null
+    },
+    {
       "hypothesis_id": "phase8-v2-H001",
       "registered_utc": "2026-09-21T00:00:00Z",
       "statement": "The frozen V1 requirement that a valid order block and fair-value gap satisfy an exact contemporaneous geometric overlap may be stricter than the underlying economic idea being represented. A causally related displacement structure may exist even when the two detected price regions do not literally overlap at the decision timestamp.",
@@ -699,6 +725,118 @@
       "no_v002": true,
       "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D003.md",
       "specification_sha256": "2b5204925a700cc2faa817835e77d298d778138f811bdfb2ad06cfe9c007cc46"
+    }
+,
+    {
+      "diagnostic_id": "phase8-v2-D004",
+      "title": "Expired Order-Block Structural Fate Decomposition",
+      "diagnostic_type": "DIAGNOSTIC_INVESTIGATION",
+      "status": "REGISTERED_NOT_EXECUTED",
+      "registered_utc": "2026-09-25T11:45:21Z",
+      "linked_hypothesis": "phase8-v2-H006",
+      "contextual_prior": "phase8-v2-H002 = SUPPORTED_BY_D003",
+      "h002_boundary": "H002 remains SUPPORTED_BY_D003; D004 must NOT reopen, re-test or re-classify it. The D003 result motivates D004 but is never a test oracle and no observed D003 count may be encoded into tooling or tests.",
+      "h001_boundary": "CONTEXTUAL_ONLY — H001 remains INCONCLUSIVE_D001; final FVG geometry appears as context only and no H001 decision rule is preregistered here.",
+      "h003_boundary": "NOT_TESTED_BY_D004 — absolutely no OB-to-FVG lag, FVG-to-OB lag, temporal windows, or preceding/following bar associations; the temporal_fvg_lag concept is banned output.",
+      "h005_boundary": "SUPPORTED_BY_V001 — already disposed; not reopened by D004.",
+      "scientific_question": "Among decisions whose frozen canonical evaluation is BlockState.EXPIRED with a confirmed same-side canonical block, what structural fate do those blocks exhibit at the causal decision timestamp (untouched, touched, invalidated, or first retested exactly on the final available candle), and with what final canonical FVG context?",
+      "motivation_binding": "D003 R001 (result commit 5f9b1e9e8dac9775bbf586174e94cfef039c23c0; H002 SUPPORTED_BY_D003; canonical lifecycle ELIGIBLE 87 / EXPIRED 133 / MITIGATED 28 / INVALIDATED 3 / UNAVAILABLE 275 among 526 Gate-11 entrants) motivates D004 but is NEVER a test oracle and establishes nothing about the internal structure of the EXPIRED state. The supervisory V002 deferral (a canonical-OB substitution variant is mathematically incapable of reaching candidate_ready >= 90 because canonical eligible = 87 < 90) motivates measuring the dominant lifecycle restriction first; the 87 and 90 figures are never encoded into tooling or tests.",
+      "expiry_short_circuit_semantics": "evaluate_order_block returns BlockState.EXPIRED (reason block_expired) immediately when the count of causally available post-confirmation candles exceeds config.order_block_expiry_bars, BEFORE its mitigation/invalidation loop; consumed-ID and premature checks precede the expiry check. D004 decomposes the population this short-circuit creates; it never modifies the short-circuit.",
+      "frozen_configuration": "order_block_expiry_bars = 30 in the exact frozen StrategyConfig; not changed, not tested at any alternative value (31/40/45/60/90/no-expiry/session/day/dynamic-ATR), no grid, no numeric parameter trial.",
+      "primary_population": "Decisions that (1) legitimately reach the same canonical OB lifecycle population used by D003 (D001 classification, reference check, successful orchestration evaluation, Gate-10 pass, Gate-11 entry, D003 observer loop reused verbatim), (2) have a confirmed same-side canonical block, and (3) are classified by the frozen canonical evaluate_order_block as BlockState.EXPIRED (reason block_expired) — derived naturally at execution time; no observed count may be encoded into tooling or tests.",
+      "reference_populations": "For structural context only, the same descriptive fate predicates may be reported for decisions classified ELIGIBLE, RETEST_ELIGIBLE, MITIGATED or INVALIDATED; UNAVAILABLE may be counted but has no block geometry; states are never merged.",
+      "preregistered_fate_predicates": [
+        "block_confirmed_at",
+        "block_candidate_open_time",
+        "decision_at",
+        "post_confirmation_bars (exact count of causally available post-confirmation candles)",
+        "bars_beyond_expiry_boundary",
+        "zone_overlap_before_decision (candle.low <= zone_high and candle.high >= zone_low, the frozen evaluator expression)",
+        "first_zone_overlap_index (0-based ordinal among causally available post-confirmation candles, else null)",
+        "invalidating_close (close below a LONG block's zone_low / above a SHORT block's zone_high)",
+        "first_invalidating_close_index (else null)",
+        "untouched_through_decision",
+        "first_retest_on_final_candle",
+        "block_side",
+        "block_zone"
+      ],
+      "preregistered_fate_categories": {
+        "EXPIRED_UNTOUCHED": "no zone overlap and no invalidating close through decision time",
+        "EXPIRED_TOUCHED": "at least one block-zone overlap occurred before decision time",
+        "EXPIRED_INVALIDATED": "an invalidating close occurred before decision time",
+        "EXPIRED_FIRST_RETEST_AT_DECISION": "the first causal zone overlap occurs on the final available candle at the decision",
+        "overlap_rule": "categories may overlap where mathematically unavoidable, except where definitions make them exclusive (UNTOUCHED excludes TOUCHED and INVALIDATED); raw predicate counts are authoritative rather than a forced single exclusive bucket; no category may be called eligible"
+      },
+      "age_surface": {
+        "unit": "post-confirmation bars, exact observed values",
+        "permitted_summaries": [
+          "count",
+          "minimum",
+          "maximum",
+          "median",
+          "exact integer-frequency histogram of post-confirmation bar counts",
+          "preregistered deterministic quantiles (p25/p50/p75, linear interpolation on the sorted integer sample)"
+        ],
+        "prohibited": [
+          "evaluation at any alternative expiry threshold",
+          "any statement of the form 'would pass at expiry = X'"
+        ]
+      },
+      "fvg_context_surface": {
+        "source": "the already-persisted final canonical FVG surface exactly as D003 extracts it (frozen flattened D001 row fvg surface plus the persisted raw first-FVG geometry recovered through the D003 render reconciliation); no FVG redetection",
+        "measures": [
+          "final FVG present yes/no",
+          "direction agreement with the block side (semantic LONG/SHORT comparison, not_available when either side is absent/FLAT)",
+          "raw canonical FVG count",
+          "canonical geometric overlap true/false via the frozen D001 mirror geometry with the persisted ATR and the expired block's canonical zone",
+          "exact descriptive separation geometry from the same frozen observer"
+        ],
+        "prohibited": [
+          "alternate overlap tolerance",
+          "tolerance sensitivity report"
+        ]
+      },
+      "fvg_contingency": "descriptive expired fate predicate x final FVG present x direction agreement x canonical overlap true/false over the expired population; observed-cell counts only; no candidate counts",
+      "consumption_invariant": "consumed_ids derive causally from the prior setup-state record exactly as in D003. Because evaluate_order_block checks consumed IDs before its expiry short-circuit, a block returned as EXPIRED cannot be consumed under frozen semantics; D004 asserts this invariant for every EXPIRED observation and FAILS CLOSED on violation.",
+      "causality_rule": "only candles with available_at <= decision_at may be inspected (the exact frozen evaluate_order_block causality filter); no later candle, no future mitigation, no 'what happened next'; the setup-state chain follows the D003/TC001 discipline (observer receives the causal PRIOR state record; the current decision's next_record is used read-only for render reconciliation only).",
+      "block_identity_reconciliation": "D004 reuses detect_order_blocks, StrategyConfig, StrategySide and the same canonical block-selection ordering used by evaluate_order_block; the analyzed block identity must match the block returned by frozen canonical evaluation (block_id, side, zone, confirmed_at); any mismatch FAILS CLOSED; no parallel OB detector is created.",
+      "d003_semantics_reconciliation": "for every observed decision, canonical state from frozen evaluate_order_block, side, block ID, zone and reason must agree with the corresponding D004 selected block/context; any disagreement fails closed.",
+      "h006_disposition_rule": {
+        "SUPPORTED_BY_D004": "a meaningful proportion of frozen EXPIRED blocks remain structurally untouched and uninvalidated through decision time, demonstrating that fixed age frequently preempts other structural lifecycle evidence; strengthened if those blocks also retain same-direction final FVG structure, but FVG coexistence is not required; 'meaningful proportion' is argued from concentration and structural interpretation, never an invented after-the-fact percentage cutoff",
+        "NOT_SUPPORTED_BY_D004": "frozen EXPIRED blocks are predominantly already touched, mitigated-like, invalidated, directionally inconsistent, or otherwise structurally stale by decision time",
+        "INCONCLUSIVE_D004": "counts are too sparse, or causal decomposition cannot distinguish the structural fate safely",
+        "fixed_before_execution": true,
+        "no_strategy_change_follows": true
+      },
+      "boundary_section": "D004 does NOT test 'would removing expiry create >= 90 candidates' and does NOT compute alternate candidate_ready, alternate Gate-11 passes, alternate canonical eligibility or alternate closed-trade feasibility; those are strategy-variant outcomes and remain prohibited. D004 does not create V002.",
+      "prohibitions": [
+        "no change to order_block_expiry_bars and no alternative expiry evaluation",
+        "no alternate candidate/eligibility/Gate-11 counterfactuals",
+        "no temporal association (H003 surface)",
+        "no optimizer or search",
+        "no profitability, fills, closed trades or account quantities",
+        "no strategy parameter or threshold change",
+        "no V002 creation"
+      ],
+      "banned_output_guard": "exact-key bans plus robust semantic substring families (candidate_if_expiry_removed, eligible_without_expiry, alternate_expiry, expiry_45, expiry_60, counterfactual_candidate, pnl, profit, win_rate, closed_trades, temporal_fvg_lag and relatives); honest negation keys pass",
+      "empirical_universe": {
+        "tier": "TIER_A_FOLD01",
+        "store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "prohibited_historical_store": "fold-01-1d710826193a6767",
+        "not_opened_during_registration_or_tooling": true
+      },
+      "fold_boundary": [
+        "2024-04-01T00:00:00+00:00",
+        "2024-06-08T00:00:00+00:00"
+      ],
+      "budget_classification": "registration and tooling freeze consume zero diagnostic budget",
+      "budget_consumption_upon_first_empirical_execution": "3 / 12",
+      "two_phase_discipline": "Phase A preregistration precedes tooling freeze; Phase B synthetic-tested tooling is committed and pushed before any Fold-01 access; empirical execution only under separate supervisory authorization after the remote resolves to the frozen tooling commit",
+      "no_v002": true,
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D004.md",
+      "specification_sha256": "cededb5f495d142d5713f691eec8c9b7efb604082ca4b722f6cfb72881a86392"
     }
   ],
   "strategy_variants": [
