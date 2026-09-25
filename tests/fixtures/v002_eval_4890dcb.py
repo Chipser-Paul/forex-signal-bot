@@ -205,13 +205,11 @@ def observe_v002_decision(
 ) -> dict[str, Any]:
     """Read-only V002 structural-pair evaluation for one Gate-11 entrant.
 
-    Only decisions that legitimately ENTERED frozen Gate 11 under the
-    unchanged upstream pipeline (``gate_11_confluence_score`` present in
-    the frozen funnel row) belong to the V002 population — TC001.  The
-    BOOLEAN VALUE of the historical Gate-11 result is DESCRIPTIVE
-    comparison metadata only and never decides membership or fails the
-    observation: a historical Gate-11 failure is precisely one of the
-    decisions V002 may legitimately classify differently.
+    Only decisions that legitimately reached Gate 11 in the frozen reducer
+    (gate_11_confluence_score present in the frozen funnel row) enter the
+    V002 population.  The V002 evaluator consumes the reducer's exact M5
+    entry frame, reducer-exact consumed ids from the causal PRIOR state
+    record, the persisted htf_bias and the persisted final-FVG surface.
     """
     from bot.strategy.models import StrategySide  # noqa: PLC0415
 
@@ -289,11 +287,12 @@ def observe_v002_decision(
         ),
         "legacy_score_passed": bool(row["score"].get("passes_threshold")),
     }
-    # TC001: the historical Gate-11 outcome is DESCRIPTIVE comparison
-    # metadata only.  A historical Gate-11 failure must NOT fail closed —
-    # V002 changes the Gate-11 OB/FVG structural semantics, so a decision
-    # the old semantics rejected is exactly one the new semantics may
-    # accept (the semantic effect V002 exists to measure).
+    if not observation["legacy_score_passed"]:
+        raise V002EvalError(
+            f"V002 population decision {decision_id!r} did not pass frozen "
+            "Gate 11; the V002 population must be a subset of frozen "
+            "Gate-11 passers"
+        )
     return observation
 
 
@@ -359,8 +358,6 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     overlap_false = 0
     overlap_not_available = 0
     gate11_v002_pass = 0
-    legacy_pass = 0
-    legacy_fail = 0
     strategy_eligible: list[dict[str, Any]] = []
     ages: list[int] = []
     for observation in observations:
@@ -385,11 +382,6 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
                 overlap_not_available += 1
         if observation["v002_gate11_score"]["passes_threshold"]:
             gate11_v002_pass += 1
-        # TC001: descriptive legacy comparison counts — neither gates V002.
-        if observation["legacy_score_passed"]:
-            legacy_pass += 1
-        else:
-            legacy_fail += 1
         if observation["v002_strategy_eligible"]:
             strategy_eligible.append(
                 {
@@ -419,8 +411,6 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             "exact_overlap_descriptive_not_available": overlap_not_available,
             "v002_structural_active_age_summary": _age_summary(ages),
             "gate11_v002_score_pass_count": gate11_v002_pass,
-            "legacy_score_passed_count": legacy_pass,
-            "legacy_score_failed_count": legacy_fail,
             "score_component_labels": {
                 "ob_component": V002_OB_LABEL,
                 "fvg_component": V002_FVG_LABEL,
@@ -618,14 +608,8 @@ def run_v002(
             buckets["evaluation_error"] += 1
             continue
         rows.append(row)
-        # TC001: V002 population = every decision that legitimately ENTERED
-        # frozen Gate 11 under the unchanged upstream pipeline (Gate 8/9/10
-        # passed).  The historical Gate-11 BOOLEAN must not act as an
-        # eligibility filter for the new strategy's own semantics.
-        gate11_entered = "gate_11_confluence_score" in (
-            row.get("gate_results") or {}
-        )
-        if gate11_entered:
+        gate11_passed = bool(row.get("gate_results", {}).get("gate_11_confluence_score"))
+        if gate11_passed:
             assert_store_semantic_compatibility(snapshot)
             observations.append(
                 observe_v002_decision(
@@ -704,42 +688,9 @@ def assert_expected_surfaces(document: Mapping[str, Any]) -> None:
     surface = document["V002_structural_pair_surface"]
     if surface["gate11_entrants_observed"] < 0:
         raise V002EvalError("negative V002 population")
-    # TC001 hard reconciliation: the observed V002 population must equal
-    # the frozen funnel's Gate-11 entered count exactly — no silent
-    # population truncation (passer-based filtering) may ever recur.
-    entered = int(
-        document.get("gate_funnel", {})
-        .get("gate_11_confluence_score", {})
-        .get("entered", -1)
-    )
-    if entered < 0:
-        raise V002EvalError(
-            "gate funnel lacks a gate_11_confluence_score entry; the V002 "
-            "population cannot be reconciled"
-        )
-    if surface["gate11_entrants_observed"] != entered:
-        raise V002EvalError(
-            "V002 population mismatch (TC001): observed "
-            f"{surface['gate11_entrants_observed']} Gate-11 entrants != "
-            f"funnel entered {entered}"
-        )
     candidate = document["candidate_surface"]
     if candidate["candidate_ready"] < 0:
         raise V002EvalError("negative candidate_ready")
-    # TC001 hard reconciliation: a downstream candidate must be a subset of
-    # the V002 Gate-11 score passes (unchanged downstream protections such
-    # as DXY may still reject; they can never create candidates).
-    if not (
-        candidate["candidate_ready"]
-        <= surface["gate11_v002_score_pass_count"]
-        <= surface["gate11_entrants_observed"]
-    ):
-        raise V002EvalError(
-            "candidate/score reconciliation violated (TC001): "
-            f"candidate_ready {candidate['candidate_ready']} > "
-            f"v002 score passes {surface['gate11_v002_score_pass_count']} "
-            f"> entrants {surface['gate11_entrants_observed']}"
-        )
 
 
 def _gate_funnel(rows: list[Mapping[str, Any]]) -> dict[str, dict[str, int]]:

@@ -1889,6 +1889,49 @@
         "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
         "note": "The H001 evidence synthesis consumes ZERO additional diagnostic budget; budget remains 3 / 12; no D005 is created; V002 registration consumes nothing until first empirical observation."
       }
+    },
+    {
+      "correction_id": "phase6-development-v2-V002-TC001",
+      "record_type": "PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION",
+      "variant_id": "phase6-development-v2-V002",
+      "defect_class": "V002_PRE_EMPIRICAL_GATE11_PASSER_POPULATION_MISMATCH",
+      "defective_tooling_commit": "4890dcbce8579f159224b653d94f634cc9017549",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 4890dcbce8579f159224b653d94f634cc9017549, subject 'fix: observe all V002 Gate-11 entrants'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "registered_utc": "2026-09-25T17:58:00Z",
+      "defect_description": "the frozen V002 Fold-01 measurement loop selected its population with gate11_passed = bool(gate_results['gate_11_confluence_score']) and evaluated V002 only on historical Gate-11 PASSERS, and observe_v002_decision raised on legacy_score_passed == False; because V002 changes the Gate-11 OB/FVG structural semantics, a decision that failed the historical Gate-11 score is precisely one V002 may legitimately classify differently, so the old strategy's Gate-11 boolean acted as an eligibility filter for the new strategy and prevented V002 from measuring its own semantic effect",
+      "old_population": "historical Gate-11 passers only (boolean value of the frozen gate_11_confluence_score result)",
+      "corrected_population": "historical Gate-11 ENTRANTS — every decision with 'gate_11_confluence_score' in gate_results, i.e. every decision that legitimately entered frozen Gate 11 after passing the unchanged upstream Gates 8/9/10; the historical Gate-11 BOOLEAN VALUE never decides membership; decisions that never reached Gate 11 remain excluded; the upstream funnel (classification, reference check, Gates 8/9/10, prior-state sequencing, D001 orchestration evaluation) is unchanged and NOT broadened into Gate-10 failures",
+      "legacy_comparison_descriptive_only": "legacy_score_passed and legacy_canonical_fvg_in_ob are retained as descriptive structural-comparison metadata only; neither gates V002 evaluation; a legacy_score_passed=False observation with v002_gate11_score.passes_threshold=True is a legitimate semantic difference and no longer fails closed; descriptive legacy pass/fail counts added to the aggregate surface",
+      "reconciliations_added": [
+        "V002_structural_pair_surface.gate11_entrants_observed must equal gate_funnel['gate_11_confluence_score']['entered'] — fail closed (prevents any future silent population truncation)",
+        "candidate_ready <= gate11_v002_score_pass_count <= gate11_entrants_observed — fail closed (downstream protections such as DXY may reject candidates; they can never create them)"
+      ],
+      "regressions_added": [
+        "real-adapter legacy-fail regression: a row produced by the REAL frozen evaluate_orchestration_decision that ENTERS Gate 11 with historical Gate-11 FALSE is observed by V002 with legacy_score_passed False and no exception",
+        "V002-rescue regression: synthetic causal fixture where the frozen legacy OB predicate is invalid (the D001-observed dominant failure shape) so historical Gate-11 fails, while V002 structural-active OB is true, same-direction final FVG associated is true, premium/discount true, sweep true, HTF aligned — legacy_score_passed False AND v002_gate11_score passes 8/8 AND v002_strategy_eligible True with unchanged downstream protections clear",
+        "mixed-population loop regression: non-entrant excluded, historical-fail entrant observed, historical-pass entrant observed; gate11_entrants_observed == 2 == funnel entered; both legacy outcomes present; the fail is not discarded",
+        "old-bug reproduction: the legacy-fail entrant regression is proven to FAIL against the defective tooling bytes at 4890dcb (observer rejection arm and run_v002 skip arm both demonstrated) using a byte-identical fixture of the committed blob (SHA-256 fd5629f76a9edcd6564ee05691babd916ff13a0b2855cabd1dec6d13c36a5daa) executed in-process"
+      ],
+      "strategy_module_unchanged": true,
+      "strategy_module_diff": "bot/strategy/variant_v002.py = 0 bytes changed",
+      "scientific_semantics_unchanged": "H007 statement, V002 structural-active OB semantics, FVG association, descriptive overlap, 8/8 scorer, downstream V002 semantics, success classification (90 threshold) and the scientific metric surface are all unchanged; spec docs/PHASE8_V2_VARIANT_V002.md remains SHA-256 f53f27c4e7700adf63194392e05f4c523d65312ecde7081dc427ec7347aa8703",
+      "store_compatibility_decision_unchanged": "B — the preserved immutable V001 store remains semantically sufficient; assert_store_semantic_compatibility unmodified; the correction revealed no missing causal input",
+      "no_empirical_v002_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no Tier B; no 2025+; no holdout; all tests synthetic",
+      "budget_impact": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "note": "TC001 consumes ZERO strategy-variant budget; V002 becomes 2 / 8 only when the corrected tooling first observes real Fold-01 V002 strategy behavior under separate supervisory authorization"
+      },
+      "h001_h007_v002_preregistration_untouched": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      }
     }
   ],
   "provenance_corrections": [
