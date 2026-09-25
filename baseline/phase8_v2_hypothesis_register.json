@@ -483,9 +483,9 @@
         "direction consistency counts"
       ],
       "implementation_required": false,
-      "status": "REGISTERED",
-      "result": null,
-      "disposition": null
+      "status": "SUPPORTED_BY_D003_D004_SYNTHESIS",
+      "result": "phase8-v2-H001-R001",
+      "disposition": "SUPPORTED_BY_D003_D004_SYNTHESIS"
     },
     {
       "hypothesis_id": "phase8-v2-H002",
@@ -573,6 +573,47 @@
       "linked_static_audit": "phase8-v2-S001",
       "linked_variant": "phase6-development-v2-V001",
       "no_strategy_rule_change_beyond_local_repair_implied": true
+    },
+    {
+      "hypothesis_id": "phase8-v2-H007",
+      "title": "Canonical OB/FVG Structural-Pair Semantics",
+      "registered_utc": "2026-09-25T15:29:54Z",
+      "status": "REGISTERED",
+      "result": null,
+      "disposition": null,
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "registered_after_evidence_was_observed": true,
+      "registered_after_evidence": [
+        "phase8-v2-D003-R001",
+        "phase8-v2-D004-R001",
+        "phase8-v2-H001-R001"
+      ],
+      "statement": "Gate-11 structure should be represented by one coherent canonical OB/FVG pair concept rather than the conjunction of the legacy/acquisition ob_result.valid predicate and mandatory exact contemporaneous geometric overlap. A canonical structural pair consists of (1) a confirmed same-side canonical order block that is structurally active at the causal decision timestamp and (2) a final canonical FVG in the same market direction. Exact geometric overlap remains observable evidence but is not mandatory membership in the structural pair.",
+      "economic_rationale": "H002 established a large mismatch between legacy OB validity and canonical lifecycle structure (legacy Gate-11 OB validity passes only 4 of 526 entrants). H006 established that fixed 30-bar age alone rejects a meaningful subset of otherwise untouched/uninvalidated blocks (57 of 133 frozen EXPIRED blocks, 42.9 percent, remain untouched and uninvalidated at the causal decision). The H001 evidence synthesis establishes that same-direction canonical OB/FVG coexistence materially exceeds exact geometric overlap (102 same-direction structurally-intact pair observations vs 61 exact-overlap pair observations; 41 of 102 fail exact overlap). The economic concept being tested is therefore the coherent structural relationship between the origin zone and its displacement imbalance, not exact legacy-detector agreement plus literal price-interval overlap.",
+      "implementation_boundary": "Tested only by separately preregistered variant phase6-development-v2-V002. D003/D004 computed no variant or alternate-semantics surface. No H007 evaluator may run on Fold-01 data before V002 preregistration is frozen and committed and a separate empirical authorization exists. Exact overlap remains a descriptive observer with its frozen tolerance and is never fed into H007 eligibility. The downstream canonical-strategy decision must consume the same H007 semantics as Gate 11.",
+      "code_components": [
+        "bot/state/gate_reducer.py (gate_11_confluence_score: fvg_in_ob geometry, atr*0.30 tolerance, first FVG only)",
+        "bot/strategy/order_blocks.py (evaluate_order_block age-only EXPIRED short-circuit)",
+        "bot/strategy/confluence.py (fvg_overlap component)",
+        "bot/strategy/models.py (SetupEvidence.fvg_overlaps_order_block)"
+      ],
+      "expected_qualitative_effect": "If H007 is relevant, one coherent structural-pair concept (structurally-active same-side canonical block plus same-direction final canonical FVG, exact overlap not mandatory) will admit a materially larger pair surface than the frozen exact-overlap conjunction while remaining a strict structural predicate, without weakening any other gate, DXY authority or protected semantic.",
+      "expected_frequency_effect": "Qualitative only: replacing the frozen conjunction with one coherent pair concept would be expected to increase candidate frequency relative to the frozen semantics; no number is predicted and none may be computed before a separately authorized V002 empirical execution.",
+      "potential_failure_mode": "If the structural-pair concept collapses toward absence of structure (near-zero structural-active blocks or no same-direction FVG association), or the enlarged pair surface comes only from weakening non-structural protections, H007 is unsupported for V2 purposes.",
+      "data_permitted": ["TIER_A_FOLD01"],
+      "metrics_permitted": [
+        "structural-active OB counts",
+        "associated same-direction final FVG counts",
+        "exact-overlap descriptive true/false counts",
+        "structural-active OB age distribution",
+        "H007 pair-state reason distribution",
+        "Gate-11 reach/pass/fail counts",
+        "raw candidate_ready count"
+      ],
+      "no_numeric_candidate_prediction_preregistered": true,
+      "no_new_numeric_expiry_value": true,
+      "implementation_required": true,
+      "linked_variant": "phase6-development-v2-V002"
     }
   ],
   "diagnostics": [
@@ -901,6 +942,118 @@
       ],
       "interpretation_rule": "possible outcomes: FUNCTIONAL_REPAIR_WITH_ADEQUATE_DENSITY, FUNCTIONAL_REPAIR_WITH_INSUFFICIENT_DENSITY, FUNCTIONAL_REPAIR_NO_CANDIDATES, IMPLEMENTATION_REPAIR_FAILED, EMPIRICAL_EXECUTION_BLOCKED; a functioning FVG detector is not automatically a good strategy; selection requires supervisory review",
       "budget_consumption_upon_first_empirical_result": "1 / 8 strategy variants observed",
+      "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
+      "numeric_parameter_trials_consumed": 0
+    },
+    {
+      "variant_id": "phase6-development-v2-V002",
+      "title": "Canonical Structural OB/FVG Pair",
+      "status": "REGISTERED_NOT_OBSERVED",
+      "registered_utc": "2026-09-25T15:29:54Z",
+      "budget_classification": "STRATEGY_VARIANT",
+      "specification_document": "docs/PHASE8_V2_VARIANT_V002.md",
+      "specification_sha256": "PENDING_AT_PREREGISTRATION",
+      "specification_sha256_note": "placeholder recorded at governance-only preregistration; replaced by the SHA-256 of the final frozen spec document at the implementation/tooling freeze commit",
+      "linked_hypothesis": "phase8-v2-H007",
+      "supporting_evidence": [
+        "phase8-v2-H002 SUPPORTED_BY_D003",
+        "phase8-v2-H006 SUPPORTED_BY_D004",
+        "phase8-v2-H001 SUPPORTED_BY_D003_D004_SYNTHESIS"
+      ],
+      "one_concept_rule": "one conceptual hypothesis: canonical OB/FVG structural-pair semantics — a single coherent OB semantic definition plus the FVG association that references that same block concept. Implementation may touch multiple code locations, but those edits are structurally inseparable: Gate 11 must evaluate one OB semantic definition, the FVG association must reference that same canonical block concept, and the downstream canonical strategy must consume the same OB semantic definition — using different OB definitions before and after Gate 11 would create a contradictory strategy. These consistency edits are ONE hypothesis, not separate strategy hypotheses; no unrelated rule may change.",
+      "structural_active_ob_semantics": [
+        "canonical same-side confirmed block exists",
+        "confirmation is causally available (available_at <= decision_at)",
+        "block is not consumed",
+        "no invalidating close has occurred by decision time",
+        "no prior zone interaction has already mitigated the block",
+        "first-retest behavior remains consistent with existing canonical semantics",
+        "elapsed age greater than 30 bars ALONE must NOT reject an otherwise untouched/uninvalidated block; age is recorded as metadata only"
+      ],
+      "fvg_association_semantics": [
+        "frozen final canonical FVG surface",
+        "causally available",
+        "same direction as the structural-active OB / requested trade side",
+        "exact geometric overlap is NOT mandatory for structural-pair membership",
+        "exact overlap still computed and recorded descriptively with the frozen tolerance, unchanged",
+        "no proximity threshold; no partial-overlap threshold; no temporal lag; no H003 rule"
+      ],
+      "confluence_architecture_preserved": {
+        "weights": {
+          "HTF bias alignment": 2,
+          "premium/discount": 1,
+          "OB structure": 2,
+          "FVG structural relationship": 1,
+          "liquidity sweep": 2
+        },
+        "maximum": 8,
+        "threshold": "8/8 unchanged",
+        "v002_component_meanings": {
+          "two_point_ob_component": "canonical structurally-active OB present",
+          "one_point_fvg_component": "same-direction final canonical FVG associated with that OB (NOT labeled exact geometric overlap; exact overlap reported separately as a descriptive field)"
+        }
+      },
+      "downstream_consistency_rule": "the downstream canonical-strategy decision used by V002 must consume the SAME structural-active OB semantics and the SAME structural-pair evidence used at Gate 11; passing Gate 11 under V002 semantics and then rejecting the exact same block via the historical age-only EXPIRED short-circuit is prohibited; an isolated V002 adapter/evaluator path is allowed; the historical canonical evaluator remains unchanged for V1/V001",
+      "protected_unchanged": [
+        "causal candle availability",
+        "active-bar exclusion",
+        "HTF bias",
+        "liquidity sweep",
+        "displacement detector",
+        "FVG detector thresholds",
+        "internal structure Gate 10",
+        "premium/discount",
+        "session",
+        "news",
+        "DXY authority",
+        "regime",
+        "risk",
+        "broker safeguards",
+        "entry idempotency",
+        "consumption invariants",
+        "execution lifecycle",
+        "symbol allowlist",
+        "global StrategyConfig.order_block_expiry_bars = 30",
+        "historical canonical evaluator EXPIRED short-circuit for V1/V001"
+      ],
+      "prohibited_variant_shapes": [
+        "expiry-only variant preserving exact overlap — mathematically futile: candidate_ready <= Gate-11 passes <= 61 < 90",
+        "overlap-only variant retaining the legacy OB predicate — structurally futile: legacy Gate-11 OB validity passes only 4 / 526",
+        "numeric expiry 45 / 60 / 90 or any numeric extension",
+        "any replacement age threshold derived from the D004 age histogram",
+        "any weakening of DXY authority to increase candidate count"
+      ],
+      "success_classification_preregistered": {
+        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 — merits continued research only; establishes neither sample sufficiency nor profitability",
+        "OPPORTUNITY_INSUFFICIENT": "0 < candidate_ready < 90",
+        "NO_CANDIDATES": "candidate_ready == 0",
+        "IMPLEMENTATION_FAILED": "only if H007 semantics are not functioning as specified"
+      },
+      "no_candidate_target_encoding": "the structural synthesis counts (102 pair observations / 61 exact-overlap / 41 non-overlapping) are motivation showing V002 is not mathematically futile; they are NOT predicted candidate counts; 102 / 61 / 41 / 90 must not be encoded as test expected strategy outputs; tests use synthetic fixtures only; the empirical result must derive naturally",
+      "two_phase_discipline": "Phase A governance-only preregistration committed and pushed before any implementation; Phase B implementation/tooling freeze only after the remote resolves to the Phase-A commit; no Fold-01 access during implementation or tooling work; no V002 empirical execution in this task",
+      "fold_boundary": "[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)",
+      "reserved_evidence": "Folds 02-04, 2025+ data and holdout remain inaccessible; Folds 02-04 remain reserved sequential confirmation evidence; V002 must first demonstrate candidate_ready >= 90 on contaminated Tier-A Fold 01 before any Tier B access",
+      "allowed_metric_surface": "see docs/PHASE8_V2_VARIANT_V002.md (structural metrics only: scheduled decisions, accounting buckets, Gate 8-13 funnel, candidate_ready count, candidate rate, candidate setup IDs, long/short distribution, weekly/time distribution, session distribution, duplicate/setup-consumption counts, V002 structural-active OB count, associated same-direction FVG count, exact-overlap descriptive true/false, structural-active OB age distribution, H007 pair-state reason distribution; no performance metrics)",
+      "prohibitions": [
+        "P&L",
+        "wins/losses",
+        "profit factor",
+        "expectancy",
+        "drawdown",
+        "Sharpe",
+        "trade-return distribution",
+        "account balance/equity outcome",
+        "Fold 02-04 access",
+        "2025+ data access",
+        "holdout access",
+        "Tier B access before candidate_ready >= 90 on Fold 01",
+        "candidate-count optimization toward 90",
+        "no ranking above 90",
+        "DXY weakening",
+        "numeric expiry variants"
+      ],
+      "interpretation_rule": "possible outcomes: OPPORTUNITY_SUFFICIENT / OPPORTUNITY_INSUFFICIENT / NO_CANDIDATES / IMPLEMENTATION_FAILED; candidate_ready >= 90 means the variant merits continued research only and establishes neither sample sufficiency nor profitability; no ranking above 90; no optimization toward 90; selection requires supervisory review",
+      "budget_consumption_upon_first_empirical_result": "strategy variants becomes permanently 2 / 8 observed at the instant first Fold-01 V002 strategy behavior is empirically observed",
       "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
       "numeric_parameter_trials_consumed": 0
     }
@@ -1674,6 +1827,68 @@
         "note": "D004 first empirical execution consumed the third diagnostic permanently; the attempt-1 preflight blockage consumed nothing additional."
       },
       "v002_status": "NOT CREATED — V002 DECISION REQUIRES SUPERVISORY INTERPRETATION OF D004 R001"
+    },
+    {
+      "result_id": "phase8-v2-H001-R001",
+      "record_type": "EVIDENCE_SYNTHESIS",
+      "hypothesis_id": "phase8-v2-H001",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_EVIDENCE_SYNTHESIS — D003+D004 R001 — NO NEW EMPIRICAL EXECUTION",
+      "synthesis_timestamp_utc": "2026-09-25T15:29:54Z",
+      "synthesis_inputs": [
+        "phase8-v2-D003-R001",
+        "phase8-v2-D004-R001"
+      ],
+      "executed": false,
+      "no_fold01_store_read": true,
+      "no_new_replay": true,
+      "diagnostic_budget_consumed": "0",
+      "input_provenance": {
+        "d003_r001_result_sha256": "71f85982c3170c689678682184ccc2d3fe291bc74372a47e3dc8aed3a6d1b096",
+        "d003_r001_note": "D003 R001 input taken from the canonical register result_records surface only (the register restates the sealed D003 aggregate surfaces verbatim); no D003 output file was opened",
+        "d004_r001_result_sha256": "6563a93d426045df5ab48d0554d96deff1b9b82132071192be815e46cd723c9d",
+        "d004_r001_bytes": 6984,
+        "d004_r001_note": "D004 R001 input taken from the canonical register result_records surface only; the sealed output file phase8_data::/v2_diagnostics/phase8-v2-D004/fold01/phase8-v2-D004_result.json was NOT opened during this synthesis",
+        "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited historical store fold-01-1d710826193a6767 NOT read"
+      },
+      "synthesis_arithmetic": {
+        "d003_eligible_ob_plus_final_fvg_same_direction_pairs": 60,
+        "d003_direction_agreement": {"agree": 60, "disagree": 0},
+        "d003_canonical_overlap": {"true": 39, "false": 21},
+        "d004_expired_untouched_with_same_direction_final_fvg": 42,
+        "d004_canonical_overlap_among_those": {"true": 22, "false": 20},
+        "population_disjointness": "D003 ELIGIBLE and D004 EXPIRED_UNTOUCHED populations are lifecycle-disjoint (ELIGIBLE blocks are untouched through decision with age <= 30 by construction; EXPIRED_UNTOUCHED blocks have age > 30), so simple addition composes one coherent structural surface without double counting",
+        "same_direction_structurally_intact_ob_fvg_pairs": 102,
+        "exact_canonical_overlaps": 61,
+        "same_direction_non_overlapping_pairs": 41,
+        "count_semantics": "102, 61 and 41 are STRUCTURAL PAIR OBSERVATION COUNTS ONLY — they are NOT candidate counts, NOT eligibility counts, NOT strategy outputs and NOT predictions; no candidate count under any alternate rule was computed"
+      },
+      "disposition": "SUPPORTED_BY_D003_D004_SYNTHESIS",
+      "disposition_basis": "The already-preregistered H001 expected qualitative effect is observed in the sealed evidence: (1) OB/FVG pair availability is not near-zero (60 structurally-intact same-direction pairs in D003's canonical-eligible surface, 42 in D004's EXPIRED_UNTOUCHED-with-final-FVG surface); (2) same-direction OB/FVG coexistence materially exceeds exact-overlap coexistence (102 vs 61); (3) 41 of 102 structurally coherent same-direction pairs fail exact geometric overlap, so exact overlap removes a substantial part of the observed pair surface rather than merely tracking structure absence. The registered H001 potential_failure_mode ('OB and FVG availability themselves are near-zero, or the overlap conjunction is not a material attrition point') does not hold. This is a qualitative application of the criteria registered before D003/D004; no new numeric acceptance threshold is introduced.",
+      "futility_arguments_recorded": {
+        "expiry_only_variant_futile": "Under H006 alone, structurally active canonical OBs would consist at most of the existing canonical eligible structure plus age-only EXPIRED_UNTOUCHED structure; but preserving exact overlap gives only 61 observed exact-overlap structural pairs, so an expiry-only/OB-only variant that preserves exact overlap satisfies candidate_ready <= Gate-11 passes <= 61 < 90 (the charter Tier-A research target). Therefore V002 is not spent on an expiry-only variant.",
+        "overlap_only_variant_futile": "Frozen legacy Gate-11 OB validity passes only 4 / 526, so changing overlap while retaining the legacy OB predicate remains structurally futile. Therefore no overlap-only variant is created."
+      },
+      "h002_not_reopened": true,
+      "h005_h006_untouched": true,
+      "no_new_numeric_threshold_introduced": true,
+      "result_document": "docs/PHASE8_V2_VARIANT_V002.md (sections 4-8 document this synthesis)",
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      },
+      "budget_after_synthesis": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "The H001 evidence synthesis consumes ZERO additional diagnostic budget; budget remains 3 / 12; no D005 is created; V002 registration consumes nothing until first empirical observation."
+      }
     }
   ],
   "provenance_corrections": [
