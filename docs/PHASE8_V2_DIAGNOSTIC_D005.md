@@ -99,16 +99,9 @@ to H003, distinguishing at minimum:
 H003's preregistered relationship is ORDERING-BASED: "OB and FVG evidence may be causally
 related across a short temporal sequence rather than being required to appear as a strictly
 simultaneous state at one decision timestamp." No numeric proximity, lag tolerance, or
-temporal window is preregistered anywhere in H003, so D005 invents none.
+temporal window is preregistered anywhere in H003, so D005 invents none.`h003_temporal_association_decisions` therefore counts primary-population decisions for which AT LEAST ONE same-direction canonical FVG exists in the causal frame that was formed AT OR AFTER canonical OB confirmation — the exact causal "temporal sequence" reading of H003 (the displacement imbalance follows its origin). FVGs formed before OB confirmation are reported descriptively (`SAME_DIRECTION_FVG_PRE_OB_ONLY`) but do NOT satisfy the H003 temporal-sequence relationship, because a strict temporal sequence requires the imbalance evidence to be causally produced by/after the structural origin.
 
-`h003_temporal_association_decisions` therefore counts primary-population decisions for
-which AT LEAST ONE same-direction canonical FVG exists in the causal frame that was formed
-AT OR AFTER canonical OB confirmation and is still unfilled at the decision timestamp — the
-exact causal "temporal sequence" reading of H003 (the displacement imbalance follows its
-origin). FVGs formed before OB confirmation are reported descriptively
-(`SAME_DIRECTION_FVG_PRE_OB_ONLY`) but do NOT satisfy the H003 temporal-sequence
-relationship, because a strict temporal sequence requires the imbalance evidence to be
-causally produced by/after the structural origin.
+The FVG fill state (§8) is a DESCRIPTIVE universe field only and is NOT part of the H003 ordering relationship: H003 preregisters ordering and nothing else. Importing the final-surface unfilled requirement into this rule would vacate the diagnostic, because the store's persisted final surface is `get_unfilled_fvgs(entry, "M5", direction=htf_bias)` over the whole causal frame (`bot/state/gate_inputs.py`), so a primary-population decision (empty final surface) by definition has no same-direction unfilled FVG anywhere in the frame; what CAN exist temporally after the OB in that population is a same-direction FVG that was formed and subsequently filled — exactly the temporal evidence H003 asks about.
 
 No after-observation modification of this rule is permitted.
 
@@ -133,10 +126,13 @@ No optimal lag. No lag cutoff search. No threshold derivation from any distribut
 For active-OB decisions lacking a final FVG, classify the exact causal reason:
 
 * `NO_SAME_DIRECTION_FVG_EVER` — no same-direction canonical FVG exists in the causal frame;
-* `SAME_DIRECTION_FVG_EXISTED_BUT_FILLED` — a same-direction FVG was formed but filled
-  before the decision;
-* `SAME_DIRECTION_FVG_PRE_OB_ONLY` — same-direction FVGs exist, unfilled, but all formed
-  before OB confirmation (no post-confirmation temporal sequence);
+* `SAME_DIRECTION_FVG_EXISTED_BUT_FILLED` — at least one same-direction FVG was formed
+  AT/AFTER canonical OB confirmation (for primary-population decisions such an FVG is
+  necessarily filled before the decision, because an unfilled one would be a member of
+  the persisted final surface and contradict primary membership);
+* `SAME_DIRECTION_FVG_PRE_OB_ONLY` — same-direction FVGs exist but ALL were formed
+  BEFORE canonical OB confirmation (for primary-population decisions they are necessarily
+  filled; no post-confirmation temporal sequence exists);
 * `OPPOSITE_DIRECTION_ONLY` — only opposite-direction canonical FVGs exist in the causal frame.
 
 The four categories are exhaustive and mutually exclusive under the frozen detector; any
