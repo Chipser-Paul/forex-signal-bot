@@ -478,6 +478,35 @@ def observe_decision(
     return observation
 
 
+_DIRECTION_ALIASES = {
+    "bullish": "LONG",
+    "long": "LONG",
+    "bearish": "SHORT",
+    "short": "SHORT",
+}
+
+
+def _semantic_direction(value: Any) -> str | None:
+    """Normalize a direction token to its semantic LONG/SHORT form (TC004).
+
+    Legacy/acquisition vocabulary (``bullish``/``bearish``) and canonical
+    vocabulary (``LONG``/``SHORT``) describe the same two directions, so
+    Surface E must compare semantics, not spellings.  Mapping
+    (case-insensitive): bullish/long -> LONG; bearish/short -> SHORT;
+    absent/empty/FLAT -> None (directionally unavailable, never silently
+    agreed or disagreed).  Any unexpected meaningful token fails closed.
+    """
+    if value is None:
+        return None
+    token = str(value).strip().lower()
+    if token in ("", "flat"):
+        return None
+    normalized = _DIRECTION_ALIASES.get(token)
+    if normalized is None:
+        raise D003Error(f"unexpected direction token: {value!r}")
+    return normalized
+
+
 def aggregate_d003(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """Reduce Gate-11 observations into the preregistered D003 surfaces."""
     obs = list(observations)
@@ -550,12 +579,17 @@ def aggregate_d003(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         )
         agreement[cell] = agreement.get(cell, 0) + 1
         legacy_direction = (cont.get("legacy_ob") or {}).get("direction")
-        canonical_direction = (
-            lifecycle.get("side") if lifecycle.get("side") != "FLAT" else None
-        )
-        if legacy_direction is None or canonical_direction is None:
+        # TC004 (Surface E only): compare SEMANTIC directions — the legacy
+        # vocabulary (bullish/bearish) and the canonical lifecycle vocabulary
+        # (LONG/SHORT) are equivalent spellings of the same two directions.
+        # FLAT/unavailable -> not_available; unknown tokens fail closed via
+        # _semantic_direction.  Surface G below keeps its original
+        # like-vocabulary comparison untouched.
+        legacy_semantic = _semantic_direction(legacy_direction)
+        canonical_semantic = _semantic_direction(lifecycle.get("side"))
+        if legacy_semantic is None or canonical_semantic is None:
             direction_agreement["not_available"] += 1
-        elif str(legacy_direction) == str(canonical_direction):
+        elif legacy_semantic == canonical_semantic:
             direction_agreement["agree"] += 1
         else:
             direction_agreement["disagree"] += 1

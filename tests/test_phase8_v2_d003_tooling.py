@@ -1213,6 +1213,161 @@ def test_tc003_decision_result_record_never_drives_lifecycle(monkeypatch):
     assert seen["prior"] is not next_record
 
 
+# ---------------------------------------------------------------------------
+# TC004 — Surface-E direction-agreement semantic vocabulary.
+#
+# The TC003 corrected rerun was voided because Surface E compared the
+# legacy vocabulary (bullish/bearish) with the canonical lifecycle
+# vocabulary (LONG/SHORT) by raw string equality, reporting semantic
+# agreement as disagreement.  These regressions prove semantic
+# normalization, aggregation-level behavior, the old-bug reproduction,
+# Surface-G invariance, and the exact-partition invariant — all with
+# synthetic observations and no empirical counts.
+# ---------------------------------------------------------------------------
+
+
+def _e_observation(*, legacy_direction, lifecycle_side, eligible=False):
+    """Minimal Gate-11 observation driving the Surface-E agreement path."""
+    return {
+        "gate_11_entered": True,
+        "score": {"score": 8},
+        "contingency": {
+            "premium_discount": True,
+            "legacy_ob_valid": True,
+            "legacy_fvg_in_ob": False,
+            "legacy_ob": {"present": True, "valid": True,
+                          "direction": legacy_direction,
+                          "type": "order_block", "reason": "ob_aligned"},
+        },
+        "canonical_lifecycle": {
+            "state": "ELIGIBLE" if eligible else "EXPIRED",
+            "reason": ("confirmed_unmitigated_block" if eligible
+                       else "block_expired"),
+            "side": lifecycle_side,
+            "eligible": eligible,
+            "zone_low": None, "zone_high": None,
+            "consumed_ids_derived": [],
+        },
+        "final_fvg_present": False,
+        "final_fvg_direction": None,
+        "overlap_mirror": {"canonical_fvg_in_ob": False},
+        "canonical_pair_geometry": {},
+    }
+
+
+def test_tc004_semantic_direction_contract():
+    """§11: the normalization maps both vocabularies to semantic LONG/
+    SHORT, treats absence/FLAT as unavailable, and fails closed on unknown
+    meaningful tokens."""
+    assert d003._semantic_direction("bullish") == "LONG"
+    assert d003._semantic_direction("BULLISH") == "LONG"
+    assert d003._semantic_direction("long") == "LONG"
+    assert d003._semantic_direction("LONG") == "LONG"
+    assert d003._semantic_direction("bearish") == "SHORT"
+    assert d003._semantic_direction("BEARISH") == "SHORT"
+    assert d003._semantic_direction("short") == "SHORT"
+    assert d003._semantic_direction("SHORT") == "SHORT"
+    assert d003._semantic_direction(None) is None
+    assert d003._semantic_direction("") is None
+    assert d003._semantic_direction("FLAT") is None
+    assert d003._semantic_direction("flat") is None
+    with pytest.raises(d003.D003Error, match="unexpected direction token"):
+        d003._semantic_direction("sideways")
+    with pytest.raises(d003.D003Error, match="unexpected direction token"):
+        d003._semantic_direction(123)
+
+
+def test_tc004_aggregate_surface_e_uses_semantics():
+    """§12: the aggregator itself (not just the helper) classifies legacy
+    vs canonical direction pairs semantically, with FLAT/unavailable as
+    not_available and the partition invariant over all entrants (§15)."""
+    observations = [
+        _e_observation(legacy_direction="bullish", lifecycle_side="LONG",
+                       eligible=True),
+        _e_observation(legacy_direction="bearish", lifecycle_side="SHORT",
+                       eligible=True),
+        _e_observation(legacy_direction="bullish", lifecycle_side="SHORT"),
+        _e_observation(legacy_direction="bearish", lifecycle_side="LONG"),
+        _e_observation(legacy_direction="bullish", lifecycle_side="FLAT"),
+        _e_observation(legacy_direction=None, lifecycle_side="LONG"),
+        _e_observation(legacy_direction="bullish", lifecycle_side=None),
+    ]
+    aggregate = d003.aggregate_d003(observations)
+    agreement = aggregate["E_acquisition_canonical_agreement"][
+        "direction_agreement"
+    ]
+    assert agreement["agree"] == 2
+    assert agreement["disagree"] == 2
+    assert agreement["not_available"] == 3
+    assert (
+        agreement["agree"] + agreement["disagree"] + agreement["not_available"]
+        == aggregate["gate11_entrants"]
+    ), "every Gate-11 entrant must classify exactly once (no silent drops)"
+    # The four-cell eligibility contingency is untouched by TC004.
+    cells = aggregate["E_acquisition_canonical_agreement"]
+    assert sum(v for k, v in cells.items() if k.startswith("legacy_")) == 7
+    assert cells["legacy_true_canonical_true"] == 2
+    assert cells["legacy_true_canonical_false"] == 5
+
+
+def test_tc004_old_bug_reproduces_and_is_repaired():
+    """§13: legacy 'bullish' vs canonical 'LONG' (and 'bearish' vs 'SHORT')
+    are semantic agreement; under the pre-TC004 string-equality code they
+    were reported as disagreement."""
+    pair = [
+        _e_observation(legacy_direction="bullish", lifecycle_side="LONG",
+                       eligible=True),
+        _e_observation(legacy_direction="bearish", lifecycle_side="SHORT",
+                       eligible=True),
+    ]
+    agreement = d003.aggregate_d003(pair)[
+        "E_acquisition_canonical_agreement"
+    ]["direction_agreement"]
+    assert agreement["agree"] == 2
+    assert agreement["disagree"] == 0
+
+
+def test_tc004_surface_g_invariance():
+    """§14: Surface G keeps its original like-vocabulary comparison —
+    identical legacy/FVG directions agree, opposite disagree — unaffected
+    by the TC004 normalization (identity-preserving for G)."""
+    same = _e_observation(legacy_direction="bullish", lifecycle_side="FLAT")
+    same["final_fvg_present"] = True
+    same["final_fvg_direction"] = "bullish"
+    same["canonical_lifecycle"] = {
+        **same["canonical_lifecycle"], "eligible": True, "state": "ELIGIBLE",
+        "reason": "confirmed_unmitigated_block", "zone_low": 97.0,
+        "zone_high": 99.0,
+    }
+    same["canonical_pair_geometry"] = {
+        "intersection": True, "containment": False,
+        "signed_separation": 0.0, "absolute_separation": 0.0,
+        "fvg_width": 1.0, "ob_width": 2.0,
+    }
+    opposite = {
+        **same,
+        "final_fvg_direction": "bearish",
+        "contingency": {
+            **same["contingency"],
+            "legacy_ob": {**same["contingency"]["legacy_ob"],
+                          "direction": "bullish"},
+        },
+    }
+    aggregate = d003.aggregate_d003([same, opposite])
+    g = aggregate["G_contextual_fvg_coexistence"]["direction_agreement"]
+    assert g["agree"] == 1 and g["disagree"] == 1
+    assert aggregate["G_contextual_fvg_coexistence"]["pairs_with_both"] == 2
+
+
+def test_tc004_unknown_direction_token_fails_closed():
+    """§6: an unexpected meaningful direction value in either vocabulary
+    fails closed inside aggregation instead of silently classifying."""
+    with pytest.raises(d003.D003Error, match="unexpected direction token"):
+        d003.aggregate_d003([
+            _e_observation(legacy_direction="reversal", lifecycle_side="LONG"),
+        ])
+
+
 def test_write_result_refuses_overwrite(tmp_path, monkeypatch):
     doc, rendered = d003.run_d003(
         _d003_boundary_store(monkeypatch), canonical_commit="c" * 40, tooling_commit=_tooling_commit(), blob_source=_tooling_blob_source(),
