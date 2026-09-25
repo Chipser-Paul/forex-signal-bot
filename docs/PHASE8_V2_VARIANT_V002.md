@@ -333,3 +333,47 @@ trials `0 / 4`; `UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION
 PROHIBITED = ACTIVE`. The H001 evidence synthesis consumed zero diagnostic
 budget and created no D005. At the instant first Fold-01 V002 strategy behavior
 is empirically observed, strategy variants becomes permanently `2 / 8`.
+
+---
+
+## 25. Implementation and tooling freeze record (Phase B)
+
+* **Implementation module:** `bot/strategy/variant_v002.py` — isolated V002
+  evaluator (`evaluate_v002_structural_pair`), V002 Gate-11 scorer
+  (`score_v002_setup`, frozen 2/1/2/1/2 architecture, threshold 8/8, V002
+  component labels) and the downstream-consistency path
+  (`evaluate_v002_strategy`, which mirrors `evaluate_legacy_context` while
+  consuming the SAME structural-pair semantics; the historical canonical
+  evaluator and `StrategyConfig` are untouched).
+* **Synthetic invariant tests:** `tests/test_phase8_v2_v002_variant.py` (17
+  tests) and `tests/test_phase8_v2_v002_downstream.py` (8 tests) cover the
+  full §21 invariant list, including the age-alone divergence proof
+  (>30-bar untouched block ACTIVE under V002 while the identical frame
+  returns EXPIRED from the frozen canonical evaluator), LONG/SHORT,
+  overlap-true/overlap-false acceptance, no-FVG rejection, Gate 11 8/8,
+  DXY/news/session/symbol-allowlist invariance and the untouched-config
+  fingerprint proof.
+* **Measurement tooling:** `backtests/phase8_v2_variant_v002_eval.py` —
+  reuses the frozen D001 loop discipline verbatim (`classify_snapshot`,
+  `_reference_check_failed`, `evaluate_orchestration_decision`, seed/carry,
+  `_snapshot_rows`, `reconcile_accounting`); the V002 observer evaluates the
+  frozen V002 evaluator/scorer/downstream path on Gate-11 passers only;
+  emits the preregistered structural surface only; banned-metric guard;
+  `canonical_git_blob_v1` provenance binding the implementation commit and
+  the tooling commit; refuses the historical store, Tier B, holdout and
+  2025+; writes non-overwriting, content-hashed output. NOT executed in the
+  freeze task.
+* **Store compatibility decision (§22): B — the preserved immutable V001
+  store is semantically sufficient.** Determined from input semantics: every
+  V002-required causal input (M5 `entry_rows`, persisted final-FVG surface,
+  persisted `htf_bias`, decision timestamp, frozen `StrategyConfig`,
+  reducer-exact consumed ids) is reconstructable causally from the existing
+  snapshots; V002 strategy outputs are not stored as immutable inputs; the
+  assertion runs per snapshot at execution time and fails closed
+  (`assert_store_semantic_compatibility` — any missing causal input forces
+  the fresh-rebuild requirement).
+* **Phase A commit:** `3d910becf95ea3f0e9888241ec6f34af35fcfd42`
+  (governance only, parent `cd7526260ac224facb5dbf993f6e98be25cb650d`,
+  pushed and remote-verified).
+* **Freeze commit:** recorded in `docs/PHASE8_PROGRESS.md` and the register
+  provenance at publication.

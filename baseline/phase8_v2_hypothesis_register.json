@@ -952,7 +952,7 @@
       "registered_utc": "2026-09-25T15:29:54Z",
       "budget_classification": "STRATEGY_VARIANT",
       "specification_document": "docs/PHASE8_V2_VARIANT_V002.md",
-      "specification_sha256": "PENDING_AT_PREREGISTRATION",
+      "specification_sha256": "f53f27c4e7700adf63194392e05f4c523d65312ecde7081dc427ec7347aa8703",
       "specification_sha256_note": "placeholder recorded at governance-only preregistration; replaced by the SHA-256 of the final frozen spec document at the implementation/tooling freeze commit",
       "linked_hypothesis": "phase8-v2-H007",
       "supporting_evidence": [
