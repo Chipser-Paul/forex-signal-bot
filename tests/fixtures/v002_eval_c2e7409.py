@@ -94,13 +94,9 @@ FOLD01_END_MS = int(datetime.fromisoformat(FOLD01_END).timestamp() * 1000)
 
 #: Payload fields every V002-required causal input depends on.  A store
 #: snapshot whose payload lacks any of these cannot drive V002 evaluation
-#: and fails closed (store-compatibility decision, spec section 22; TC002
-#: adds the frozen Gate-12/13 causal inputs: entry price/frame, session
-#: context, liquidity pools, internal structure and the sweep signal).
+#: and fails closed (store-compatibility decision, spec section 22).
 REQUIRED_PAYLOAD_FIELDS = (
     "entry_rows", "fvgs", "htf_bias", "atr", "ob_result", "displacement",
-    "session_context", "liquidity_context", "internal_structure",
-    "liquidity_signal",
 )
 
 BANNED_METRIC_KEYS = frozenset(
@@ -206,7 +202,6 @@ def observe_v002_decision(
     prior_state_record: Any,
     *,
     config: Any,
-    decision_result_record: Any = None,
 ) -> dict[str, Any]:
     """Read-only V002 structural-pair evaluation for one Gate-11 entrant.
 
@@ -271,18 +266,6 @@ def observe_v002_decision(
     score = _score_v002(
         pair=pair, htf_bias=htf_bias, pd_flag=pd_flag, sweep_flag=sweep_flag,
     )
-    setup_id, entry, entry_ready = _entry_readiness(
-        row=row,
-        snapshot=snapshot,
-        decision_result_record=decision_result_record,
-        decision_at=decision_at,
-        frame=frame,
-        payload=payload,
-        pair=pair,
-        score=score,
-        strategy_eligible=bool(strategy.entry_eligible),
-        config=config,
-    )
     observation: dict[str, Any] = {
         "decision_id": decision_id,
         "available_at_ms": int(snapshot.available_at_ms),
@@ -298,13 +281,9 @@ def observe_v002_decision(
             None if pair.exact_overlap is None else bool(pair.exact_overlap)
         ),
         "v002_gate11_score": score,
-        "v002_gate11_passed": bool(score["passes_threshold"]),
         "v002_strategy_eligible": bool(strategy.entry_eligible),
         "v002_strategy_reasons": [str(reason) for reason in strategy.reasons],
         "v002_strategy_order_block_state": strategy.order_block.value,
-        "v002_setup_id": setup_id,
-        "v002_entry": entry,
-        "v002_entry_ready": bool(entry_ready),
         "legacy_canonical_fvg_in_ob": bool(
             (row.get("overlap") or {}).get("canonical_fvg_in_ob")
         ),
@@ -316,159 +295,6 @@ def observe_v002_decision(
     # the old semantics rejected is exactly one the new semantics may
     # accept (the semantic effect V002 exists to measure).
     return observation
-
-
-def _persisted_setup_id(
-    decision_result_record: Any, decision_id: Any
-) -> str | None:
-    """Recover the reducer's frozen stable setup identity (TC002 section 14).
-
-    The decision's own canonical persisted render (``next_record``) is used
-    read-only for identity recovery only.  Fail closed when the persisted
-    event id does not match the observation's decision id or when the
-    setup id is missing/empty.
-    """
-    if decision_result_record is None:
-        raise V002EvalError(
-            f"decision {decision_id!r}: persisted render unavailable; the "
-            "frozen stable setup identity cannot be recovered"
-        )
-    data = decision_result_record.data()
-    if data.get("last_event_id") != decision_id:
-        raise V002EvalError(
-            f"persisted event id mismatch at {decision_id!r}: "
-            f"{data.get('last_event_id')!r}"
-        )
-    rendered = data.get("last_result")
-    if not rendered:
-        raise V002EvalError(
-            f"persisted result missing at {decision_id!r}"
-        )
-    gate = json.loads(rendered)
-    setup_id = gate.get("setup_id")
-    if not setup_id or not str(setup_id).strip():
-        raise V002EvalError(
-            f"persisted setup id missing at {decision_id!r}"
-        )
-    return str(setup_id)
-
-
-def _v002_private_entry_state(
-    decision_result_record: Any,
-    *,
-    decision_at: datetime,
-    payload: Mapping[str, Any],
-) -> Any:
-    """Rebuild a PRIVATE deterministic frozen setup state for Gate 12/13.
-
-    Uses the existing canonical reconstruction mechanism
-    (``bot.strategy.setup_state.state_from_record``) over the decision's own
-    ``next_record`` — never the main historical D001 state chain, which is
-    left untouched.  Every frozen field ``determine_entry`` consumes
-    (structure_dir/structure_state, liquidity sweep triple,
-    displacement_seen/fvg_zone, news_status, daily_limits_hit, session,
-    event time) is the canonical reducer-updated value of THIS decision.
-    The H007-specific entry context (ob_zone/fvg_zone/htf_zone_alignment)
-    is supplied separately from the V002 structural pair and never
-    overwrites frozen state fields.
-    """
-    from bot.strategy.setup_state import state_from_record  # noqa: PLC0415
-
-    return state_from_record(decision_result_record, decision_at)
-
-
-def _v002_entry(
-    *,
-    state: Any,
-    decision_at: datetime,
-    frame: Any,
-    pair: Any,
-    score: Mapping[str, Any],
-    payload: Mapping[str, Any],
-) -> dict[str, Any] | None:
-    """Frozen Gate 12/13 through ``determine_entry`` under V002 evidence.
-
-    The entry model, thresholds, early-entry semantics and session
-    interpretation are the frozen ones; only the H007 structural context
-    fields (ob_zone / fvg_zone / htf_zone_alignment) carry V002 structural
-    meaning — the preregistered downstream-consistency consequence of H007.
-    """
-    from strategies.smc_engine.entry_model import determine_entry  # noqa: PLC0415
-
-    current_price = float(frame["close"].iloc[-1])
-    structure_context = (payload.get("liquidity_context") or {}).get(
-        "structure_context"
-    ) or {}
-    internal = payload.get("internal_structure") or {}
-    session_context = payload.get("session_context") or {}
-    liquidity_context = payload.get("liquidity_context") or {}
-    ob_zone = None
-    if pair.structurally_active and pair.zone_low is not None:
-        ob_zone = (float(pair.zone_low), float(pair.zone_high))
-    fvg_zone = None
-    if pair.fvg_associated and pair.fvg_bottom is not None:
-        fvg_zone = (float(pair.fvg_bottom), float(pair.fvg_top))
-    entry = determine_entry(
-        "XAUUSDm",
-        state,
-        current_price,
-        score_result=dict(score),
-        context={
-            "ob_zone": ob_zone,
-            "fvg_zone": fvg_zone,
-            "after_london_open": session_context.get("active_session") == "london",
-            "asian_liquidity_swept": any(
-                pool.get("type") in ("asian_high", "asian_low")
-                for pool in liquidity_context.get("liquidity_pools", [])
-            ),
-            "sweep_rejected": bool(internal.get("event") in ("CHOCH", "BOS")),
-            "internal_structure_event": internal.get("event"),
-            "htf_zone_alignment": bool(pair.structurally_active),
-        },
-        emit_log=None,
-    )
-    return entry
-
-
-def _entry_readiness(
-    *,
-    row: Mapping[str, Any],
-    snapshot: Any,
-    decision_result_record: Any,
-    decision_at: datetime,
-    frame: Any,
-    payload: Mapping[str, Any],
-    pair: Any,
-    score: Mapping[str, Any],
-    strategy_eligible: bool,
-    config: Any,
-) -> tuple[str | None, dict[str, Any] | None, bool]:
-    """Frozen Gate-12/13 entry readiness for one V002 observation (TC002).
-
-    Returns ``(persisted_setup_id, entry, entry_ready)``.  Entry readiness
-    is evaluated for EVERY Gate-11 entrant whose V002 canonical-strategy
-    decision is eligible — the same stage the frozen V1/V001 reducer
-    requires before emitting ``candidate_ready``.  The historical D001
-    state chain is never mutated: the entry model runs over a private
-    deterministic state reconstruction of THIS decision's own record.
-    """
-    setup_id = _persisted_setup_id(decision_result_record, row.get("decision_id"))
-    if not strategy_eligible:
-        return setup_id, None, False
-    state = _v002_private_entry_state(
-        decision_result_record,
-        decision_at=decision_at,
-        payload=payload,
-    )
-    entry = _v002_entry(
-        state=state,
-        decision_at=decision_at,
-        frame=frame,
-        pair=pair,
-        score=score,
-        payload=payload,
-    )
-    return setup_id, entry, bool(entry)
 
 
 def _entry_frame(rows: list[dict[str, Any]]):
@@ -532,15 +358,11 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     overlap_true = 0
     overlap_false = 0
     overlap_not_available = 0
+    gate11_v002_pass = 0
     legacy_pass = 0
     legacy_fail = 0
+    strategy_eligible: list[dict[str, Any]] = []
     ages: list[int] = []
-    # TC002 V002 variant funnel (section 6):
-    gate11_pass = 0
-    strategy_pass = 0
-    entry_pass = 0
-    # TC002 candidate surface — v002_entry_ready, NOT strategy eligibility.
-    candidates: list[dict[str, Any]] = []
     for observation in observations:
         pair_states[observation["v002_pair_state"]] = (
             pair_states.get(observation["v002_pair_state"], 0) + 1
@@ -561,43 +383,29 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
                 overlap_false += 1
             else:
                 overlap_not_available += 1
+        if observation["v002_gate11_score"]["passes_threshold"]:
+            gate11_v002_pass += 1
         # TC001: descriptive legacy comparison counts — neither gates V002.
         if observation["legacy_score_passed"]:
             legacy_pass += 1
         else:
             legacy_fail += 1
-        # TC002 funnel stages.
-        gate11_passed = bool(observation["v002_gate11_passed"])
-        strategy_passed = bool(observation["v002_strategy_eligible"])
-        entry_ready = bool(observation["v002_entry_ready"])
-        if gate11_passed:
-            gate11_pass += 1
-        if strategy_passed:
-            strategy_pass += 1
-        if entry_ready:
-            entry_pass += 1
-            candidates.append(
+        if observation["v002_strategy_eligible"]:
+            strategy_eligible.append(
                 {
-                    "setup_id": observation["v002_setup_id"],
                     "decision_id": observation["decision_id"],
+                    "available_at_ms": observation["available_at_ms"],
                     "side": observation["v002_side"],
                     "age_bars": observation["v002_age_bars"],
                     "exact_overlap_descriptive": observation[
                         "v002_exact_overlap_descriptive"
                     ],
-                    "entry": observation["v002_entry"],
                 }
             )
+    candidate_ready = len(strategy_eligible)
     entrants = len(observations)
-    candidate_ready = entry_pass
-    candidate_setup_ids = [item["setup_id"] for item in candidates]
-    id_counts: dict[str, int] = {}
-    for setup_id in candidate_setup_ids:
-        id_counts[setup_id] = id_counts.get(setup_id, 0) + 1
-    unique_ids = len(id_counts)
-    duplicate_occurrences = candidate_ready - unique_ids
-    long_count = sum(1 for item in candidates if item["side"] == "LONG")
-    short_count = sum(1 for item in candidates if item["side"] == "SHORT")
+    long_count = sum(1 for item in strategy_eligible if item["side"] == "LONG")
+    short_count = sum(1 for item in strategy_eligible if item["side"] == "SHORT")
     return {
         "V002_structural_pair_surface": {
             "gate11_entrants_observed": entrants,
@@ -609,37 +417,16 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             "exact_overlap_descriptive_true": overlap_true,
             "exact_overlap_descriptive_false": overlap_false,
             "exact_overlap_descriptive_not_available": overlap_not_available,
+            "v002_structural_active_age_summary": _age_summary(ages),
+            "gate11_v002_score_pass_count": gate11_v002_pass,
             "legacy_score_passed_count": legacy_pass,
             "legacy_score_failed_count": legacy_fail,
-            "v002_structural_active_age_summary": _age_summary(ages),
             "score_component_labels": {
                 "ob_component": V002_OB_LABEL,
                 "fvg_component": V002_FVG_LABEL,
                 "weights": [2, 1, 2, 1, 2],
                 "maximum": 8,
                 "threshold": 8,
-            },
-        },
-        "V002_variant_funnel": {
-            "gate_11_v002": {
-                "entered": entrants,
-                "passed": gate11_pass,
-                "failed": entrants - gate11_pass,
-            },
-            "canonical_strategy_v002": {
-                "entered": gate11_pass,
-                "passed": strategy_pass,
-                "failed": gate11_pass - strategy_pass,
-            },
-            "gate_12_13_rr_entry_v002": {
-                "entered": strategy_pass,
-                "passed": entry_pass,
-                "failed": strategy_pass - entry_pass,
-            },
-            "stage_definitions": {
-                "gate_11_v002": "every TC001 Gate-11 entrant; passed = V002 8/8 score pass",
-                "canonical_strategy_v002": "entered = V002 Gate-11 passers; passed = evaluate_v002_strategy entry_eligible",
-                "gate_12_13_rr_entry_v002": "entered = V002 canonical-strategy passers; passed = frozen determine_entry returns an entry",
             },
         },
         "candidate_surface": {
@@ -649,29 +436,13 @@ def aggregate_v002(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             ),
             "candidate_long_count": long_count,
             "candidate_short_count": short_count,
-            "candidate_setup_ids": candidate_setup_ids,
-            "candidate_decision_ids": [item["decision_id"] for item in candidates],
-            "candidate_age_bars": [item["age_bars"] for item in candidates],
+            "candidate_setup_ids": [item["decision_id"] for item in strategy_eligible],
+            "candidate_age_bars": [
+                item["age_bars"] for item in strategy_eligible
+            ],
             "candidate_exact_overlap_descriptive": [
-                item["exact_overlap_descriptive"] for item in candidates
+                item["exact_overlap_descriptive"] for item in strategy_eligible
             ],
-            "candidate_entry_directions": [
-                (item["entry"] or {}).get("direction") for item in candidates
-            ],
-            "candidate_entry_types": [
-                (item["entry"] or {}).get("entry_type") for item in candidates
-            ],
-            "candidate_entry_modes": [
-                (item["entry"] or {}).get("entry_mode") for item in candidates
-            ],
-            "unique_candidate_setup_ids": unique_ids,
-            "duplicate_candidate_setup_id_occurrences": duplicate_occurrences,
-            "setup_id_reconciliation": {
-                "convention": "candidate_ready counts every entry-ready observation; unique_candidate_setup_ids counts distinct persisted setup identities; duplicate_candidate_setup_id_occurrences = candidate_ready - unique_candidate_setup_ids; candidate_ready is never silently deduplicated (frozen V1 setup-reuse/consumption checks remain upstream and unchanged)",
-                "unique_plus_duplicates_equals_candidate_ready": (
-                    unique_ids + duplicate_occurrences == candidate_ready
-                ),
-            },
         },
         "success_classification_rule": {
             "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90",
@@ -851,10 +622,6 @@ def run_v002(
         # frozen Gate 11 under the unchanged upstream pipeline (Gate 8/9/10
         # passed).  The historical Gate-11 BOOLEAN must not act as an
         # eligibility filter for the new strategy's own semantics.
-        # TC002: the decision's own next_record travels with the observation
-        # (read-only) for frozen setup-identity recovery and the private
-        # Gate-12/13 entry-state reconstruction; the historical state chain
-        # itself continues unchanged via next_record.
         gate11_entered = "gate_11_confluence_score" in (
             row.get("gate_results") or {}
         )
@@ -863,7 +630,6 @@ def run_v002(
             observations.append(
                 observe_v002_decision(
                     row, snapshot, prior_state_record, config=config,
-                    decision_result_record=next_record,
                 )
             )
         state_record = next_record
@@ -922,7 +688,6 @@ def assert_expected_surfaces(document: Mapping[str, Any]) -> None:
         "decision_accounting",
         "gate_funnel",
         "V002_structural_pair_surface",
-        "V002_variant_funnel",
         "candidate_surface",
         "success_classification_rule",
     )
@@ -958,50 +723,22 @@ def assert_expected_surfaces(document: Mapping[str, Any]) -> None:
             f"{surface['gate11_entrants_observed']} Gate-11 entrants != "
             f"funnel entered {entered}"
         )
-    # TC002 hard funnel reconciliation (section 16):
-    funnel = document["V002_variant_funnel"]
     candidate = document["candidate_surface"]
-    candidate_ready = int(candidate["candidate_ready"])
-    if candidate_ready < 0:
+    if candidate["candidate_ready"] < 0:
         raise V002EvalError("negative candidate_ready")
-    if candidate_ready != int(funnel["gate_12_13_rr_entry_v002"]["passed"]):
-        raise V002EvalError(
-            "candidate_ready must equal gate_12_13_rr_entry_v002.passed "
-            f"(TC002): {candidate_ready} != "
-            f"{funnel['gate_12_13_rr_entry_v002']['passed']}"
-        )
+    # TC001 hard reconciliation: a downstream candidate must be a subset of
+    # the V002 Gate-11 score passes (unchanged downstream protections such
+    # as DXY may still reject; they can never create candidates).
     if not (
-        candidate_ready
-        <= int(funnel["canonical_strategy_v002"]["passed"])
-        <= int(funnel["gate_11_v002"]["passed"])
+        candidate["candidate_ready"]
+        <= surface["gate11_v002_score_pass_count"]
         <= surface["gate11_entrants_observed"]
     ):
         raise V002EvalError(
-            "V002 variant funnel chain violated (TC002): "
-            f"candidate_ready {candidate_ready} > strategy pass "
-            f"{funnel['canonical_strategy_v002']['passed']} > gate11 pass "
-            f"{funnel['gate_11_v002']['passed']} > entrants "
-            f"{surface['gate11_entrants_observed']}"
-        )
-    if funnel["gate_11_v002"]["entered"] != surface["gate11_entrants_observed"]:
-        raise V002EvalError("gate_11_v002 entered must equal the entrant population")
-    if funnel["canonical_strategy_v002"]["entered"] != funnel["gate_11_v002"]["passed"]:
-        raise V002EvalError(
-            "canonical_strategy_v002 entered must equal gate_11_v002 passed"
-        )
-    if (
-        funnel["gate_12_13_rr_entry_v002"]["entered"]
-        != funnel["canonical_strategy_v002"]["passed"]
-    ):
-        raise V002EvalError(
-            "gate_12_13_rr_entry_v002 entered must equal "
-            "canonical_strategy_v002 passed"
-        )
-    reconciliation = candidate["setup_id_reconciliation"]
-    if not reconciliation["unique_plus_duplicates_equals_candidate_ready"]:
-        raise V002EvalError(
-            "candidate setup-ID reconciliation violated (TC002): "
-            "unique + duplicates != candidate_ready"
+            "candidate/score reconciliation violated (TC001): "
+            f"candidate_ready {candidate['candidate_ready']} > "
+            f"v002 score passes {surface['gate11_v002_score_pass_count']} "
+            f"> entrants {surface['gate11_entrants_observed']}"
         )
 
 

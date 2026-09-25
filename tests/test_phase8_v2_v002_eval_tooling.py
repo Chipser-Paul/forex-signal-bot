@@ -126,6 +126,8 @@ def test_store_compatibility_accepts_complete_payload():
                 "entry_rows": [{"open_time": "2024-04-02T12:00:00+00:00"}],
                 "fvgs": [], "htf_bias": "bullish", "atr": 1.0,
                 "ob_result": {}, "displacement": {},
+                "session_context": {}, "liquidity_context": {},
+                "internal_structure": {}, "liquidity_signal": {},
             }
         )
 
@@ -183,12 +185,13 @@ def test_observe_v002_decision_on_mocked_snapshot(monkeypatch):
     prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
     from backtests.phase8_v2_diagnostic_d001 import evaluate_orchestration_decision
 
-    row, _next_record = evaluate_orchestration_decision(snapshot, prior)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
     assert row["gate_results"].get("gate_11_confluence_score") is True, (
         "fixture must pass frozen Gate 11 to enter the V002 population"
     )
     observation = v002_eval.observe_v002_decision(
         row, snapshot, prior, config=config,
+        decision_result_record=next_record,
     )
     assert observation["v002_pair_state"] in (V002_ACTIVE, "MITIGATED", "RETEST_ELIGIBLE")
     assert observation["v002_side"] == "LONG"
@@ -212,8 +215,11 @@ def test_aggregate_counts_and_candidate_surface():
             "v002_block_id": "x", "v002_fvg_associated": True,
             "v002_fvg_direction": "bullish", "v002_exact_overlap_descriptive": True,
             "v002_gate11_score": {"passes_threshold": True, "max_score": 8},
+            "v002_gate11_passed": True,
             "v002_strategy_eligible": True, "v002_strategy_reasons": ["APPROVED"],
             "v002_strategy_order_block_state": "ELIGIBLE",
+            "v002_setup_id": "s8n1_full_candidate", "v002_entry": {"direction": "buy"},
+            "v002_entry_ready": True,
             "legacy_canonical_fvg_in_ob": False, "legacy_score_passed": True,
         },
         {
@@ -223,8 +229,11 @@ def test_aggregate_counts_and_candidate_surface():
             "v002_block_id": "y", "v002_fvg_associated": False,
             "v002_fvg_direction": None, "v002_exact_overlap_descriptive": None,
             "v002_gate11_score": {"passes_threshold": False, "max_score": 8},
+            "v002_gate11_passed": False,
             "v002_strategy_eligible": False, "v002_strategy_reasons": ["ORDER_BLOCK_UNAVAILABLE"],
             "v002_strategy_order_block_state": "MITIGATED",
+            "v002_setup_id": "s8n1_rejected", "v002_entry": None,
+            "v002_entry_ready": False,
             "legacy_canonical_fvg_in_ob": True, "legacy_score_passed": True,
         },
     ]
@@ -236,11 +245,20 @@ def test_aggregate_counts_and_candidate_surface():
     assert surface["v002_associated_same_direction_fvg_count"] == 1
     assert surface["exact_overlap_descriptive_true"] == 1
     assert surface["v002_structural_active_age_summary"]["count"] == 1
+    funnel = aggregate["V002_variant_funnel"]
+    assert funnel["gate_11_v002"] == {"entered": 2, "passed": 1, "failed": 1}
+    assert funnel["canonical_strategy_v002"] == {"entered": 1, "passed": 1, "failed": 0}
+    assert funnel["gate_12_13_rr_entry_v002"] == {"entered": 1, "passed": 1, "failed": 0}
     candidate = aggregate["candidate_surface"]
     assert candidate["candidate_ready"] == 1
-    assert candidate["candidate_setup_ids"] == ["d1"]
+    assert candidate["candidate_setup_ids"] == ["s8n1_full_candidate"]
+    assert candidate["candidate_setup_ids"] != ["d1"]
+    assert candidate["unique_candidate_setup_ids"] == 1
+    assert candidate["duplicate_candidate_setup_id_occurrences"] == 0
+    assert candidate["setup_id_reconciliation"]["unique_plus_duplicates_equals_candidate_ready"] is True
     assert candidate["candidate_long_count"] == 1
     assert candidate["candidate_short_count"] == 0
+    assert candidate["candidate_entry_directions"] == ["buy"]
     assert aggregate["success_classification_rule"]["OPPORTUNITY_SUFFICIENT"] == "candidate_ready >= 90"
 
 
@@ -277,7 +295,7 @@ def test_run_v002_full_loop_on_mocked_store(monkeypatch):
 
     seed = datetime(2024, 1, 1, tzinfo=UTC)
     prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
-    row, _next = evaluate_orchestration_decision(snapshot, prior)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
     assert row["gate_results"].get("gate_11_confluence_score") is True
 
     early = _Snapshot(
@@ -300,7 +318,12 @@ def test_run_v002_full_loop_on_mocked_store(monkeypatch):
     assert accounting["reconciles"] is True
     surface = doc["V002_structural_pair_surface"]
     assert surface["gate11_entrants_observed"] == 1
-    assert surface["gate11_v002_score_pass_count"] >= 1
+    funnel = doc["V002_variant_funnel"]
+    assert funnel["gate_11_v002"]["entered"] == 1
+    assert funnel["gate_11_v002"]["passed"] >= 1
+    assert funnel["canonical_strategy_v002"]["entered"] == funnel["gate_11_v002"]["passed"]
+    assert funnel["gate_12_13_rr_entry_v002"]["entered"] == funnel["canonical_strategy_v002"]["passed"]
+    assert doc["candidate_surface"]["candidate_ready"] == funnel["gate_12_13_rr_entry_v002"]["passed"]
     assert doc["candidate_surface"]["candidate_ready"] >= 0
     import hashlib
 
@@ -406,11 +429,12 @@ def test_tc001_real_adapter_legacy_fail_entrant_is_observed(monkeypatch):
 
     seed = datetime(2024, 1, 1, tzinfo=UTC)
     prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
-    row, _next = evaluate_orchestration_decision(snapshot, prior)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
     assert "gate_11_confluence_score" in row["gate_results"], "must ENTER Gate 11"
     assert row["gate_results"]["gate_11_confluence_score"] is False
     observation = v002_eval.observe_v002_decision(
         row, snapshot, prior, config=_config(),
+        decision_result_record=next_record,
     )
     assert observation["legacy_score_passed"] is False
     assert observation["v002_pair_state"] in (
@@ -428,10 +452,11 @@ def test_tc001_v002_rescue_semantic_difference_is_observable(monkeypatch):
 
     seed = datetime(2024, 1, 1, tzinfo=UTC)
     prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
-    row, _next = evaluate_orchestration_decision(snapshot, prior)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
     assert row["gate_results"]["gate_11_confluence_score"] is False
     observation = v002_eval.observe_v002_decision(
         row, snapshot, prior, config=_config(),
+        decision_result_record=next_record,
     )
     assert observation["legacy_score_passed"] is False
     assert observation["v002_structurally_active"] is True
@@ -439,6 +464,9 @@ def test_tc001_v002_rescue_semantic_difference_is_observable(monkeypatch):
     assert observation["v002_gate11_score"]["passes_threshold"] is True
     assert observation["v002_gate11_score"]["score"] == 8
     assert observation["v002_strategy_eligible"] is True
+    assert observation["v002_entry_ready"] is True
+    assert observation["v002_entry"]["direction"] == "buy"
+    assert observation["v002_setup_id"].startswith("s8n1_")
 
 
 def test_tc001_mixed_population_loop_reconciliation(monkeypatch):
@@ -473,10 +501,12 @@ def test_tc001_mixed_population_loop_reconciliation(monkeypatch):
     assert legacy_fail == 1, "the historical Gate-11 failure must not be discarded"
     assert legacy_pass == 1
     assert legacy_fail + legacy_pass == 2
+    funnel = doc["V002_variant_funnel"]
     candidate = doc["candidate_surface"]
     assert (
         candidate["candidate_ready"]
-        <= surface["gate11_v002_score_pass_count"]
+        <= funnel["canonical_strategy_v002"]["passed"]
+        <= funnel["gate_11_v002"]["passed"]
         <= surface["gate11_entrants_observed"]
     )
     assert rendered  # deterministic canonical bytes produced
@@ -484,6 +514,10 @@ def test_tc001_mixed_population_loop_reconciliation(monkeypatch):
 
 def _tc001_doc(surface: dict, candidate: dict) -> dict:
     """Minimal complete V002 document for surface-check unit tests."""
+    entrants = int(surface.get("gate11_entrants_observed", 3))
+    gate11_pass = int(surface.get("gate11_v002_score_pass_count", entrants))
+    strategy_pass = int(surface.get("gate11_v002_score_pass_count", entrants))
+    entry_pass = int(candidate.get("candidate_ready", strategy_pass))
     return {
         "decision_accounting": {
             "scheduled": 5, "reducer_classified": 5, "missing_history": 0,
@@ -493,6 +527,11 @@ def _tc001_doc(surface: dict, candidate: dict) -> dict:
             "gate_11_confluence_score": {"entered": 3, "passed": 1, "failed": 2},
         },
         "V002_structural_pair_surface": surface,
+        "V002_variant_funnel": {
+            "gate_11_v002": {"entered": entrants, "passed": gate11_pass, "failed": 0},
+            "canonical_strategy_v002": {"entered": gate11_pass, "passed": strategy_pass, "failed": 0},
+            "gate_12_13_rr_entry_v002": {"entered": strategy_pass, "passed": entry_pass, "failed": 0},
+        },
         "candidate_surface": candidate,
         "success_classification_rule": {
             "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90",
@@ -548,7 +587,7 @@ def test_tc001_old_bug_reproduction_against_defective_commit(monkeypatch):
 
     seed = datetime(2024, 1, 1, tzinfo=UTC)
     prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
-    row, _next = evaluate_orchestration_decision(snapshot, prior)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
     assert row["gate_results"]["gate_11_confluence_score"] is False
     # Old defect, rejection arm: the committed observer refuses a
     # historical Gate-11 FAILURE even when the row entered Gate 11.
@@ -607,3 +646,260 @@ def _gitobjectstore_root():
     if _GIT_STORE_ROOT is None:
         _GIT_STORE_ROOT = Path(tempfile.mkdtemp(prefix="v002-tc001-gitstore-"))
     return _GIT_STORE_ROOT
+
+
+# ---------------------------------------------------------------------------
+# TC002 — candidate_ready through frozen Gates 12/13
+# (phase6-development-v2-V002-TC002)
+# ---------------------------------------------------------------------------
+
+TC002_DEFECTIVE_COMMIT = "c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb"
+
+
+def _observe_with_next(snapshot, monkeypatch=None):
+    """Run the real reducer loop once and observe the Gate-11 entrant."""
+    from bot.strategy.setup_state import StrategyState, record_from_state
+    from backtests.phase8_v2_diagnostic_d001 import evaluate_orchestration_decision
+
+    seed = datetime(2024, 1, 1, tzinfo=UTC)
+    prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
+    return row, next_record, v002_eval.observe_v002_decision(
+        row, snapshot, prior, config=_config(),
+        decision_result_record=next_record,
+    )
+
+
+def test_tc002_strategy_eligible_but_entry_not_ready_is_not_candidate(monkeypatch):
+    """V002 Gate 11 passes, downstream strategy is eligible, but the frozen
+    entry model returns None: entry-ready False and NOT candidate_ready.
+    The synthetic state lacks a real liquidity sweep triple (liquidity_type
+    None), so determine_entry has no valid liquidity alignment and waits —
+    exactly the historical entry_not_ready shape."""
+    snapshot = _displacement_snapview(AT, monkeypatch)
+    row, next_record, observation = _observe_with_next(snapshot)
+    assert row["gate_results"]["gate_11_confluence_score"] is True
+    assert observation["v002_gate11_passed"] is True
+    assert observation["v002_strategy_eligible"] is True
+    # Forced entry-not-ready: neutralize the frozen state's liquidity sweep
+    # identity on the PRIVATE V002 entry state only (an unchanged
+    # non-H007 reason the historical reducer reports entry_not_ready for).
+    class _PrivateObserver:
+        pass
+
+    real_state_builder = v002_eval._v002_private_entry_state
+
+    def _stripped_state(record, *, decision_at, payload):
+        state = real_state_builder(record, decision_at=decision_at, payload=payload)
+        state.liquidity_type = None
+        state.liquidity_side = None
+        return state
+
+    v002_eval._v002_private_entry_state = _stripped_state
+    try:
+        row, next_record, observation = _observe_with_next(snapshot)
+    finally:
+        v002_eval._v002_private_entry_state = real_state_builder
+    assert observation["v002_strategy_eligible"] is True
+    assert observation["v002_entry_ready"] is False
+    assert observation["v002_entry"] is None
+    aggregate = v002_eval.aggregate_v002([observation])
+    assert aggregate["candidate_surface"]["candidate_ready"] == 0
+    assert aggregate["V002_variant_funnel"]["gate_12_13_rr_entry_v002"]["passed"] == 0
+
+
+def test_tc002_full_candidate_counts_once(monkeypatch):
+    """Full V002 candidate: historical Gate 11 fails, V002 Gate 11 passes
+    8/8, V002 canonical strategy passes, frozen determine_entry returns a
+    real entry; candidate_ready increments exactly once."""
+    snapshot = _SnapView(_rescue_snapshot(AT, monkeypatch), AT)
+    row, next_record, observation = _observe_with_next(snapshot)
+    assert row["gate_results"]["gate_11_confluence_score"] is False
+    assert observation["legacy_score_passed"] is False
+    assert observation["v002_gate11_passed"] is True
+    assert observation["v002_strategy_eligible"] is True
+    assert observation["v002_entry_ready"] is True
+    assert observation["v002_entry"] is not None
+    aggregate = v002_eval.aggregate_v002([observation])
+    assert aggregate["candidate_surface"]["candidate_ready"] == 1
+    assert aggregate["candidate_surface"]["candidate_decision_ids"] == [
+        row["decision_id"]
+    ]
+
+
+def test_tc002_legacy_equivalence_when_semantics_coincide(monkeypatch):
+    """When historical and V002 semantics coincide, the historical reducer's
+    action is reproduced by the V002 path over the same frozen inputs."""
+    snapshot = _displacement_snapview(AT, monkeypatch)
+    from bot.strategy.setup_state import StrategyState, record_from_state
+    from backtests.phase8_v2_diagnostic_d001 import evaluate_orchestration_decision
+
+    seed = datetime(2024, 1, 1, tzinfo=UTC)
+    prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
+    if row["action"] == "candidate_ready":
+        observation = v002_eval.observe_v002_decision(
+            row, snapshot, prior, config=_config(),
+            decision_result_record=next_record,
+        )
+        assert observation["v002_entry_ready"] is True
+    else:
+        # The historical reducer refused entry for unchanged non-H007
+        # reasons; V002 must not rescue it merely because the canonical
+        # strategy passed — assert no entry is manufactured.
+        observation = v002_eval.observe_v002_decision(
+            row, snapshot, prior, config=_config(),
+            decision_result_record=next_record,
+        )
+        if observation["v002_strategy_eligible"]:
+            assert observation["v002_entry_ready"] is False
+
+
+def test_tc002_funnel_regression_exact_chain(monkeypatch):
+    """Synthetic population: Gate-11 fail, strategy fail, entry-not-ready,
+    full candidate.  Funnel: entrants 4, gate11 pass 3, strategy pass 2,
+    gate-12/13 pass 1, candidate_ready 1."""
+    base = _SnapView(_displacement_snapshot, AT) if False else None
+    snapshot_ok = _displacement_snapview(AT, monkeypatch)
+    failing = _SnapView(_rescue_snapshot(AT, monkeypatch), AT)
+    observations = []
+    from bot.strategy.setup_state import StrategyState, record_from_state
+    from backtests.phase8_v2_diagnostic_d001 import evaluate_orchestration_decision
+
+    seed = datetime(2024, 1, 1, tzinfo=UTC)
+    prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
+
+    # (1) V002 Gate-11 failure: strip the same-direction FVG from the payload
+    # surface the observer sees (no FVG association -> score 6 < 8).
+    row, next_record = evaluate_orchestration_decision(snapshot_ok, prior)
+    gate_fail = dict(observation_of(row, snapshot_ok, prior, next_record))
+    gate_fail["v002_gate11_passed"] = False
+    gate_fail["v002_gate11_score"] = dict(gate_fail["v002_gate11_score"], passes_threshold=False, score=6)
+    gate_fail["v002_strategy_eligible"] = False
+    gate_fail["v002_entry_ready"] = False
+    gate_fail["v002_entry"] = None
+    observations.append(gate_fail)
+
+    # (2) strategy fail: non-structural downstream rejection (DXY conflict).
+    strategy_fail = dict(gate_fail)
+    strategy_fail["decision_id"] = "synthetic-strategy-fail"
+    strategy_fail["v002_gate11_passed"] = True
+    strategy_fail["v002_gate11_score"] = dict(gate_fail["v002_gate11_score"], passes_threshold=True, score=8)
+    strategy_fail["v002_strategy_eligible"] = False
+    strategy_fail["v002_strategy_reasons"] = ["DXY_DIRECTION_CONFLICT"]
+    strategy_fail["v002_entry_ready"] = False
+    observations.append(strategy_fail)
+
+    # (3) strategy pass but entry-not-ready.
+    entry_fail = dict(gate_fail)
+    entry_fail["decision_id"] = "synthetic-entry-fail"
+    entry_fail["v002_gate11_passed"] = True
+    entry_fail["v002_gate11_score"] = dict(gate_fail["v002_gate11_score"], passes_threshold=True, score=8)
+    entry_fail["v002_strategy_eligible"] = True
+    entry_fail["v002_entry_ready"] = False
+    entry_fail["v002_entry"] = None
+    observations.append(entry_fail)
+
+    # (4) full candidate.
+    row, next_record, observation = _observe_with_next(failing)
+    assert observation["v002_entry_ready"] is True
+    observations.append(dict(observation))
+
+    aggregate = v002_eval.aggregate_v002(observations)
+    funnel = aggregate["V002_variant_funnel"]
+    assert funnel["gate_11_v002"]["entered"] == 4
+    assert funnel["gate_11_v002"]["passed"] == 3
+    assert funnel["canonical_strategy_v002"]["entered"] == 3
+    assert funnel["canonical_strategy_v002"]["passed"] == 2
+    assert funnel["gate_12_13_rr_entry_v002"]["entered"] == 2
+    assert funnel["gate_12_13_rr_entry_v002"]["passed"] == 1
+    assert aggregate["candidate_surface"]["candidate_ready"] == 1
+    doc = {
+        "decision_accounting": {"scheduled": 4, "reducer_classified": 4,
+                                "missing_history": 0, "unavailable_input": 0,
+                                "evaluation_error": 0},
+        "gate_funnel": {"gate_11_confluence_score": {"entered": 4, "passed": 1, "failed": 3}},
+        "V002_structural_pair_surface": aggregate["V002_structural_pair_surface"],
+        "V002_variant_funnel": funnel,
+        "candidate_surface": aggregate["candidate_surface"],
+        "success_classification_rule": aggregate["success_classification_rule"],
+    }
+    v002_eval.assert_expected_surfaces(doc)  # hard reconciliation holds
+
+
+def observation_of(row, snapshot, prior, next_record):
+    return v002_eval.observe_v002_decision(
+        row, snapshot, prior, config=_config(),
+        decision_result_record=next_record,
+    )
+
+
+def test_tc002_candidate_id_is_setup_identity_not_decision_id(monkeypatch):
+    snapshot = _SnapView(_rescue_snapshot(AT, monkeypatch), AT)
+    row, next_record, observation = _observe_with_next(snapshot)
+    persisted = json.loads(next_record.data()["last_result"])
+    assert observation["v002_setup_id"] == persisted["setup_id"]
+    assert observation["v002_setup_id"] != row["decision_id"]
+    assert persisted["event_id"] == row["decision_id"]
+
+
+def test_tc002_candidate_id_fails_closed_on_mismatched_render(monkeypatch):
+    snapshot = _SnapView(_rescue_snapshot(AT, monkeypatch), AT)
+    from bot.strategy.setup_state import StrategyState, record_from_state
+    from backtests.phase8_v2_diagnostic_d001 import evaluate_orchestration_decision
+
+    seed = datetime(2024, 1, 1, tzinfo=UTC)
+    prior = record_from_state(StrategyState(event_time=seed), event_at=seed)
+    row, next_record = evaluate_orchestration_decision(snapshot, prior)
+    with pytest.raises(v002_eval.V002EvalError) as error:
+        v002_eval._persisted_setup_id(next_record, "some-other-decision-id")
+    assert "mismatch" in str(error.value)
+
+    empty = type("R", (), {})()
+    empty.data = lambda: {"last_event_id": row["decision_id"], "last_result": None}
+    with pytest.raises(v002_eval.V002EvalError) as error:
+        v002_eval._persisted_setup_id(empty, row["decision_id"])
+    assert "persisted result missing" in str(error.value)
+
+
+def test_tc002_old_bug_counts_entry_not_ready_as_candidate(monkeypatch):
+    """The TC001 tooling at c2e7409 counts a strategy-eligible / entry-
+    not-ready decision as candidate_ready; the corrected tooling must not.
+    The defective bytes are snapshotted verbatim in the committed fixture
+    (byte-verified out-of-suite via V002_TC001_VERIFY_COMMITTED_BYTES=1)."""
+    fixture = Path(__file__).parent / "fixtures" / "v002_eval_c2e7409.py"
+    legacy_bytes = fixture.read_bytes()
+    assert b'candidate_ready = len(strategy_eligible)' in legacy_bytes
+    module_name = "_v002_eval_defective_c2e7409"
+    assert module_name not in sys.modules
+    module = types.ModuleType(module_name)
+    module.__file__ = str(fixture)
+    exec(compile(legacy_bytes, module.__file__, "exec"), module.__dict__)
+    sys.modules[module_name] = module
+
+    # The same observation (strategy-eligible, entry-not-ready) evaluated by
+    # the defective aggregate counts it as a candidate; TC002 tooling does
+    # not require the field at all, so the defective surface is proven with
+    # its OWN aggregate contract.
+    defective_observation = {
+        "decision_id": "d-entry-not-ready", "available_at_ms": 1,
+        "v002_pair_state": V002_ACTIVE, "v002_pair_reason": "structurally_active_block",
+        "v002_structurally_active": True, "v002_side": "LONG", "v002_age_bars": 5,
+        "v002_block_id": "blk", "v002_fvg_associated": True,
+        "v002_fvg_direction": "bullish", "v002_exact_overlap_descriptive": False,
+        "v002_gate11_score": {"passes_threshold": True, "max_score": 8},
+        "v002_strategy_eligible": True, "v002_strategy_reasons": ["APPROVED"],
+        "v002_strategy_order_block_state": "ELIGIBLE",
+        "legacy_canonical_fvg_in_ob": True, "legacy_score_passed": True,
+    }
+    defective_aggregate = module.aggregate_v002([defective_observation])
+    assert defective_aggregate["candidate_surface"]["candidate_ready"] == 1, (
+        "defective TC001 tooling counts strategy eligibility as candidate_ready"
+    )
+    corrected = dict(defective_observation)
+    corrected.update({
+        "v002_gate11_passed": True, "v002_setup_id": "s8n1_x",
+        "v002_entry": None, "v002_entry_ready": False,
+    })
+    corrected_aggregate = v002_eval.aggregate_v002([corrected])
+    assert corrected_aggregate["candidate_surface"]["candidate_ready"] == 0

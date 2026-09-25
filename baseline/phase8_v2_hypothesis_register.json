@@ -1932,6 +1932,58 @@
         "holdout": true,
         "data_2025_plus": true
       }
+    },
+    {
+      "correction_id": "phase6-development-v2-V002-TC002",
+      "record_type": "PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION",
+      "variant_id": "phase6-development-v2-V002",
+      "defect_class": "V002_PRE_EMPIRICAL_CANDIDATE_READY_STAGE_MISMATCH",
+      "defective_tooling_commit": "c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb",
+      "corrected_tooling_commit_reference": "the unique TC002 commit that publishes this record (parent c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb, subject 'fix: measure V002 candidate readiness through entry gates'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "registered_utc": "2026-09-25T19:20:00Z",
+      "tc001_status": "ACCEPTED — TC001 (phase6-development-v2-V002-TC001) remains published and accepted; the V002 population REMAINS all legitimate historical Gate-11 entrants; TC002 does not reopen it",
+      "defect_description": "the TC001-corrected tooling treated evaluate_v002_strategy(...).entry_eligible as candidate_ready — that is the canonical-strategy-equivalent stage only; frozen V1/V001 semantics additionally require Gates 12-13 through strategies.smc_engine.entry_model.determine_entry before the reducer emits action=candidate_ready, so a setup passing V002 Gate 11 and the V002 canonical-strategy decision but failing Gate-12/13 entry readiness was wrongly counted toward the charter's candidate_ready >= 90 target",
+      "old_candidate_definition": "count(v002_strategy_eligible) — V002 canonical-strategy eligibility",
+      "corrected_candidate_definition": "count(v002_entry_ready) — a setup passes unchanged upstream Gates 8-10, V002 Gate 11 (8/8), the V002 downstream canonical-strategy decision, AND the frozen Gate-12/13 entry model (determine_entry returns an entry); no other definition is permitted; the 90 threshold and the success classification are unchanged",
+      "v002_variant_funnel": "explicit funnel added: gate_11_v002 (entered = every TC001 Gate-11 entrant; passed = V002 8/8 score pass) -> canonical_strategy_v002 (entered = V002 Gate-11 passers; passed = evaluate_v002_strategy entry_eligible) -> gate_12_13_rr_entry_v002 (entered = V002 canonical-strategy passers; passed = frozen determine_entry returns non-None); candidate_ready MUST equal gate_12_13_rr_entry_v002.passed",
+      "entry_model_reuse": "the frozen strategies.smc_engine.entry_model.determine_entry is reused directly; no new V002 entry model; entry score threshold, early-entry semantics, liquidity alignment, aggressive/conservative selection, setup-candidate registration, session interpretation and internal-structure requirement unchanged; the frozen V002 score result (score_v002_setup, 8/8) is passed as score_result; only the H007 structural context fields differ where structurally inseparable (ob_zone = V002 structural-active canonical block zone, fvg_zone = V002 associated same-direction final canonical FVG geometry, htf_zone_alignment = V002 structural-active OB present) — the preregistered downstream-consistency consequence of H007, not a new hypothesis",
+      "entry_state_reconstruction": "the entry model executes over a PRIVATE deterministic copy of the frozen setup state for the same decision, rebuilt with the existing canonical bot.strategy.setup_state.state_from_record over the decision's own next_record; the main historical D001 state chain is never mutated with V002 candidate output and remains the unchanged upstream reference pipeline; all frozen state fields determine_entry consumes (structure_dir, structure_state, liquidity_swept, liquidity_side, liquidity_type, displacement_seen, fvg_zone, news_status, daily_limits_hit, session, event time) are the canonical reducer-updated values of THIS decision; prior-state consumption for evaluate_v002_structural_pair still derives from prior_state_record ONLY (TC001/H007 causal OB lifecycle semantics unchanged)",
+      "setup_id_correction": "candidate_setup_ids now contains the frozen reducer's actual stable setup identity recovered from the decision's canonical persisted result (event-id reconciliation fail-closed; empty/missing setup id fail-closed); decision IDs remain separately descriptive as candidate_decision_ids",
+      "duplicate_reconciliation": "candidate_ready counts every entry-ready observation; unique_candidate_setup_ids counts distinct persisted setup identities; duplicate_candidate_setup_id_occurrences = candidate_ready - unique; candidate_ready is never silently deduplicated (frozen V1 setup-reuse/consumption checks remain upstream and unchanged); unique + duplicates == candidate_ready asserted fail-closed",
+      "hard_reconciliations_added": [
+        "candidate_ready == gate_12_13_rr_entry_v002.passed (fail closed)",
+        "candidate_ready <= canonical_strategy_v002.passed <= gate_11_v002.passed <= gate11_entrants_observed (fail closed)",
+        "gate_11_v002.entered == gate11_entrants_observed; canonical_strategy_v002.entered == gate_11_v002.passed; gate_12_13_rr_entry_v002.entered == canonical_strategy_v002.passed (fail closed)",
+        "unique_candidate_setup_ids + duplicate_candidate_setup_id_occurrences == candidate_ready (fail closed)",
+        "TC001 reconciliation retained: gate11_entrants_observed == frozen Gate-11 entered (fail closed)"
+      ],
+      "regressions_added": [
+        "strategy-eligible / entry-not-ready regression: V002 Gate 11 passes, V002 downstream strategy eligible, frozen determine_entry returns None -> v002_entry_ready False, NOT candidate_ready; demonstrated to be miscounted as candidate_ready by the defective c2e7409 aggregate (old-bug reproduction via byte-identical committed fixture)",
+        "full-candidate regression: historical Gate 11 fails, V002 Gate 11 passes 8/8, V002 canonical strategy passes, frozen determine_entry returns a real entry -> v002_entry_ready True, candidate_ready increments exactly once",
+        "legacy-equivalence regression: when historical and V002 structural semantics coincide, the historical reducer's candidate_ready action is reproduced by the V002 path over the same frozen inputs; an historical entry_not_ready for unchanged non-H007 reasons is not rescued merely because the canonical strategy passed",
+        "funnel regression: synthetic population entrants 4 -> V002 Gate-11 pass 3 -> strategy pass 2 -> Gate-12/13 pass 1 -> candidate_ready 1, reconciled fail-closed",
+        "candidate-ID regression: candidate setup ID is the persisted setup identity (not the decision ID), persisted event identity reconciles, malformed/mismatched persisted results fail closed"
+      ],
+      "store_compatibility_decision": "B — preserved V001 store semantically sufficient, REAFFIRMED: the frozen Gate-12/13 causal inputs (entry price from the persisted M5 entry_rows frame, session context, liquidity pools, internal structure, sweep signal) already exist in the persisted snapshot payload and current state reconstruction; REQUIRED_PAYLOAD_FIELDS extended accordingly and asserted per snapshot fail-closed; no missing causal input was found and no fresh rebuild is required",
+      "strategy_module_unchanged": true,
+      "strategy_module_diff": "bot/strategy/variant_v002.py = 0 bytes changed (canonical blob SHA 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4 unchanged)",
+      "h007_unchanged": "H007 statement, V002 structural-active OB semantics, FVG association, exact-overlap descriptive observer, 8/8 score, DXY authority, the TC001 Gate-11 entrant population and the success classification (90 threshold) are all unchanged; spec docs/PHASE8_V2_VARIANT_V002.md scientific content unchanged (its preregistered surface already required the Gate 8-13 funnel, candidate_ready count and candidate setup IDs; TC002 makes the tooling conform)",
+      "no_empirical_v002_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no Tier B; no 2025+; no holdout; all tests synthetic",
+      "budget_impact": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "note": "TC002 consumes ZERO strategy-variant budget; V002 becomes 2 / 8 only when the corrected tooling first observes real Fold-01 V002 strategy behavior under separate supervisory authorization"
+      },
+      "h001_h007_v002_preregistration_untouched": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      }
     }
   ],
   "provenance_corrections": [
