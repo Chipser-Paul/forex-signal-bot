@@ -483,9 +483,9 @@
         "OB direction distribution"
       ],
       "implementation_required": false,
-      "status": "REGISTERED",
-      "result": null,
-      "disposition": null
+      "status": "SUPPORTED_BY_D003",
+      "result": "phase8-v2-D003-R001",
+      "disposition": "SUPPORTED_BY_D003"
     },
     {
       "hypothesis_id": "phase8-v2-H003",
@@ -1012,6 +1012,274 @@
         "numeric_parameter_trials": "0 / 4",
         "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
         "note": "R001 completes the already-consumed first variant; no additional variant consumed"
+      }
+    },
+    {
+      "result_id": "phase8-v2-D003-R001",
+      "diagnostic_id": "phase8-v2-D003",
+      "hypothesis_id": "phase8-v2-H002",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "executed": true,
+      "preregistration_commit": "8b3a8bd1169fcd5f8fb0a15a089451c68d3e04b6",
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D003.md",
+      "specification_sha256": "2b5204925a700cc2faa817835e77d298d778138f811bdfb2ad06cfe9c007cc46",
+      "canonical_source_commit_used": "3e4514bbc257911d17a5f1f93acd2f86a275e2e9",
+      "measurement_tooling_commit": "3e4514bbc257911d17a5f1f93acd2f86a275e2e9",
+      "fingerprint_contract": "canonical_git_blob_v1",
+      "tooling_fingerprint": "c4a4d2f88fe01d991e48ca43cf2f281a73f3a790ac23d82b57c0735d4257797c",
+      "complete_tooling_lineage": {
+        "preregistration": "8b3a8bd1169fcd5f8fb0a15a089451c68d3e04b6",
+        "original_tooling_freeze": "882b4c9468f032fb4ac30f0737afd0831e12206d",
+        "tc001_prior_state_repair": "aa6bbc1cd3e4d84821cba6cf5e821b917444c198",
+        "tc002_canonical_fingerprint": "58bedf6c59c213cbaf3557c7dc03bac4e7896aed",
+        "tc003_row_contract_repair": "b26ac6a88eb6276d8a0e0f5db3eb413d3732fe84",
+        "tc004_direction_semantics": "3e4514bbc257911d17a5f1f93acd2f86a275e2e9"
+      },
+      "governance_lineage": [
+        "phase8-v2-D003-TC001",
+        "phase8-v2-D003-TC002",
+        "phase8-v2-D003-TC003",
+        "phase8-v2-D003-TC004"
+      ],
+      "void_attempt_history": {
+        "attempt1_output_sha256": "6637338401bd5133a53c4dbed455cff757b6459b85549088e17fe228a00488df",
+        "attempt1_blockage_sha256": "764de0ea6fba632845b00da8f8c03950e8d0cbc69e5d6864821bafe0765b9a46",
+        "attempt1_classification": "VOID_ATTEMPT_OUTPUT \u2014 NOT R001",
+        "tc003_rerun1_output_sha256": "5c8c2a8b84ce816f8c34e80a99e89cd03281fbc6c0b655562dc5b9136c215450",
+        "tc003_rerun1_blockage_sha256": "e28f976c356ae28b591fca594340faf5dea8491ba9ed2d80f36efb256dd0235a",
+        "tc003_rerun1_classification": "VOID_CORRECTED_RERUN_OUTPUT \u2014 NOT R001",
+        "both_artifact_pairs_preserved_intact": true
+      },
+      "execution_window_utc": {
+        "original_exposure": "2026-09-24T21:52:07.081601+00:00",
+        "tc003_corrected_rerun": "2026-09-25T00:07:38.631820+00:00",
+        "tc004_final_rerun_started": "2026-09-25T10:44:13.390741+00:00",
+        "tc004_final_rerun_finished": "2026-09-25T10:47:05.654904+00:00"
+      },
+      "input_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "plan_fingerprint": "adbab1bd1faf844107f2bb4f1727ea832282964c37129f9447b7a20025359a09",
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767"
+      },
+      "h002_disposition": "SUPPORTED_BY_D003",
+      "h002_disposition_basis": "Preregistered structural rule: 251/526 Gate-11 entrants carry a confirmed canonical OB-like block (confirmed_unmitigated_block observable), of which 164 are consumed by later lifecycle failure concentrated in block_expired (133) with block_already_mitigated (28) and close_below_bullish_zone (3); canonical eligibility (87, 16.5 percent) is materially rarer because of the lifecycle conjunction. Meaningful OB-like structure demonstrably enters later lifecycle states, so the NOT_SUPPORTED arm (UNAVAILABLE/no_confirmed_block domination with little later-state structure) does not hold. No numeric threshold was invented and no strategy change follows.",
+      "preregistered_structural_summaries": {
+        "snapshot_accounting": {
+          "scheduled": 13269,
+          "structural_decisions": 7316,
+          "missing_history": 4815,
+          "unavailable_input": 1138,
+          "evaluation_error": 0,
+          "reconciles": true
+        },
+        "gate11_entrants": 526,
+        "gate_funnel": {
+          "canonical_strategy": {
+            "entered": 1,
+            "failed": 1,
+            "passed": 0
+          },
+          "gate_10_internal_structure": {
+            "entered": 1489,
+            "failed": 963,
+            "passed": 526
+          },
+          "gate_11_confluence_score": {
+            "entered": 526,
+            "failed": 525,
+            "passed": 1
+          },
+          "gate_8_liquidity": {
+            "entered": 7316,
+            "failed": 3709,
+            "passed": 3607
+          },
+          "gate_9_displacement": {
+            "entered": 3607,
+            "failed": 2118,
+            "passed": 1489
+          }
+        },
+        "B_frozen_score_components": {
+          "check_fail": {
+            "FVG overlaps the order block zone": 525,
+            "HTF bias aligns with trade direction": 0,
+            "Liquidity sweep occurred before entry": 0,
+            "Price located in premium/discount zone": 0,
+            "Valid order block present": 522
+          },
+          "check_pass": {
+            "FVG overlaps the order block zone": 1,
+            "HTF bias aligns with trade direction": 526,
+            "Liquidity sweep occurred before entry": 526,
+            "Price located in premium/discount zone": 526,
+            "Valid order block present": 4
+          },
+          "combination_frequencies": {
+            "pd=True ob=False fvg=False": 522,
+            "pd=True ob=True fvg=False": 3,
+            "pd=True ob=True fvg=True": 1
+          },
+          "points_awarded": {
+            "FVG overlaps the order block zone": 1,
+            "HTF bias aligns with trade direction": 1052,
+            "Liquidity sweep occurred before entry": 1052,
+            "Price located in premium/discount zone": 526,
+            "Valid order block present": 8
+          },
+          "score_distribution": {
+            "5": 522,
+            "7": 3,
+            "8": 1
+          }
+        },
+        "C_discriminating_contingency": {
+          "pd=True ob=False fvg=False": 522,
+          "pd=True ob=True fvg=False": 3,
+          "pd=True ob=True fvg=True": 1
+        },
+        "D_canonical_ob_lifecycle": {
+          "eligible_count": 87,
+          "non_eligible_count": 439,
+          "reason_distribution": {
+            "block_already_mitigated": 28,
+            "block_expired": 133,
+            "close_below_bullish_zone": 3,
+            "confirmed_unmitigated_block": 87,
+            "no_confirmed_block": 275
+          },
+          "side_distribution": {
+            "FLAT": 275,
+            "LONG": 149,
+            "SHORT": 102
+          },
+          "state_distribution": {
+            "ELIGIBLE": 87,
+            "EXPIRED": 133,
+            "INVALIDATED": 3,
+            "MITIGATED": 28,
+            "UNAVAILABLE": 275
+          },
+          "state_x_direction": {
+            "ELIGIBLE": {
+              "LONG": 50,
+              "SHORT": 37
+            },
+            "EXPIRED": {
+              "LONG": 70,
+              "SHORT": 63
+            },
+            "INVALIDATED": {
+              "LONG": 3
+            },
+            "MITIGATED": {
+              "LONG": 26,
+              "SHORT": 2
+            },
+            "UNAVAILABLE": {
+              "FLAT": 275
+            }
+          },
+          "state_x_reason": {
+            "ELIGIBLE": {
+              "confirmed_unmitigated_block": 87
+            },
+            "EXPIRED": {
+              "block_expired": 133
+            },
+            "INVALIDATED": {
+              "close_below_bullish_zone": 3
+            },
+            "MITIGATED": {
+              "block_already_mitigated": 28
+            },
+            "UNAVAILABLE": {
+              "no_confirmed_block": 275
+            }
+          }
+        },
+        "E_acquisition_canonical_agreement": {
+          "direction_agreement": {
+            "agree": 251,
+            "disagree": 0,
+            "not_available": 275
+          },
+          "legacy_false_canonical_false": 437,
+          "legacy_false_canonical_true": 85,
+          "legacy_true_canonical_false": 2,
+          "legacy_true_canonical_true": 2
+        },
+        "F_canonical_failure_reasons": {
+          "block_already_mitigated": 28,
+          "block_expired": 133,
+          "close_below_bullish_zone": 3,
+          "confirmed_unmitigated_block": 87,
+          "no_confirmed_block": 275
+        },
+        "G_contextual_fvg_coexistence": {
+          "canonical_eligible_and_final_fvg": 60,
+          "canonical_eligible_no_final_fvg": 27,
+          "canonical_not_eligible_with_final_fvg": 116,
+          "canonical_overlap_false": 21,
+          "canonical_overlap_true": 39,
+          "direction_agreement": {
+            "agree": 60,
+            "disagree": 0,
+            "not_available": 0
+          },
+          "neither": 323,
+          "pairs_with_both": 60
+        },
+        "H_premium_discount_context": {
+          "pd=True eligible_ob=False fvg=False": 323,
+          "pd=True eligible_ob=False fvg=True": 116,
+          "pd=True eligible_ob=True fvg=False": 27,
+          "pd=True eligible_ob=True fvg=True": 60
+        }
+      },
+      "cross_surface_reconciliation": {
+        "B_pass_fail_pairs": true,
+        "B_score_distribution_sum": true,
+        "B_combination_sum": true,
+        "C_sum": true,
+        "D_state_sum": true,
+        "D_eligible_plus_non_eligible": true,
+        "E_four_cells_sum": true,
+        "E_direction_partition_sum": true,
+        "G_cells_sum": true,
+        "H_combination_sum": true,
+        "gate11_passed_vs_score_8": true,
+        "all_pass": true
+      },
+      "output": {
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_diagnostics/phase8-v2-D003/fold01/tc004-rerun1/phase8-v2-D003_result.json",
+        "sha256": "71f85982c3170c689678682184ccc2d3fe291bc74372a47e3dc8aed3a6d1b096",
+        "bytes": 5595,
+        "read_back_verified": true
+      },
+      "result_document": "docs/PHASE8_V2_DIAGNOSTIC_D003_RESULT.md",
+      "no_profitability_metrics": true,
+      "no_parameter_counterfactuals": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      },
+      "budget_after_result": {
+        "diagnostics_executed": "2 / 12",
+        "strategy_variants_observed": "1 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "The TC004 rerun completes the already-consumed D003 diagnostic; no additional diagnostic consumed."
       }
     }
   ],
