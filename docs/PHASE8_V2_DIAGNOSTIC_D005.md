@@ -1,0 +1,265 @@
+# PHASE 8 V2 — DIAGNOSTIC D005 SPECIFICATION (PREREGISTERED)
+
+Status: PREREGISTERED — NOT EXECUTED. This document is written BEFORE any D005 empirical
+access. Fold 01 is NOT opened during preregistration or tooling. The store is named for
+boundary definition only.
+
+Canonical baseline of this preregistration: result commit `6bb5c1ba63e21e66f66b5724011614253deda169`
+(tree `1e4fa4a2df8e661ab44010a74ad4e8ee5d6921d1`, parent `cae8637adfbfae7338179d2e4d0888d81266e916`).
+
+## 1. Scientific question
+
+Among decisions whose frozen V002 structural-pair evaluator reports a structurally-active
+canonical order block WITHOUT an associated same-direction final canonical FVG, what causal
+temporal relationships exist between that block and canonical FVG structure in the causally
+available frame, and why is the final FVG surface empty for those decisions?
+
+This is the preregistered H003 question: OB and FVG evidence may be causally related across a
+short temporal sequence rather than being required to appear as a strictly simultaneous state
+at one decision timestamp. D005 measures the temporal structure explicitly; it is the
+"later diagnostic" that H003's implementation boundary reserved. D005 is READ-ONLY: it
+implements no strategy, creates no variant, and consumes no variant budget.
+
+## 2. Empirical universe (future execution only — DO NOT execute in the preregistration or tooling task)
+
+Authorized future data: Tier-A Fold 01 only, store `fold-01-a8b406884ab3525a`, identity
+SHA-256 `a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4`, rows content
+SHA-256 `96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22`, 13,269 decision
+snapshots, coverage `fold-01/full`, re-hashed before any observation. The prohibited
+historical store `fold-01-1d710826193a6767` is never opened. Folds 02–04, 2025+ and holdout
+remain sealed. Tier B is NOT AUTHORIZED (candidate_ready 61 < 90).
+
+## 3. Primary population (structural definition — no observed count may be encoded)
+
+Future D005 population: V002 Gate-11 entrants (decisions in which
+`"gate_11_confluence_score"` is present in the frozen D001 adapter row's gate results) for
+which the frozen V002 structural-pair evaluator reports:
+
+* `structurally_active == True`, AND
+* `fvg_associated == False` under final-FVG semantics.
+
+The population is derived naturally during execution. No expected count — including the
+motivating V002 R001 values — may be encoded into tooling or tests.
+
+## 4. Reference populations (structural context only)
+
+For reconciliation and context only:
+
+* R1: V002 structurally active + final same-direction FVG associated;
+* R2: V002 structurally active + no final same-direction FVG associated (this is the
+  primary population, reported separately for partition proof);
+* R3: V002 non-active.
+
+R1 + R2 + R3 must partition the V002 Gate-11 entrant universe exactly under frozen V002
+semantics. OB state is never reinterpreted: the frozen V002 evaluator is the sole source of
+`structurally_active` and `fvg_associated`.
+
+## 5. Frozen configuration
+
+Reuse the repaired canonical V001/V002 FVG implementation exactly:
+
+* ATR period — unchanged;
+* displacement multiplier — unchanged;
+* gap definition — unchanged;
+* direction definition — unchanged;
+* fill semantics — unchanged.
+
+No alternate detector, no numeric trial, no alternate ATR/displacement threshold. The
+canonical detectors are imported, never reimplemented.
+
+## 6. Causal FVG history rules
+
+For every primary-population decision, D005 inspects ONLY the causally available M5 frame
+through `decision_at`. A candle whose `available_at > decision_at` is never inspected. FVGs
+are detected by the frozen canonical detector over that causal frame. No future FVG, no
+retrospective reconstruction, no temporal aggregation across decisions.
+
+## 7. Final-FVG reconciliation (fail closed)
+
+Before any historical FVG observation is used, D005 recomputes the frozen final
+same-direction unfilled FVG surface from the causal frame and requires EXACT reconciliation
+with the persisted V002 input surface. If the persisted final FVG list and the canonical
+recomputation disagree on any decision: FAIL CLOSED. No temporal aggregation is permitted to
+mask a mismatch.
+
+## 8. Temporal FVG universe (categories never collapsed)
+
+For each primary-population decision, report all causally detected canonical FVGs relevant
+to H003, distinguishing at minimum:
+
+* FVG formed BEFORE canonical OB confirmation;
+* FVG formed AT/AFTER canonical OB confirmation;
+* same-direction;
+* opposite-direction;
+* still unfilled at decision;
+* filled before decision.
+
+## 9. Temporal association definition (exact H003 preregistered relationship)
+
+H003's preregistered relationship is ORDERING-BASED: "OB and FVG evidence may be causally
+related across a short temporal sequence rather than being required to appear as a strictly
+simultaneous state at one decision timestamp." No numeric proximity, lag tolerance, or
+temporal window is preregistered anywhere in H003, so D005 invents none.
+
+`h003_temporal_association_decisions` therefore counts primary-population decisions for
+which AT LEAST ONE same-direction canonical FVG exists in the causal frame that was formed
+AT OR AFTER canonical OB confirmation and is still unfilled at the decision timestamp — the
+exact causal "temporal sequence" reading of H003 (the displacement imbalance follows its
+origin). FVGs formed before OB confirmation are reported descriptively
+(`SAME_DIRECTION_FVG_PRE_OB_ONLY`) but do NOT satisfy the H003 temporal-sequence
+relationship, because a strict temporal sequence requires the imbalance evidence to be
+causally produced by/after the structural origin.
+
+No after-observation modification of this rule is permitted.
+
+## 10. Temporal distance surface (descriptive only)
+
+For qualifying same-direction temporal relationships report, descriptively:
+
+* OB confirmation timestamp;
+* FVG formation timestamp;
+* signed bar distance;
+* absolute bar distance;
+* elapsed minutes;
+* whether the FVG forms before or after OB confirmation;
+* whether the FVG remains unfilled at decision;
+* whether it was filled before decision.
+
+Permitted summaries: count, min, max, median, exact integer histogram, p25 / p50 / p75.
+No optimal lag. No lag cutoff search. No threshold derivation from any distribution.
+
+## 11. Final-surface attrition categories (defined before execution)
+
+For active-OB decisions lacking a final FVG, classify the exact causal reason:
+
+* `NO_SAME_DIRECTION_FVG_EVER` — no same-direction canonical FVG exists in the causal frame;
+* `SAME_DIRECTION_FVG_EXISTED_BUT_FILLED` — a same-direction FVG was formed but filled
+  before the decision;
+* `SAME_DIRECTION_FVG_PRE_OB_ONLY` — same-direction FVGs exist, unfilled, but all formed
+  before OB confirmation (no post-confirmation temporal sequence);
+* `OPPOSITE_DIRECTION_ONLY` — only opposite-direction canonical FVGs exist in the causal frame.
+
+The four categories are exhaustive and mutually exclusive under the frozen detector; any
+decision that fits none is a FAIL-CLOSED accounting error, not an `other` bucket.
+
+## 12. H003 temporal-association count
+
+The count of primary-population decisions satisfying §9 is named ONLY
+`h003_temporal_association_decisions`. It is a structural count. It must NEVER be named or
+treated as `candidate_ready`, `rescued_candidates`, `candidate_if_temporal` or equivalent.
+
+## 13. Necessary variant-headroom classification (pure arithmetic, NOT science)
+
+Supervisory arithmetic recorded at preregistration (NOT empirical counterfactuals):
+
+* canonical-strategy rejects at V002 R001: 22 → best case 61 + 22 = 83 < 90;
+* Gate-12/13 rejects at V002 R001: 19 → best case 61 + 19 = 80 < 90.
+
+Therefore a V003 that modifies ONLY canonical-strategy protections, or ONLY Gate-12/13
+entry semantics, is mathematically unable to reach the 90-candidate Tier-A target. Neither
+variant is created.
+
+Temporal-only headroom rule: a temporal-association-only V003 can affect at most decisions
+whose V002 structural-active OB lacks the required final same-direction FVG but possesses
+valid causal temporal FVG structure under H003 — i.e. at most
+`h003_temporal_association_decisions`. Required headroom is 90 − 61 = 29. Classification:
+
+* `TEMPORAL_VARIANT_HEADROOM_POSSIBLE` if `h003_temporal_association_decisions >= 29`;
+* `TEMPORAL_VARIANT_HEADROOM_INSUFFICIENT` if `h003_temporal_association_decisions < 29`.
+
+This is a NECESSARY condition only. `>= 29` does NOT prove a variant would reach 90 (the
+affected decisions must still survive V002 score, canonical strategy and Gate 12/13 under
+whatever preregistered semantics a future variant defines). No automatic V003 follows from
+either classification. The 29 figure is an arithmetic feasibility bound only — NOT an H003
+support threshold, NOT a parameter, NOT a tuning objective, NOT a candidate prediction.
+
+## 14. H003 disposition rule (copied verbatim from the preregistered record)
+
+H003's existing preregistered criteria govern, exactly as registered before any D005
+evidence existed:
+
+* expected qualitative effect (verbatim): "If H003 is relevant, OB and FVG detections
+  should exhibit short, structured temporal offsets rather than being restricted to
+  same-bar co-occurrence; measurable only by a later dedicated diagnostic.";
+* potential failure mode (verbatim): "If causal OB/FVG pairs are temporally diffuse or
+  absent, temporal association is not economically meaningful for this strategy.";
+* expected frequency effect (verbatim): "Qualitative only: a temporal-association rule
+  would be expected to broaden admissible evidence relative to strict simultaneity; no
+  number is predicted."
+
+Application at execution: H003 is qualitatively SUPPORTED if the primary population is not
+near-zero AND qualifying temporal associations exhibit structured (non-degenerate, non-
+diffuse) offsets consistent with the expected qualitative effect; H003's failure mode holds
+if causal OB/FVG pairs are temporally diffuse or absent. The 29-observation headroom rule
+(§13) is NEVER the scientific support rule. Disposition values are drawn from the
+register's existing vocabulary (`SUPPORTED_BY_D005` / `NOT_SUPPORTED_BY_D005`), applied
+qualitatively. If at execution time the record were found to lack a usable
+pre-observation interpretation rule, execution would STOP and return for supervisory
+review; this document records that the rule above exists and is copied verbatim.
+
+## 15. Boundaries — hypotheses D005 does NOT touch
+
+* H001 — `SUPPORTED_BY_D003_D004_SYNTHESIS`: not reopened; final-FVG geometry appears only
+  as frozen V002 input context.
+* H002 — `SUPPORTED_BY_D003`: not reopened, not re-tested.
+* H006 — `SUPPORTED_BY_D004`: not reopened, not re-tested.
+* H007 — represented by V002 R001 (`OPPORTUNITY_INSUFFICIENT_TIER_A_FOLD01_OBSERVED`):
+  not reopened; V002 semantics are consumed frozen.
+* H005 — `SUPPORTED_BY_V001`: not reopened.
+
+## 16. Prohibited counterfactuals and banned outputs
+
+D005 does NOT calculate: candidate_ready if temporal association were accepted; Gate-11
+pass if historical FVG were retained; candidate count if filled FVGs were reused; candidate
+count without the final-FVG requirement; any alternate score threshold; any alternate age
+cutoff. D005 reports structural temporal evidence only.
+
+No downstream relaxation is tested: DXY, regime, bias, news, session, allowlist, Gate-12/13
+liquidity alignment, entry readiness and the score threshold remain frozen descriptive V002
+context.
+
+Banned output concepts (fail closed): `candidate_if_temporal`, `rescued_candidate`,
+`alternate_lag`, `optimal_lag`, `temporal_threshold`, `candidate_without_final_fvg`, `pnl`,
+`profit`, `win_rate`, `expectancy`, `drawdown`, `sharpe`, `closed_trades`. No temporal
+parameter search of any kind (1/2/3/5/10 bars, session windows, minute thresholds, ATR-based
+temporal windows): no numeric trial, no optimizer.
+
+## 17. Immutability of V002 artifacts
+
+Read-only diagnostic. `bot/strategy/variant_v002.py`,
+`backtests/phase8_v2_variant_v002_eval.py`, TC001 and TC002 are NOT modified. The V002
+strategy module remains byte-identical (Git blob `8272c28552c05067b6dc3ba039ee8df2dbbfb8b4`).
+
+## 18. Tooling reuse and two-phase discipline
+
+Phase B tooling (`backtests/phase8_v2_diagnostic_d005.py`) reuses where possible: D001
+snapshot classification, the V001 canonical FVG reconstruction/mirror, the V002
+structural-pair evaluator, the V002 Gate-11 entrant definition, canonical Git-blob
+provenance (`canonical_git_blob_v1`), Fold-01 boundary guards, and deterministic state
+seed/carry. Detectors are never reimplemented. Phase A (this preregistration) precedes
+tooling; Phase B synthetic-tested tooling is committed and pushed before any Fold-01
+access; empirical execution only under separate supervisory authorization after the remote
+resolves to the frozen tooling commit.
+
+## 19. Budget
+
+Registration and tooling freeze consume zero diagnostic budget: diagnostics remain `3 / 12`
+at the tooling-freeze hard stop. Strategy variants remain `2 / 8`; numeric parameter trials
+remain `0 / 4`; budget lock ACTIVE; V003 NOT CREATED. At the instant a future separately
+authorized D005 execution first reads Fold 01, diagnostics become permanently `4 / 12`. No
+strategy-variant budget is consumed by D005 under any outcome.
+
+## 20. Required synthetic test coverage (Phase B, synthetic data only)
+
+At minimum: (1) active OB + no FVG ever; (2) active OB + same-direction FVG after OB;
+(3) active OB + same-direction FVG before OB only; (4) active OB + same-direction FVG
+formed then filled before decision; (5) active OB + final unfilled same-direction FVG
+reference case; (6) opposite-direction FVG only; (7) LONG block; (8) SHORT block;
+(9) post-decision FVG excluded causally; (10) persisted final-FVG reconciliation;
+(11) exact temporal-distance arithmetic; (12) malformed timestamp fail closed;
+(13) block-identity mismatch fail closed; (14) historical final-FVG list mismatch fail
+closed; (15) no counterfactual-candidate keys. Reconciliations: V002 entrant population,
+V002 structural state, structurally-active population, final-FVG association status,
+primary/reference partition, per-FVG causality, final-surface recomputation equality,
+temporal-category accounting, H003 count subset-of-primary, reserved-evidence guards. No
+empirical count is encoded anywhere.
