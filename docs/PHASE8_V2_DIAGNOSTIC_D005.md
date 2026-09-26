@@ -312,3 +312,144 @@ c615c3e9ae15f6c47b1b9da27b835d46a431b05c): initial Phase-A preregistration
 correction `d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941`.  The
 full-document SHA after this append is recorded in the register TC001 record and the
 corrected tooling's `SPEC_SHA256`.
+
+---
+
+## 22. TC002 — V002 Marginal/Intersection Partition and CLI Boundary Clarification
+
+Status: POST_EXPOSURE_MEASUREMENT_TOOLING_CORRECTION (phase8-v2-D005-TC002).
+
+This section appends to — and never rewrites — sections 1–21.  The scientific
+surfaces of D005 are unchanged: the H003 statement and ordering-only rule, the
+primary-population definition, the temporal FVG detector, the TC001 causal
+availability clock, the attrition categories, the temporal-distance metrics,
+the 29-observation headroom arithmetic and the H003 qualitative interpretation
+rule all stand exactly as preregistered.  TC002 corrects two measurement
+tooling defects exposed by D005 Attempt 1 and creates no new scientific
+hypothesis.
+
+### 22.1 Attempt-1 blockage identity (bound incident history)
+
+D005 Attempt 1 completed the full 13,269-snapshot Fold-01 observation loop
+over the preserved authorized store `fold-01-a8b406884ab3525a` (identity
+`a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4`, rows
+`96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22`), then
+failed closed during aggregation with the exact frozen error
+`ReconciliationError: primary population 42 != structurally-active without
+final FVG R2=34`.  Exposure timestamp (first authorized store processing):
+`2026-09-26T13:18:42.145570+00:00`; diagnostics are therefore permanently
+4 / 12, strategy variants 2 / 8, numeric trials 0 / 4.  The external blockage
+artifact `phase8-v2-D005_ATTEMPT1_BLOCKAGE.json`
+(SHA-256 `168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2`,
+3692 bytes) is preserved unmodified.  No successful D005 R001 exists; no H003
+interpretation was made; V003 was not created.  A separate PRE-ACCESS
+WRAPPER_REFUSAL at 2026-09-26T13:14:25Z (CLI path scan) consumed ZERO
+empirical exposure and no budget.  The values 42, 34 and 8 are recorded here
+ONLY as observed incident history; they are never test oracles and the
+corrected logic is justified from set semantics alone.
+
+### 22.2 Primary defect — D005_V002_MARGINAL_INTERSECTION_PARTITION_MISMATCH
+
+The Attempt-1 tooling computed the reference partition from the frozen V002
+aggregate MARGINALS as `R1 = associated`, `R2 = active − associated`.  This
+subtraction is invalid: `v002_structurally_active_count` and
+`v002_associated_same_direction_fvg_count` are independent marginals of two
+different boolean attributes, and V002 can legitimately report
+`fvg_associated == True` while `structurally_active == False` — for example a
+canonical block in state `MITIGATED` (or `INVALIDATED`/`CONSUMED`) still
+carries the same-direction persisted final FVG association attached by the
+frozen evaluator.  Therefore `associated ⊄ active`, the subtraction
+under-counts R2 and is prohibited.
+
+### 22.3 Corrected four-cell contingency (the only partition rule)
+
+The V002 population partition is constructed directly from individual frozen
+per-decision V002 observations.  For every Gate-11 entrant exactly one cell:
+
+* A `ACTIVE_ASSOCIATED` — `structurally_active == True` AND
+  `fvg_associated == True`;
+* B `ACTIVE_NOT_ASSOCIATED` — `structurally_active == True` AND
+  `fvg_associated == False` — this is the D005 PRIMARY population;
+* C `NONACTIVE_ASSOCIATED` — `structurally_active == False` AND
+  `fvg_associated == True`;
+* D `NONACTIVE_NOT_ASSOCIATED` — `structurally_active == False` AND
+  `fvg_associated == False`.
+
+Required: `A + B + C + D == Gate11 entrants` exactly.
+
+### 22.4 Corrected reference populations
+
+* R1 = `ACTIVE_ASSOCIATED`;
+* R2 = `ACTIVE_NOT_ASSOCIATED` (primary D005 population);
+* R3 = all non-active = `NONACTIVE_ASSOCIATED + NONACTIVE_NOT_ASSOCIATED`.
+
+Required: `R1 + R2 + R3 == entrants` and `primary_count == R2` exactly.  R1
+is NOT defined as the V002 associated marginal.
+
+### 22.5 Marginals as reconciliation totals only
+
+The frozen V002 aggregate marginals continue to be consumed, as
+reconciliation totals only:
+
+* `v002_structurally_active_count == A + B`;
+* `v002_associated_same_direction_fvg_count == A + C`;
+* `gate11_entrants_observed == A + B + C + D`.
+
+These equalities explicitly prove why the two marginals cannot be directly
+subtracted: their overlap is cell A, which is counted in both.
+
+### 22.6 Primary decision-ID set reconciliation (no count-only check)
+
+D005 aggregation now receives the actual per-decision frozen V002
+observations.  Let `primary_ids` be the decision IDs of V002 observations
+with `structurally_active == True` AND `fvg_associated == False`, and
+`d005_ids` the decision IDs actually observed by D005.  Required:
+
+* `primary_ids == d005_ids` as exact SETS (never count-only);
+* no duplicate decision IDs anywhere;
+* every D005 observation maps to exactly one V002 observation;
+* every primary V002 observation receives exactly one D005 observation.
+
+Any violation fails closed.
+
+### 22.7 Secondary defect — D005_AUTHORIZED_STORE_HASH_PATH_YEAR_FALSE_POSITIVE
+
+The inherited generic CLI path guard scanned arbitrary four-digit substrings
+as calendar years, so numeric fragments embedded in the authorized store
+directory name `fold-01-a8b406884ab3525a` (`4068`, `3525`) were misread as
+`>= 2025` and refused BEFORE any store access.  This refusal consumed no
+budget.  The D005 CLI now performs a D005-specific structured pre-open
+boundary check instead of arbitrary substring-year scanning.  Reserved-
+evidence protection is NOT weakened: the guard still refuses holdout /
+final-validation tokens, standalone year directory components (`2025`,
+`2026`, ...), structured `year=YYYY` markers with YYYY >= 2025, ISO-style
+components beginning `2025-` / `2026-`, any different Fold store basename,
+the prohibited historical store `fold-01-1d710826193a6767`, and Fold-02+
+basenames.  Arbitrary four-digit substrings embedded inside SHA hashes,
+fingerprints, store IDs and alphanumeric package IDs are never interpreted
+as calendar years.  The post-open structured store-identity checks (Fold 01
+ID, full coverage, M5, exact evaluation window, prohibited-historical-store
+refusal, identity SHA) remain authoritative; pathname checks alone are never
+sufficient.
+
+### 22.8 Budget and scope integrity
+
+TC002 consumes ZERO diagnostic budget: diagnostics remain 4 / 12, variants
+2 / 8, numeric 0 / 4.  A later corrected D005 empirical rerun remains 4 / 12
+because D005 has already consumed its diagnostic slot; it must NOT become
+5 / 12.  No empirical access occurs during TC002: no Fold store of any kind
+is opened, all regression fixtures are synthetic, and the V002 strategy
+module (blob 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4) and the frozen V002
+measurement tooling are byte-identical before and after.
+
+### 22.9 Historical specification hashes
+
+All preserved and verified from the committed Git blobs: initial Phase-A
+preregistration `bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401`
+(df19e89a8afd72deda2b58c79f38a798daaead76); ordering-only correction
+`d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941`
+(c615c3e9ae15f6c47b1b9da27b835d46a431b05c); TC001 causal-clock correction
+`2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8`
+(7c9608d5b9871414a830e38395d1a67f7efacad2).  The new full-document SHA-256
+after this append is recorded in the register TC002 record and the corrected
+tooling's `SPEC_SHA256`.

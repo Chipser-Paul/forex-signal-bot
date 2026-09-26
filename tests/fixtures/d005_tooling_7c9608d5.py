@@ -68,11 +68,10 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import sys
 import uuid
 from datetime import date, datetime, timezone
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 import pandas as pd
@@ -90,7 +89,7 @@ from backtests.phase8_v2_diagnostic_d001 import (  # noqa: E402
     evaluate_orchestration_decision,
     reconcile_accounting,
 )
-from backtests.phase8_v2_variant_v001_eval import HOLDOUT_TOKENS  # noqa: E402
+from backtests.phase8_v2_variant_v001_eval import reject_holdout_path  # noqa: E402
 from backtests.phase8_v2_variant_v002_eval import (  # noqa: E402
     _entry_frame,
     _gate_funnel,
@@ -105,7 +104,7 @@ H003_ID = "phase8-v2-H003"
 V002_ID = "phase6-development-v2-V002"
 CHARTER_ID = "phase8-v2-research-charter-v1-8527e3a5eec98f53"
 CHARTER_SHA256 = "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc"
-SPEC_SHA256 = "b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11"
+SPEC_SHA256 = "2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8"
 SPECIFICATION_DOCUMENT = "docs/PHASE8_V2_DIAGNOSTIC_D005.md"
 CLASSIFICATION = (
     "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE"
@@ -168,68 +167,6 @@ class ReconciliationError(D005Error):
 
 class FinalSurfaceMismatch(D005Error):
     """Persisted final-FVG surface does not reconcile with canonical recomputation."""
-
-
-# ---------------------------------------------------------------------------
-# D005-TC002 structured pre-open boundary check (CLI wrapper only)
-# ---------------------------------------------------------------------------
-
-#: The ONLY Fold store basename the D005 CLI may open.  Its hash material
-#: embeds four-digit numeric fragments (``4068``, ``3525``) that are NOT
-#: calendar years (D005-TC002: the inherited arbitrary substring-year scan
-#: refused the authorized store before any access; that refusal consumed no
-#: budget).  Post-open structured store-identity checks remain authoritative.
-AUTHORIZED_FOLD01_STORE_BASENAME = "fold-01-a8b406884ab3525a"
-
-_STANDALONE_YEAR_PART = re.compile(r"^\d{4}$")
-_ISO_YEAR_PREFIX_PART = re.compile(r"^(?:20|19)\d{2}-")
-_STRUCTURAL_YEAR_MARKER = re.compile(r"year=(\d{4})")
-_FOLD_STORE_PART = re.compile(r"^fold-\d{2}-")
-
-
-def validate_authorized_store_path(path: str | Path) -> None:
-    """D005-specific structured pre-open boundary check (D005-TC002).
-
-    Replaces the D005 CLI's use of the inherited arbitrary substring-year
-    scan.  Reserved-evidence protection is NOT weakened:
-
-    * holdout / final-validation tokens are refused by name;
-    * standalone four-digit directory components, structured ``year=YYYY``
-      markers and ISO-style ``YYYY-`` components are refused when the year
-      is 2025 or later;
-    * the prohibited historical store and every Fold store basename other
-      than the authorized Fold-01 one are refused.
-
-    Numeric fragments embedded inside SHA hashes, fingerprints, store IDs
-    and alphanumeric package IDs are NEVER interpreted as calendar years:
-    ``fold-01-a8b406884ab3525a`` contains ``4068``/``3525`` and must pass.
-    Pathname validation is pre-open plumbing only; the post-open structured
-    store-identity checks (Fold 01 ID, full coverage, M5, exact evaluation
-    window, prohibited-historical-store refusal) remain authoritative.
-    """
-    text = str(path)
-    lowered = text.lower()
-    for token in HOLDOUT_TOKENS:
-        if token in lowered:
-            raise BoundaryError(f"holdout evidence path refused: {text!r}")
-    for part in PureWindowsPath(text).parts:
-        part_lower = part.lower()
-        if part_lower == HISTORICAL_STORE_ID:
-            raise BoundaryError(f"prohibited historical store refused: {text!r}")
-        if _STANDALONE_YEAR_PART.match(part) and int(part) >= 2025:
-            raise BoundaryError(f"2025+ evidence path refused: {text!r}")
-        if _ISO_YEAR_PREFIX_PART.match(part) and int(part[:4]) >= 2025:
-            raise BoundaryError(f"2025+ evidence path refused: {text!r}")
-        for year in _STRUCTURAL_YEAR_MARKER.findall(part_lower):
-            if int(year) >= 2025:
-                raise BoundaryError(f"2025+ evidence path refused: {text!r}")
-        if _FOLD_STORE_PART.match(part_lower) and (
-            part_lower != AUTHORIZED_FOLD01_STORE_BASENAME
-        ):
-            raise BoundaryError(
-                "only the authorized Fold-01 store may be opened; refused: "
-                f"{text!r}"
-            )
 
 
 # ---------------------------------------------------------------------------
@@ -632,93 +569,30 @@ def _distance_summary(distances: list[int]) -> dict[str, Any]:
 
 def aggregate_d005(
     observations: Iterable[Mapping[str, Any]],
-    v002_observations: Iterable[Mapping[str, Any]],
     v002_pair_surface: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Aggregate the D005 primary observations and reconcile the partition.
 
-    D005-TC002: the reference partition is built directly from the
-    individual frozen per-decision V002 observations as a four-cell
-    contingency over (structurally_active, fvg_associated).  The frozen V002
-    aggregate marginals are INDEPENDENT totals used only for reconciliation,
-    because ``fvg_associated`` is NOT a subset of ``structurally_active``
-    (a MITIGATED/INVALIDATED/CONSUMED block still carries its same-direction
-    final FVG association); subtracting the two marginals is prohibited.
-
-    Cells: A ACTIVE_ASSOCIATED, B ACTIVE_NOT_ASSOCIATED (the D005 primary
-    population), C NONACTIVE_ASSOCIATED, D NONACTIVE_NOT_ASSOCIATED.
-    R1 = A, R2 = B, R3 = C + D.  The D005-observed decision-ID set must
-    equal the primary decision-ID set exactly (never count-only).
+    The V002 structural-pair surface (frozen TC001/TC002 aggregate shape)
+    supplies the entrant universe; the primary population is R2 and the three
+    reference populations must partition it exactly.
     """
     observations = list(observations)
-    v002_observations = list(v002_observations)
     entrants = int(v002_pair_surface["gate11_entrants_observed"])
-    active_marginal = int(v002_pair_surface["v002_structurally_active_count"])
-    associated_marginal = int(
-        v002_pair_surface["v002_associated_same_direction_fvg_count"]
-    )
-    if len(v002_observations) != entrants:
-        raise ReconciliationError(
-            f"V002 observation count {len(v002_observations)} != entrants "
-            f"{entrants}"
-        )
-    v002_ids = [str(item["decision_id"]) for item in v002_observations]
-    if len(set(v002_ids)) != len(v002_ids):
-        raise ReconciliationError(
-            "duplicate decision IDs in the V002 observations"
-        )
-    cell_a = cell_b = cell_c = cell_d = 0
-    primary_ids: set[str] = set()
-    for item in v002_observations:
-        is_active = bool(item["v002_structurally_active"])
-        is_associated = bool(item["v002_fvg_associated"])
-        if is_active and is_associated:
-            cell_a += 1
-        elif is_active:
-            cell_b += 1
-            primary_ids.add(str(item["decision_id"]))
-        elif is_associated:
-            cell_c += 1
-        else:
-            cell_d += 1
-    if cell_a + cell_b + cell_c + cell_d != entrants:
-        raise ReconciliationError(
-            f"four-cell contingency {cell_a}+{cell_b}+{cell_c}+{cell_d} "
-            f"!= entrants {entrants}"
-        )
-    # Marginals are reconciliation totals only; their overlap (cell A) is
-    # counted in both, which is exactly why they cannot be subtracted.
-    if active_marginal != cell_a + cell_b:
-        raise ReconciliationError(
-            f"active marginal {active_marginal} != A+B {cell_a + cell_b}"
-        )
-    if associated_marginal != cell_a + cell_c:
-        raise ReconciliationError(
-            f"associated marginal {associated_marginal} != A+C {cell_a + cell_c}"
-        )
-    r1, r2, r3 = cell_a, cell_b, cell_c + cell_d
+    active = int(v002_pair_surface["v002_structurally_active_count"])
+    associated = int(v002_pair_surface["v002_associated_same_direction_fvg_count"])
     primary_count = len(observations)
+    r1 = associated
+    r2 = active - associated
+    r3 = entrants - active
     if primary_count != r2:
         raise ReconciliationError(
-            f"primary population {primary_count} != ACTIVE_NOT_ASSOCIATED "
-            f"R2={r2}"
+            f"primary population {primary_count} != structurally-active "
+            f"without final FVG R2={r2}"
         )
     if r1 + r2 + r3 != entrants:
         raise ReconciliationError(
             f"reference partition {r1}+{r2}+{r3} != entrants {entrants}"
-        )
-    d005_ids = [str(observation["decision_id"]) for observation in observations]
-    if len(set(d005_ids)) != len(d005_ids):
-        raise ReconciliationError(
-            "duplicate decision IDs in the D005 observations"
-        )
-    if set(d005_ids) != primary_ids:
-        missing = sorted(primary_ids - set(d005_ids))
-        extra = sorted(set(d005_ids) - primary_ids)
-        raise ReconciliationError(
-            "D005 observation decision IDs do not equal the primary V002 "
-            "decision-ID set exactly "
-            f"(missing={missing}, extra={extra})"
         )
 
     categories = {name: 0 for name in ATTRITION_CATEGORIES}
@@ -778,29 +652,11 @@ def aggregate_d005(
                 "== True AND fvg_associated == False under final-FVG "
                 "semantics; derived naturally during execution"
             ),
-            "four_cell_contingency": {
-                "ACTIVE_ASSOCIATED": cell_a,
-                "ACTIVE_NOT_ASSOCIATED": cell_b,
-                "NONACTIVE_ASSOCIATED": cell_c,
-                "NONACTIVE_NOT_ASSOCIATED": cell_d,
-                "sums_to_entrants_exactly": (
-                    cell_a + cell_b + cell_c + cell_d == entrants
-                ),
-                "marginals_are_reconciliation_totals_only": True,
-                "associated_is_not_a_subset_of_active": True,
-                "marginal_subtraction_prohibited": True,
-                "active_marginal_reconciles": active_marginal == cell_a + cell_b,
-                "associated_marginal_reconciles": (
-                    associated_marginal == cell_a + cell_c
-                ),
-            },
-            "primary_decision_id_set_reconciles_exactly": True,
             "reference_populations_partition": {
                 "R1_active_with_final_same_direction_fvg": r1,
                 "R2_active_without_final_same_direction_fvg": r2,
                 "R3_v002_non_active": r3,
                 "partitions_entrants_exactly": r1 + r2 + r3 == entrants,
-                "primary_equals_R2": primary_count == r2,
             },
             "h003_side_counts": {
                 "LONG": sides.get("LONG", 0),
@@ -1060,7 +916,7 @@ def run_d005(
         },
         "gate_funnel": _gate_funnel(rows),
         "v002_reference_surface": v002_surface,
-        **aggregate_d005(d005_observations, v002_observations, v002_surface),
+        **aggregate_d005(d005_observations, v002_surface),
         "h003_disposition_rule": (
             "H003's existing preregistered expected qualitative effect and "
             "potential failure mode govern, applied qualitatively at "
@@ -1137,29 +993,6 @@ def assert_expected_surfaces(document: Mapping[str, Any]) -> None:
         raise D005Error(
             "primary population does not equal R2 (active without final FVG)"
         )
-    if not partition.get("primary_equals_R2"):
-        raise D005Error(
-            "reference partition does not assert primary_equals_R2 (D005-TC002)"
-        )
-    contingency = population.get("four_cell_contingency")
-    if not contingency:
-        raise D005Error("D005 four-cell contingency surface missing (D005-TC002)")
-    if not (
-        contingency["sums_to_entrants_exactly"]
-        and contingency["marginals_are_reconciliation_totals_only"]
-        and contingency["associated_is_not_a_subset_of_active"]
-        and contingency["marginal_subtraction_prohibited"]
-        and contingency["active_marginal_reconciles"]
-        and contingency["associated_marginal_reconciles"]
-    ):
-        raise D005Error(
-            "four-cell contingency reconciliation flags are not all true "
-            "(D005-TC002)"
-        )
-    if not population.get("primary_decision_id_set_reconciles_exactly"):
-        raise D005Error(
-            "primary decision-ID set reconciliation flag missing (D005-TC002)"
-        )
     attrition = document["final_surface_attrition"]
     if not attrition["reconciles_to_primary_population"]:
         raise D005Error("attrition categories do not reconcile to the primary population")
@@ -1184,7 +1017,7 @@ def _canonical(value: Any) -> str:
 def write_result(material: Mapping[str, Any], rendered: bytes, output_dir: Path) -> tuple[Path, str]:
     """Atomically write the deterministic result; refuse overwrite."""
     output_dir = Path(output_dir)
-    validate_authorized_store_path(str(output_dir))
+    reject_holdout_path(str(output_dir))
     target = output_dir / "phase8-v2-D005_result.json"
     if target.exists():
         raise D005Error(f"result already exists; refusing overwrite: {target}")
@@ -1207,7 +1040,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     from bot.validation.market_feature_store import FoldFeatureStore  # noqa: PLC0415
 
-    validate_authorized_store_path(args.store)
+    reject_holdout_path(args.store)
     store = FoldFeatureStore.open(args.store)
     document, rendered = run_d005(
         store,

@@ -15,6 +15,16 @@ candle's ``open_time`` is descriptive metadata only
 (``fvg_completion_open_time``).  Same-candle / next-candle / previous-candle
 regressions pin the boundary semantics and the frozen 81c6a6f tooling is
 proven defective in-process.
+
+D005-TC002 (post-exposure measurement correction): the reference partition
+is the four-cell contingency over (structurally_active, fvg_associated)
+built from individual frozen V002 observations — the aggregate marginals are
+reconciliation totals only and are never subtracted
+(``fvg_associated`` is NOT a subset of ``structurally_active``); D005
+decision IDs must equal the primary decision-ID set exactly; and the CLI
+performs a structured pre-open boundary check that never misreads hash
+fragments (``4068``/``3525``) in the authorized store basename as years.
+No empirical Fold-01 value is encoded anywhere in this file.
 """
 from __future__ import annotations
 
@@ -33,6 +43,7 @@ from backtests import phase8_v2_diagnostic_d005 as d005
 from backtests import phase8_v2_variant_v002_eval as v002_eval
 from bot.strategy.config import StrategyConfig
 from bot.strategy.models import StrategySide
+from bot.strategy.variant_v002 import evaluate_v002_structural_pair
 from tests.test_phase8_v2_v002_variant import build_rows, to_frame
 
 UTC = timezone.utc
@@ -851,7 +862,9 @@ def test_banned_concepts_are_structurally_refused():
 
 
 # ---------------------------------------------------------------------------
-# Aggregation, partition, headroom classification
+# Aggregation, partition, headroom classification (D005-TC002 corrected:
+# four-cell contingency from individual V002 observations; marginals are
+# reconciliation totals only — never subtracted)
 # ---------------------------------------------------------------------------
 
 
@@ -860,6 +873,15 @@ def _surface(entrants=10, active=4, associated=1):
         "gate11_entrants_observed": entrants,
         "v002_structurally_active_count": active,
         "v002_associated_same_direction_fvg_count": associated,
+    }
+
+
+def _v002_obs(decision_id, *, active, associated):
+    """Minimal frozen-V002-observation shape for partition classification."""
+    return {
+        "decision_id": decision_id,
+        "v002_structurally_active": active,
+        "v002_fvg_associated": associated,
     }
 
 
@@ -932,11 +954,31 @@ def test_aggregate_partition_headroom_and_categories():
         _d005_obs("d", "NO_SAME_DIRECTION_FVG_EVER", False),
         _d005_obs("e", "OPPOSITE_DIRECTION_ONLY", False),
     ]
-    # primary=5 => R2=5, active=6 => R1=1, entrants=12 => R3=6
-    aggregate = d005.aggregate_d005(observations, _surface(entrants=12, active=6, associated=1))
+    # primary=5 (cell B) => R2=5; cell A=1 => R1=1; entrants=12 => R3=6
+    v002_observations = (
+        [_v002_obs(name, active=True, associated=False) for name in ("a", "b", "c", "d", "e")]
+        + [_v002_obs("x", active=True, associated=True)]
+        + [_v002_obs(f"n{i}", active=False, associated=False) for i in range(6)]
+    )
+    aggregate = d005.aggregate_d005(
+        observations, v002_observations, _surface(entrants=12, active=6, associated=1)
+    )
     assert aggregate["D005_population"]["primary_population"] == 5
     partition = aggregate["D005_population"]["reference_populations_partition"]
     assert partition["partitions_entrants_exactly"] is True
+    assert partition["primary_equals_R2"] is True
+    contingency = aggregate["D005_population"]["four_cell_contingency"]
+    assert contingency["ACTIVE_ASSOCIATED"] == 1
+    assert contingency["ACTIVE_NOT_ASSOCIATED"] == 5
+    assert contingency["NONACTIVE_ASSOCIATED"] == 0
+    assert contingency["NONACTIVE_NOT_ASSOCIATED"] == 6
+    assert contingency["sums_to_entrants_exactly"] is True
+    assert contingency["marginals_are_reconciliation_totals_only"] is True
+    assert contingency["associated_is_not_a_subset_of_active"] is True
+    assert contingency["marginal_subtraction_prohibited"] is True
+    assert aggregate["D005_population"][
+        "primary_decision_id_set_reconciles_exactly"
+    ] is True
     assert aggregate["final_surface_attrition"]["categories"] == {
         "NO_SAME_DIRECTION_FVG_EVER": 1,
         "OPPOSITE_DIRECTION_ONLY": 1,
@@ -962,7 +1004,12 @@ def test_headroom_possible_boundary_at_29():
         _d005_obs(f"d{i}", "SAME_DIRECTION_FVG_EXISTED_BUT_FILLED", True)
         for i in range(29)
     ]
-    aggregate = d005.aggregate_d005(observations, _surface(entrants=40, active=29, associated=0))
+    v002_observations = [_v002_obs(f"d{i}", active=True, associated=False) for i in range(29)] + [
+        _v002_obs(f"n{i}", active=False, associated=False) for i in range(11)
+    ]
+    aggregate = d005.aggregate_d005(
+        observations, v002_observations, _surface(entrants=40, active=29, associated=0)
+    )
     assert aggregate["headroom_feasibility"]["classification"] == (
         "TEMPORAL_VARIANT_HEADROOM_POSSIBLE"
     )
@@ -971,27 +1018,65 @@ def test_headroom_possible_boundary_at_29():
     ] == 29
 
 
-def test_aggregate_fails_closed_on_partition_violation():
+def test_aggregate_fails_closed_on_marginal_mismatch():
+    # active marginal disagrees with the four-cell construction
+    v002_observations = [
+        _v002_obs("a", active=True, associated=False),
+        _v002_obs("b", active=False, associated=False),
+    ]
     with pytest.raises(d005.ReconciliationError):
         d005.aggregate_d005(
             [_d005_obs("a", "NO_SAME_DIRECTION_FVG_EVER", False)],
-            _surface(entrants=10, active=4, associated=1),  # R2 = 3 != 1
+            v002_observations,
+            _surface(entrants=2, active=3, associated=0),  # active 3 != A+B 1
+        )
+    # associated marginal disagrees with the four-cell construction
+    with pytest.raises(d005.ReconciliationError):
+        d005.aggregate_d005(
+            [_d005_obs("a", "NO_SAME_DIRECTION_FVG_EVER", False)],
+            v002_observations,
+            _surface(entrants=2, active=1, associated=2),  # associated 2 != A+C 0
         )
 
 
+def test_aggregate_fails_closed_when_contingency_misses_entrants():
+    v002_observations = [
+        _v002_obs("a", active=True, associated=False),
+        _v002_obs("b", active=False, associated=False),
+    ]
+    with pytest.raises(d005.ReconciliationError) as error:
+        d005.aggregate_d005(
+            [_d005_obs("a", "NO_SAME_DIRECTION_FVG_EVER", False)],
+            v002_observations,
+            _surface(entrants=7, active=1, associated=0),  # 2 != 7
+        )
+    assert "!= entrants" in str(error.value)
+
+
 def test_aggregate_fails_closed_on_unknown_category():
+    v002_observations = [_v002_obs("a", active=True, associated=False)]
     with pytest.raises(d005.ReconciliationError):
         d005.aggregate_d005(
             [_d005_obs("a", "SOME_NEW_CATEGORY", False)],
-            _surface(entrants=10, active=4, associated=1),
+            v002_observations,
+            _surface(entrants=1, active=1, associated=0),
         )
 
 
 def test_aggregate_fails_closed_when_h003_exceeds_primary():
+    # The accumulated H003 count versus the primary population is a
+    # structural invariant; membership can only inflate via corrupted
+    # per-decision state, and a qualifying-count divergence fails closed
+    # before any inflated count could survive.
     observations = [_d005_obs("a", "NO_SAME_DIRECTION_FVG_EVER", False)]
     observations[0]["h003_temporal_association"] = True  # corrupt
+    observations[0]["h003_qualifying_fvg_count"] = 2  # inconsistent with distances
     with pytest.raises(d005.ReconciliationError):
-        d005.aggregate_d005(observations, _surface(entrants=10, active=4, associated=1))
+        d005.aggregate_d005(
+            observations,
+            [_v002_obs("a", active=True, associated=False)],
+            _surface(entrants=1, active=1, associated=0),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1106,3 +1191,284 @@ def test_boundary_guards_reused_from_v002():
     with pytest.raises(Exception) as error:
         d005.check_store_boundary(identity)
     assert "refused" in str(error.value)
+
+
+# ---------------------------------------------------------------------------
+# D005-TC002 regressions: four-cell partition, primary-ID set reconciliation,
+# real V002 semantics, structured pre-open CLI boundary guard.
+#
+# NO empirical Fold-01 value is encoded: attempt-1 counts (42/34/8) are
+# incident history only and appear in NO assertion anywhere.
+# ---------------------------------------------------------------------------
+
+
+def test_tc002_four_cell_partition_synthetic():
+    """Cells A/B/C/D each populated; R1=1, R2=1, R3=2; marginals = 2 each.
+
+    Also proves the PROHIBITED old arithmetic (active − associated) would
+    yield 0 instead of the true R2 = 1 — the exact defect class that blocked
+    attempt 1 — from set semantics, not from any empirical value.
+    """
+    v002_observations = [
+        _v002_obs("cell-a", active=True, associated=True),
+        _v002_obs("cell-b", active=True, associated=False),
+        _v002_obs("cell-c", active=False, associated=True),
+        _v002_obs("cell-d", active=False, associated=False),
+    ]
+    surface = _surface(entrants=4, active=2, associated=2)
+    aggregate = d005.aggregate_d005(
+        [_d005_obs("cell-b", "NO_SAME_DIRECTION_FVG_EVER", False)],
+        v002_observations,
+        surface,
+    )
+    contingency = aggregate["D005_population"]["four_cell_contingency"]
+    assert contingency["ACTIVE_ASSOCIATED"] == 1
+    assert contingency["ACTIVE_NOT_ASSOCIATED"] == 1
+    assert contingency["NONACTIVE_ASSOCIATED"] == 1
+    assert contingency["NONACTIVE_NOT_ASSOCIATED"] == 1
+    partition = aggregate["D005_population"]["reference_populations_partition"]
+    assert partition["R1_active_with_final_same_direction_fvg"] == 1
+    assert partition["R2_active_without_final_same_direction_fvg"] == 1
+    assert partition["R3_v002_non_active"] == 2
+    assert partition["partitions_entrants_exactly"] is True
+    assert partition["primary_equals_R2"] is True
+    assert surface["v002_structurally_active_count"] == 2
+    assert surface["v002_associated_same_direction_fvg_count"] == 2
+    assert surface["v002_structurally_active_count"] - surface[
+        "v002_associated_same_direction_fvg_count"
+    ] == 0  # the PROHIBITED subtraction: 0 != true R2 = 1
+
+
+def test_tc002_primary_id_set_reconciliation_exact():
+    v002_observations = (
+        [_v002_obs("p1", active=True, associated=False),
+         _v002_obs("p2", active=True, associated=False)]
+        + [_v002_obs("cell-a", active=True, associated=True)]
+        + [_v002_obs("cell-c", active=False, associated=True),
+           _v002_obs("cell-d", active=False, associated=False)]
+    )
+    d005_observations = [
+        _d005_obs("p1", "NO_SAME_DIRECTION_FVG_EVER", False),
+        _d005_obs("p2", "OPPOSITE_DIRECTION_ONLY", False),
+    ]
+    aggregate = d005.aggregate_d005(
+        d005_observations, v002_observations,
+        _surface(entrants=5, active=3, associated=2),
+    )
+    assert aggregate["D005_population"]["primary_population"] == 2
+    # Every primary V002 observation received exactly one D005 observation.
+    assert aggregate["D005_population"][
+        "primary_decision_id_set_reconciles_exactly"
+    ] is True
+
+
+def test_tc002_primary_id_set_mismatch_fails_closed():
+    """Equal counts but divergent decision-ID sets fail closed on the exact
+    set-equality requirement: one D005 observation carries a non-primary V002
+    decision id, so the missing primary AND the extra non-primary are both
+    named (a count-only reconciliation would pass this case)."""
+    v002_observations = [
+        _v002_obs("p1", active=True, associated=False),
+        _v002_obs("p2", active=True, associated=False),
+        _v002_obs("cell-d", active=False, associated=False),
+    ]
+    with pytest.raises(d005.ReconciliationError) as error:
+        d005.aggregate_d005(
+            [
+                _d005_obs("p1", "NO_SAME_DIRECTION_FVG_EVER", False),
+                _d005_obs("cell-d", "OPPOSITE_DIRECTION_ONLY", False),
+            ],
+            v002_observations,
+            _surface(entrants=3, active=2, associated=0),
+        )
+    message = str(error.value)
+    assert "missing" in message and "p2" in message
+    assert "extra" in message and "cell-d" in message
+
+
+def test_tc002_duplicate_primary_id_fails_closed():
+    v002_observations = [
+        _v002_obs("p1", active=True, associated=False),
+        _v002_obs("p1", active=True, associated=False),
+    ]
+    with pytest.raises(d005.ReconciliationError) as error:
+        d005.aggregate_d005(
+            [_d005_obs("p1", "NO_SAME_DIRECTION_FVG_EVER", False)],
+            v002_observations,
+            _surface(entrants=2, active=2, associated=0),
+        )
+    assert "duplicate decision IDs in the V002 observations" in str(error.value)
+
+
+def test_tc002_duplicate_d005_id_fails_closed():
+    v002_observations = [
+        _v002_obs("p1", active=True, associated=False),
+        _v002_obs("p2", active=True, associated=False),
+    ]
+    with pytest.raises(d005.ReconciliationError) as error:
+        d005.aggregate_d005(
+            [
+                _d005_obs("p1", "NO_SAME_DIRECTION_FVG_EVER", False),
+                _d005_obs("p1", "OPPOSITE_DIRECTION_ONLY", False),
+            ],
+            v002_observations,
+            _surface(entrants=2, active=2, associated=0),
+        )
+    assert "duplicate decision IDs in the D005 observations" in str(error.value)
+
+
+def test_tc002_v002_observation_count_mismatch_fails_closed():
+    with pytest.raises(d005.ReconciliationError) as error:
+        d005.aggregate_d005(
+            [],
+            [_v002_obs("p1", active=True, associated=False)],
+            _surface(entrants=5, active=1, associated=0),
+        )
+    assert "!= entrants" in str(error.value)
+
+
+def test_tc002_real_v002_mitigated_block_is_nonactive_but_associated():
+    """Real evaluate_v002_structural_pair: MITIGATED pair still carries the
+    same-direction final FVG association (associated ⊄ active).
+
+    Purely synthetic frames; no Fold-01 data.  The second post-confirmation
+    candle touches the block zone; while it is the LAST available candle the
+    pair is structurally active (RETEST_ELIGIBLE); one candle later the same
+    pair reports MITIGATED — non-active — while the persisted same-direction
+    final FVG association stays attached in both states.
+    """
+    from tests.test_phase8_v2_v002_variant import candle, to_frame
+
+    config = StrategyConfig()
+    rows = build_rows(pre=30, post=2)
+    zone_low, zone_high = 2390.0, 2401.0  # build_rows candidate low..high
+    # Make the FIRST post-confirmation candle touch the zone (low enters the
+    # zone; close stays above the zone low, so no invalidation).
+    touch_open_time = datetime(2024, 5, 1, 9, 0, tzinfo=UTC) + timedelta(minutes=5 * 32)
+    rows[32] = candle(touch_open_time, 2405.0, 2406.0, 2398.0, 2404.0)
+    frame = to_frame(rows)
+    fvgs = ({"direction": "bullish", "top": 2402.0, "bottom": 2399.0},)
+    decision_active = pd.Timestamp(rows[32]["available_at"]).to_pydatetime()
+    active_pair = evaluate_v002_structural_pair(
+        frame, StrategySide.LONG, decision_active, config, fvgs=fvgs,
+    )
+    assert active_pair.structurally_active is True
+    assert active_pair.state == "RETEST_ELIGIBLE"
+    assert active_pair.fvg_associated is True
+    # Re-decide one candle LATER: the touching candle is no longer the last
+    # available one, so the frozen evaluator reports MITIGATED — non-active —
+    # while the same persisted same-direction final FVG stays associated.
+    mitigated_pair = evaluate_v002_structural_pair(
+        frame, StrategySide.LONG,
+        pd.Timestamp(rows[33]["available_at"]).to_pydatetime(),
+        config, fvgs=fvgs,
+    )
+    assert mitigated_pair.structurally_active is False
+    assert mitigated_pair.state == "MITIGATED"
+    assert mitigated_pair.fvg_associated is True
+    assert float(zone_low) < float(zone_high)
+
+
+def test_tc002_authorized_store_hash_path_passes_preopen():
+    """The numeric fragments 4068 and 3525 inside the authorized store
+    basename are hash material, not calendar years: the structured pre-open
+    guard passes the authorized path that the inherited substring-year scan
+    refused."""
+    d005.validate_authorized_store_path(
+        "C:/Users/chips/forex-signal-bot-data/phase8/evidence/"
+        "market-feature-store/fold-01-a8b406884ab3525a"
+    )  # must not raise
+    for fragment in ("4068", "3525"):
+        assert fragment in d005.AUTHORIZED_FOLD01_STORE_BASENAME
+        assert int(fragment) >= 2025  # would be 'future years' under the old scan
+
+
+def test_tc002_preopen_refuses_reserved_paths():
+    authorized = "C:/data/phase8/evidence/market-feature-store/fold-01-a8b406884ab3525a"
+    d005.validate_authorized_store_path(authorized)
+    refusals = [
+        "C:/data/phase8/holdout/fold-01-a8b406884ab3525a",
+        "C:/data/phase8/final_validation/x",
+        "C:/data/2025/store",
+        "C:/data/year=2025/store",
+        "C:/data/2026-01-01/store",
+        "C:/data/phase8/evidence/market-feature-store/fold-02-55c55daef9809b63",
+        "C:/data/phase8/evidence/market-feature-store/fold-01-1d710826193a6767",
+    ]
+    for path in refusals:
+        with pytest.raises(d005.BoundaryError):
+            d005.validate_authorized_store_path(path)
+
+
+def test_tc002_preopen_refuses_wrong_fold_basename():
+    with pytest.raises(d005.BoundaryError):
+        d005.validate_authorized_store_path(
+            "C:/data/phase8/evidence/market-feature-store/fold-01-deadbeefcafe1234"
+        )
+
+
+def test_tc002_defective_attempt1_fixture_partition_reproduction():
+    """The frozen attempt-1 tooling bytes (7c9608d5) reproduce the exact
+    blocked reconciliation from set semantics on a synthetic four-cell case
+    (marginal subtraction), then the corrected tooling succeeds on the SAME
+    inputs.  Byte-identity of the snapshot vs the committed blob is verified
+    separately (opt-in, git plumbing outside the suite firewall).  No
+    empirical Fold-01 value is used.
+    """
+    source = (
+        Path(__file__).parent / "fixtures" / "d005_tooling_7c9608d5.py"
+    ).read_bytes()
+    module_name = "_d005_tooling_attempt1_7c9608d5"
+    assert module_name not in sys.modules
+    module = types.ModuleType(module_name)
+    module.__file__ = str(
+        Path(__file__).parent / "fixtures" / "d005_tooling_7c9608d5.py"
+    )
+    module.__dict__["__name__"] = module_name
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    sys.modules[module_name] = module
+    # Four-cell synthetic population: one entrant in each cell.  The frozen
+    # attempt-1 arithmetic (R1 = associated, R2 = active − associated)
+    # derives R2 = 0 and refuses the single primary D005 observation.
+    v002_observations = [
+        {"decision_id": "cell-a", "v002_structurally_active": True,
+         "v002_fvg_associated": True},
+        {"decision_id": "cell-b", "v002_structurally_active": True,
+         "v002_fvg_associated": False},
+        {"decision_id": "cell-c", "v002_structurally_active": False,
+         "v002_fvg_associated": True},
+        {"decision_id": "cell-d", "v002_structurally_active": False,
+         "v002_fvg_associated": False},
+    ]
+    d005_observations = [_d005_obs("cell-b", "NO_SAME_DIRECTION_FVG_EVER", False)]
+    surface = _surface(entrants=4, active=2, associated=2)
+    with pytest.raises(module.ReconciliationError):
+        module.aggregate_d005(d005_observations, surface)
+    # The corrected tooling succeeds on exactly the same inputs.
+    corrected = d005.aggregate_d005(d005_observations, v002_observations, surface)
+    assert corrected["D005_population"]["primary_population"] == 1
+    assert corrected["D005_population"]["four_cell_contingency"][
+        "ACTIVE_NOT_ASSOCIATED"
+    ] == 1
+
+
+def test_tc002_attempt1_fixture_bytes_match_frozen_commit():
+    """Byte-identity of the attempt-1 tooling snapshot against the committed
+    7c9608d5 blob (opt-in; real git plumbing is outside the suite firewall)."""
+    import os
+    import subprocess
+
+    if os.environ.get("D005_TC002_VERIFY_COMMITTED_BYTES") != "1":
+        pytest.skip(
+            "subprocess git cat-file is prohibited inside the suite; run with "
+            "D005_TC002_VERIFY_COMMITTED_BYTES=1 to byte-verify the fixture copy"
+        )
+    committed = subprocess.run(
+        ["git", "cat-file", "blob",
+         "7c9608d5b9871414a830e38395d1a67f7efacad2"
+         ":backtests/phase8_v2_diagnostic_d005.py"],
+        cwd=".", capture_output=True, check=True,
+    ).stdout
+    assert committed == (
+        Path(__file__).parent / "fixtures" / "d005_tooling_7c9608d5.py"
+    ).read_bytes()

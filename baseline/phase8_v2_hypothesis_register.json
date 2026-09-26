@@ -2219,6 +2219,82 @@
         "data_2025_plus": true
       },
       "registered_utc": "2026-09-26T10:08:55Z"
+    },
+    {
+      "correction_id": "phase8-v2-D005-TC002",
+      "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_CORRECTION",
+      "diagnostic_id": "phase8-v2-D005",
+      "hypothesis_id": "phase8-v2-H003",
+      "primary_defect_class": "D005_V002_MARGINAL_INTERSECTION_PARTITION_MISMATCH",
+      "secondary_defect_class": "D005_AUTHORIZED_STORE_HASH_PATH_YEAR_FALSE_POSITIVE",
+      "attempt1_blockage_binding": {
+        "exposure_timestamp_utc": "2026-09-26T13:18:42.145570+00:00",
+        "blockage_artifact_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_diagnostics/phase8-v2-D005/fold01/phase8-v2-D005_ATTEMPT1_BLOCKAGE.json",
+        "blockage_artifact_sha256": "168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2",
+        "blockage_artifact_bytes": 3692,
+        "exact_reconciliation_error": "ReconciliationError: primary population 42 != structurally-active without final FVG R2=34",
+        "full_observation_loop_completed": "the frozen 7c9608d5 tooling completed the full 13,269-snapshot Fold-01 observation loop over the preserved authorized store fold-01-a8b406884ab3525a and reconcile_accounting passed; the failure occurred in aggregate_d005 partition reconciliation",
+        "pre_access_wrapper_refusal": "PRE_ACCESS_WRAPPER_REFUSAL - ZERO EMPIRICAL EXPOSURE: a separate CLI invocation at 2026-09-26T13:14:25Z was refused by the substring-year path scan before FoldFeatureStore.open; it consumed no additional budget and is recorded separately from the exposure",
+        "no_successful_d005_result": true,
+        "no_h003_interpretation": "H003 remains REGISTERED with result and disposition null; no scientific interpretation was derived from the blocked attempt",
+        "v003_not_created": true,
+        "attempt1_values_incident_history_only": "the observed counts 42 / 34 / 8 are blockage evidence recorded here ONLY as incident history; they are never test oracles and appear in no test assertion; the corrected logic is justified from set semantics alone"
+      },
+      "invalid_partition_equation": "the attempt-1 aggregator derived R1 = associated and R2 = structurally_active - associated from the frozen V002 aggregate MARGINALS; this subtraction is invalid because v002_structurally_active_count and v002_associated_same_direction_fvg_count are independent marginals of two different boolean attributes and their overlap (cell A) is counted in both, so the subtraction under-counts R2",
+      "why_associated_is_not_a_subset_of_active": "V002 legitimately reports fvg_associated == True while structurally_active == False: a canonical block in a genuinely non-active frozen state (MITIGATED, also INVALIDATED/CONSUMED) still carries the same-direction persisted final FVG association attached by the frozen evaluator (_with_fvg); proven structurally by the new real-V002 semantic regression using evaluate_v002_structural_pair with synthetic frames only - the same pair is RETEST_ELIGIBLE (active, associated) at the touching candle and MITIGATED (non-active, associated) one candle later",
+      "corrected_four_cell_contingency": {
+        "A_ACTIVE_ASSOCIATED": "structurally_active == True AND fvg_associated == True",
+        "B_ACTIVE_NOT_ASSOCIATED": "structurally_active == True AND fvg_associated == False - the D005 PRIMARY population",
+        "C_NONACTIVE_ASSOCIATED": "structurally_active == False AND fvg_associated == True",
+        "D_NONACTIVE_NOT_ASSOCIATED": "structurally_active == False AND fvg_associated == False",
+        "requirement": "A + B + C + D == Gate11 entrants exactly",
+        "construction": "built directly from the individual frozen per-decision V002 observations; the aggregate_d005 signature now receives the actual v002_observations (no second V002 semantic evaluator is constructed inside the aggregator)"
+      },
+      "corrected_reference_populations": {
+        "R1": "ACTIVE_ASSOCIATED (cell A); NOT the V002 associated marginal",
+        "R2": "ACTIVE_NOT_ASSOCIATED (cell B) - the primary D005 population",
+        "R3": "all non-active = NONACTIVE_ASSOCIATED + NONACTIVE_NOT_ASSOCIATED (C + D)",
+        "requirement": "R1 + R2 + R3 == entrants and primary_count == R2 exactly"
+      },
+      "marginal_reconciliation_totals_only": {
+        "active_marginal": "v002_structurally_active_count == A + B",
+        "associated_marginal": "v002_associated_same_direction_fvg_count == A + C",
+        "entrants": "gate11_entrants_observed == A + B + C + D",
+        "no_subtraction": "the marginals continue to be consumed as reconciliation totals ONLY; subtracting them is explicitly prohibited; these equalities prove why the two marginals cannot be directly subtracted (their overlap is cell A, counted in both)"
+      },
+      "primary_decision_id_set_reconciliation": "exact SET equality between the decision IDs of V002 observations with structurally_active == True AND fvg_associated == False and the decision IDs actually observed by D005 - never count-only; duplicate decision IDs fail closed; every D005 observation maps to exactly one V002 observation and every primary V002 observation receives exactly one D005 observation",
+      "cli_boundary_correction": {
+        "defect": "the inherited generic substring-year path scan interpreted four-digit hash fragments inside the authorized store basename fold-01-a8b406884ab3525a (4068, 3525) as years >= 2025 and refused the authorized store before any access",
+        "correction": "the D005 CLI now performs a D005-specific structured pre-open boundary check (validate_authorized_store_path): holdout / final-validation tokens refused by name; standalone year directory components, structured year=YYYY markers and ISO-style YYYY- components refused when the year is 2025+; the prohibited historical store fold-01-1d710826193a6767 and every other Fold store basename refused; arbitrary four-digit substrings embedded inside SHA hashes, fingerprints, store IDs and alphanumeric package IDs are NEVER interpreted as calendar years",
+        "protection_not_weakened": "the post-open structured store-identity checks (Fold 01 ID, full coverage, M5, exact evaluation window, prohibited-historical-store refusal, identity SHA) remain authoritative; pathname checks alone are never sufficient",
+        "cli_direct_run_equivalence": "after TC002 the normal committed D005 CLI executes the exact run_d005/write_result path used by the direct driver; the untracked execution driver is no longer required because of the false-positive path scan and is NOT committed"
+      },
+      "scientific_surfaces_frozen": "H003 statement and ordering-only relationship, the primary-population definition, the temporal FVG detector, the TC001 causal availability clock, the attrition categories, the temporal-distance metrics, the 29-observation headroom arithmetic, the H003 qualitative interpretation rule, V002 strategy semantics and the V002 evaluator semantics are ALL unchanged; no new scientific hypothesis is created and TC002 does not create D006",
+      "h003_unchanged": "statement preserved verbatim: 'OB and FVG evidence may be causally related across a short temporal sequence rather than being required to appear as a strictly simultaneous state at one decision timestamp.'; result and disposition remain null; H003 is not rewritten by TC002",
+      "headroom_rule_unchanged": "the 29-observation arithmetic feasibility bound (90 - 61) and the TEMPORAL_VARIANT_HEADROOM_POSSIBLE / INSUFFICIENT classification remain mechanical arithmetic only and never an H003 support rule",
+      "tc001_clock_unchanged": "FVG completion row remains source_index + 1; formation timestamp remains the completion candle's available_at (fvg_formation_available_at); OB clock remains block.confirmed_at (confirmation-candle available_at); availability compared to availability; no manual +/-1 compensation; all TC001 same/previous/next-candle regressions remain green",
+      "no_new_scientific_interpretation": true,
+      "corrected_tooling_identity_reference": "the unique TC002 commit that publishes this record (parent 7c9608d5b9871414a830e38395d1a67f7efacad2, subject 'fix: reconcile D005 V002 intersections exactly'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit; its canonical_git_blob_v1 fingerprint of backtests/phase8_v2_diagnostic_d005.py is recomputed from the committed Git blob during the TC002 push/verify step and reported in the governance report (the fingerprint cannot be finalized before the commit exists)",
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D005.md section 22 'TC002 - V002 Marginal/Intersection Partition and CLI Boundary Clarification' appended; sections 1-21 and the original D005 scientific registration are NOT rewritten; historical document hashes preserved: initial Phase-A preregistration bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401 (df19e89a8afd72deda2b58c79f38a798daaead76), ordering-only correction d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941 (c615c3e9ae15f6c47b1b9da27b835d46a431b05c), TC001 causal-clock correction 2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8 (7c9608d5b9871414a830e38395d1a67f7efacad2); the new full-document SHA-256 b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11 is recorded in the corrected tooling's SPEC_SHA256 and this record",
+      "correction_timing": "post-exposure: D005 Attempt 1 consumed the D005 diagnostic slot (diagnostics permanently 4 / 12); this correction performs NO empirical access of any kind - no Fold store is opened, all regression fixtures are synthetic; a later corrected D005 empirical rerun remains 4 / 12 because D005 has already consumed its slot and must NOT become 5 / 12; the rerun completes the already-consumed D005 diagnostic",
+      "no_empirical_access": true,
+      "no_fold_store_opened": "no Fold-01, Fold-02/03/04, 2025+ or holdout store read during TC002; the prohibited historical store fold-01-1d710826193a6767 NOT read; attempt-1 partial observations are NOT promoted to R001 evidence; the attempt-1 blockage artifact is preserved unmodified",
+      "v002_unchanged": "bot/strategy/variant_v002.py (canonical blob SHA 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4), the frozen V002 measurement tooling (backtests/phase8_v2_variant_v002_eval.py), the TC001 record, the original D005 registration and the V002 R001 record are NOT modified",
+      "budget_impact": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "note": "TC002 consumes ZERO diagnostic budget: diagnostics remain the permanent 4 / 12 from the D005 attempt-1 exposure; variants remain 2 / 8; numeric trials remain 0 / 4; a corrected rerun stays 4 / 12 and must NOT become 5 / 12"
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "registered_utc": "2026-09-26T14:29:57Z"
     }
   ],
   "provenance_corrections": [
