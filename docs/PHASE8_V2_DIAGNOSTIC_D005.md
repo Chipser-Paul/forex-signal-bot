@@ -259,3 +259,56 @@ V002 structural state, structurally-active population, final-FVG association sta
 primary/reference partition, per-FVG causality, final-surface recomputation equality,
 temporal-category accounting, H003 count subset-of-primary, reserved-evidence guards. No
 empirical count is encoded anywhere.
+
+## 21. TC001 — Causal Formation Clock Clarification
+
+Registered as `phase8-v2-D005-TC001` in the hypothesis register
+(`PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION`, defect class
+`D005_PRE_EMPIRICAL_TEMPORAL_CLOCK_MISMATCH`; defective tooling commit
+`81c6a6f53a0e456a800f2fdddc957e34c1dc9064`).  This section is an append-only,
+pre-empirical measurement-coordinate CLARIFICATION.  It does not rewrite sections 1-20,
+the original D005 scientific registration, or H003.
+
+What is clarified: sections 8-10's "FVG formation timestamp" and "formed" mean the
+COMPLETION (third) candle's causal `available_at` — the instant the three-candle
+pattern (c1, c2, c3) becomes observable.  The canonical detector attributes
+`source_index = i - 1` (the middle displacement candle); the completion row remains
+`source_index + 1` (section 8) and detector attribution is unchanged.  The OB clock is
+the canonical `block.confirmed_at`, which is likewise the confirmation candle's
+`available_at` (`bot.strategy.order_blocks.detect_order_blocks`).  Ordering and signed
+bar distance therefore compare causal availability to causal availability:
+`FVG formation available_at - OB confirmed_at`, negative = `BEFORE_OB_CONFIRMATION`,
+zero = `AT_OB_CONFIRMATION`, positive = `AFTER_OB_CONFIRMATION`; the M5 bar-grid
+invariant (`seconds_difference % 300 == 0` within tolerance) is unchanged and no
+manual `-1`/`+1` compensation exists — the timestamps themselves are correct.
+
+Why: the previously frozen tooling (81c6a6f) timestamped FVG formation with the
+completion candle's `open_time`, which is a DIFFERENT causal clock from the OB's
+`confirmed_at`; on the canonical contiguous M5 grid (`available_at(i) ==
+open_time(i+1)`) this mislabels every FVG exactly one bar early (a true 0-bar
+same-candle completion reported as -1; a true +1 reported as 0), shifting both the
+ordering categories and the distance surface by one bar.
+
+Output naming (section 17 restated): the formation field is
+`fvg_formation_available_at`; the completion candle's `open_time` may be retained as
+`fvg_completion_open_time` DESCRIPTIVE metadata only — it must never drive
+BEFORE/AT/AFTER, signed bar distance, elapsed minutes or H003 decision membership.
+
+Scope and integrity: this is a measurement-coordinate clarification only — the
+ordering-only H003 relationship, the primary population, the 29-observation headroom
+arithmetic, the final-surface reconciliation (`get_unfilled_fvgs(causal_frame, "M5",
+direction=htf_bias)` unchanged) and the attrition categories are all unchanged.  The
+correction occurred BEFORE any D005 empirical access: no Fold-01 store was opened and
+no empirical data was observed when choosing the clock; all regression fixtures are
+synthetic.  Because the former tooling mis-timestamped the temporal relationship, some
+synthetic fixtures may legitimately move between
+`SAME_DIRECTION_FVG_EXISTED_BUT_FILLED` and `SAME_DIRECTION_FVG_PRE_OB_ONLY`; the
+category DEFINITIONS are unchanged and no old synthetic classification is forced.
+
+Historical document hashes preserved (both verified from the committed Git blobs at
+df19e89a8afd72deda2b58c79f38a798daaead76 and
+c615c3e9ae15f6c47b1b9da27b835d46a431b05c): initial Phase-A preregistration
+`bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401`; ordering-only
+correction `d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941`.  The
+full-document SHA after this append is recorded in the register TC001 record and the
+corrected tooling's `SPEC_SHA256`.

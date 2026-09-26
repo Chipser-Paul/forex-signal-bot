@@ -7,11 +7,22 @@ primary population, the causal FVG history, the final-surface reconciliation,
 the temporal universe, the ordering-only H003 rule, the exhaustive attrition
 categories, the distance surface and the fail-closed guards.  Reuses the
 proven V002/D001 synthetic fixtures; no expected empirical count is encoded.
+
+D005-TC001 (causal formation clock): FVG formation is timestamped with the
+COMPLETION candle's ``available_at`` (``fvg_formation_available_at``), the
+same causal clock as the canonical OB ``confirmed_at``; the completion
+candle's ``open_time`` is descriptive metadata only
+(``fvg_completion_open_time``).  Same-candle / next-candle / previous-candle
+regressions pin the boundary semantics and the frozen 81c6a6f tooling is
+proven defective in-process.
 """
 from __future__ import annotations
 
 import json
+import sys
+import types
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -343,21 +354,74 @@ def test_case_7_long_side_recorded():
     assert record["v002_block_id"] == observation["v002_block_id"]
 
 
-def test_case_8_short_side_end_to_end():
-    # The D004 bearish fate frame: a SHORT block whose bearish displacement
-    # FVG forms exactly AT the confirmation boundary (verified: source index
-    # 15, formation open == confirmation availability -> distance 0 bars).
-    from bot.strategy.order_blocks import detect_order_blocks
-    from tests.test_phase8_v2_d004_tooling import _fate_frame
+def _same_candle_frame() -> pd.DataFrame:
+    """TC001 same-candle fixture (verified against the real detectors):
+    FVG c1=row29, c2=row30 (displacement), c3=row31 -> completion row 31
+    whose ``available_at`` (11:40) EQUALS the block confirmation
+    availability (row 31 -> confirmed_at 11:40).  True distance 0 bars; the
+    completion candle's open_time (11:35) is one bar earlier — exactly the
+    clock the frozen 81c6a6f tooling wrongly used."""
+    frame = _bullish_frame()
+    for index, (open_, high, low, close) in {
+        28: (2400.0, 2401.0, 2398.0, 2399.0),
+        29: (2400.0, 2401.0, 2398.0, 2399.0),
+        30: (2405.0, 2405.0, 2388.0, 2390.0),
+        31: (2404.0, 2421.0, 2403.0, 2420.0),
+        32: (2406.0, 2408.0, 2402.0, 2406.0),
+    }.items():
+        for column, value in (("open", open_), ("high", high), ("low", low), ("close", close)):
+            frame.iloc[index, frame.columns.get_loc(column)] = value
+    return frame
 
-    frame = _fate_frame(side="bearish", scenario="untouched", quiet_bars=35)
+
+def _prev_candle_frame() -> pd.DataFrame:
+    """TC001 previous-candle fixture (verified against the real detectors):
+    FVG c1=row28, c2=row29 (displacement), c3=row30 -> completion row 30
+    whose ``available_at`` (11:35) is exactly ONE M5 candle BEFORE the block
+    confirmation (row 31, confirmed_at 11:40).  True distance -1 bars."""
+    frame = _bullish_frame()
+    for index, (open_, high, low, close) in {
+        29: (2402.0, 2413.0, 2401.0, 2412.0),
+        30: (2414.0, 2414.0, 2405.0, 2411.0),
+        31: (2404.0, 2421.0, 2403.0, 2420.0),
+    }.items():
+        for column, value in (("open", open_), ("high", high), ("low", low), ("close", close)):
+            frame.iloc[index, frame.columns.get_loc(column)] = value
+    return frame
+
+
+def _mirror_frame(frame: pd.DataFrame, pivot: float = 4900.0) -> pd.DataFrame:
+    """Reflect OHLC prices around ``pivot``: bullish structures become
+    bearish with identical geometry, ATR and causality.  Reflection swaps
+    the high/low columns (high' = pivot - low, low' = pivot - high) so the
+    reflected frame keeps valid OHLC invariants."""
+    mirrored = frame.copy()
+    mirrored["open"] = pivot - frame["open"].astype(float)
+    mirrored["close"] = pivot - frame["close"].astype(float)
+    mirrored["high"] = pivot - frame["low"].astype(float)
+    mirrored["low"] = pivot - frame["high"].astype(float)
+    return mirrored
+
+
+def test_case_8_short_side_end_to_end():
+    # Bearish mirror of the TC001 same-candle fixture: a SHORT block whose
+    # confirmation and the bearish FVG completion become causally available
+    # on the SAME M5 candle (true distance 0), exercising the AT branch on
+    # the SHORT side.
+    from bot.strategy.order_blocks import detect_order_blocks
+
+    frame = _mirror_frame(_same_candle_frame())
     config = StrategyConfig()
     blocks = [b for b in detect_order_blocks(frame, config) if b.side is StrategySide.SHORT]
-    assert blocks, "fixture must produce a bearish block"
+    assert blocks, "mirrored fixture must produce a SHORT block"
     block = sorted(blocks, key=lambda b: (b.confirmed_at, -b.zone_high + b.zone_low, b.block_id))[-1]
     decision_at = pd.Timestamp(frame["available_at"].iloc[-1]).to_pydatetime().astimezone(UTC)
+    from bot.analysis import get_unfilled_fvgs
+
+    persisted = get_unfilled_fvgs(frame, timeframe="M5", direction="bearish")
+    assert persisted == []
     payload = _decision_payload(
-        frame, htf_bias="bearish", persisted_fvgs=[],
+        frame, htf_bias="bearish", persisted_fvgs=persisted,
         zone=(block.zone_low, block.zone_high),
     )
     snapshot = _SnapView(payload, decision_at, "decision-short")
@@ -372,6 +436,231 @@ def test_case_8_short_side_end_to_end():
     assert 0 in record["temporal_distance_signed_bars"], (
         "the AT_OB_CONFIRMATION ordering branch must be exercised"
     )
+
+
+# ---------------------------------------------------------------------------
+# D005-TC001: causal formation clock (completion-candle available_at)
+# ---------------------------------------------------------------------------
+
+
+D005_TC001_DEFECTIVE_COMMIT = "81c6a6f53a0e456a800f2fdddc957e34c1dc9064"
+
+
+def test_tc001_same_candle_regression_available_at_clock():
+    # FVG completion causally available on the SAME M5 candle as the OB
+    # confirmation: availability-to-availability distance MUST be 0 and the
+    # order AT_OB_CONFIRMATION.  The frozen 81c6a6f tooling used the
+    # completion candle's open_time and reported one bar early (proven in
+    # test_tc001_old_bug_reproduction_same_candle_and_next_candle).
+    frame = _same_candle_frame()
+    observation, snapshot, config = _primary_observation(frame)
+    record = d005.observe_d005_decision(observation, snapshot, config=config)
+    assert record["temporal_distance_signed_bars"] == [0]
+    item = record["temporal_distance_records"][0]
+    assert item["formation_order_relative_to_ob"] == "AT_OB_CONFIRMATION"
+    assert item["signed_bar_distance"] == 0
+    assert item["elapsed_minutes"] == 0.0
+    assert item["fvg_formation_available_at"] == item["ob_confirmed_at"]
+    assert pd.Timestamp(item["fvg_completion_open_time"]) < pd.Timestamp(
+        item["fvg_formation_available_at"]
+    )
+
+
+def test_tc001_next_candle_regression():
+    # FVG completion exactly one M5 candle AFTER the OB confirmation candle:
+    # AFTER_OB_CONFIRMATION, distance +1, elapsed 5 minutes.  The base
+    # fixture's FVG (source 31, completion row 32: open 11:40, available
+    # 11:45; OB confirmed_at 11:40) is exactly this shape.
+    frame = _bullish_frame()
+    observation, snapshot, config = _primary_observation(frame)
+    record = d005.observe_d005_decision(observation, snapshot, config=config)
+    assert record["temporal_distance_signed_bars"] == [1]
+    item = record["temporal_distance_records"][0]
+    assert item["formation_order_relative_to_ob"] == "AFTER_OB_CONFIRMATION"
+    assert item["signed_bar_distance"] == 1
+    assert item["elapsed_minutes"] == 5.0
+    assert pd.Timestamp(item["fvg_completion_open_time"]) == pd.Timestamp(item["ob_confirmed_at"])
+    assert pd.Timestamp(item["fvg_formation_available_at"]) == (
+        pd.Timestamp(item["ob_confirmed_at"]) + timedelta(minutes=5)
+    )
+
+
+def test_tc001_prev_candle_regression():
+    # FVG completion exactly one M5 candle BEFORE the OB confirmation:
+    # BEFORE_OB_CONFIRMATION, distance -1, elapsed -5 minutes.  A pre-OB
+    # same-direction FVG does NOT satisfy the H003 ordering rule, so it is
+    # reported in the temporal universe (descriptive) and is correctly
+    # absent from the qualifying distance surface.
+    frame = _prev_candle_frame()
+    observation, snapshot, config = _primary_observation(frame)
+    record = d005.observe_d005_decision(observation, snapshot, config=config)
+    same = [
+        item for item in record["temporal_fvg_universe"]
+        if item["fvg_direction"] == "bullish"
+    ]
+    assert len(same) == 1
+    item = same[0]
+    assert item["formation_order_relative_to_ob"] == "BEFORE_OB_CONFIRMATION"
+    assert item["signed_bar_distance"] == -1
+    assert item["elapsed_minutes"] == -5.0
+    assert pd.Timestamp(item["fvg_formation_available_at"]) == (
+        pd.Timestamp(item["ob_confirmed_at"]) - timedelta(minutes=5)
+    )
+    assert record["h003_temporal_association"] is False
+    assert record["temporal_distance_signed_bars"] == []
+    assert record["attrition_category"] == "SAME_DIRECTION_FVG_PRE_OB_ONLY"
+
+
+def test_tc001_formation_field_is_causal_availability_clock():
+    # The formation field is the completion candle's available_at (the same
+    # causal clock as the OB confirmed_at); the ambiguous old name
+    # ``fvg_open_time`` is retired from the output entirely.
+    frame = _bullish_frame()
+    observation, snapshot, config = _primary_observation(frame)
+    record = d005.observe_d005_decision(observation, snapshot, config=config)
+    for universe in record["temporal_fvg_universe"]:
+        assert "fvg_formation_available_at" in universe
+        assert "fvg_completion_open_time" in universe
+        assert "fvg_open_time" not in universe
+        completion_index = int(universe["source_index"]) + 1
+        assert pd.Timestamp(universe["fvg_formation_available_at"]) == pd.Timestamp(
+            frame["available_at"].iloc[completion_index]
+        )
+        assert pd.Timestamp(universe["fvg_completion_open_time"]) == pd.Timestamp(
+            frame["open_time"].iloc[completion_index]
+        )
+        assert pd.Timestamp(universe["fvg_completion_open_time"]) < pd.Timestamp(
+            universe["fvg_formation_available_at"]
+        )
+
+
+def test_tc001_open_time_is_descriptive_and_cannot_affect_membership():
+    # (a) For ordinary M5 candles the completion open_time precedes the
+    # formation available_at (proven on the fixture above).
+    # (b) Structurally: NO consumer of the descriptive field exists — the
+    # order category, signed distance and H003 membership are computed from
+    # the formation available_at only, so mutating the open_time cannot move
+    # any of them.
+    kwargs = dict(
+        zone={"direction": "bullish", "filled": True, "source_index": 31},
+        fvg_formation_available_at=datetime(2024, 5, 1, 11, 45, tzinfo=UTC),
+        block_confirmed_at=datetime(2024, 5, 1, 11, 40, tzinfo=UTC),
+        decision_at=datetime(2024, 5, 1, 11, 50, tzinfo=UTC),
+    )
+    base_record = d005._fvg_universe_record(
+        decision_id="d",
+        fvg_completion_open_time=datetime(2024, 5, 1, 11, 40, tzinfo=UTC),
+        **kwargs,
+    )
+    mutated = d005._fvg_universe_record(
+        decision_id="d",
+        fvg_completion_open_time=datetime(2034, 5, 1, 11, 40, tzinfo=UTC),
+        **kwargs,
+    )
+
+    def _strip(record):
+        return {k: v for k, v in record.items() if k != "fvg_completion_open_time"}
+
+    assert _strip(base_record) == _strip(mutated)
+    assert base_record["formation_order_relative_to_ob"] == "AFTER_OB_CONFIRMATION"
+    assert base_record["signed_bar_distance"] == 1
+
+
+def test_tc001_grid_invariant_and_no_manual_compensation():
+    # The bar distance is the raw availability difference divided by 300 s
+    # with the fail-closed grid invariant; there is no -1/+1 offset
+    # anywhere.  The three boundary fixtures land exactly on 0 / +1 / -1.
+    with pytest.raises(d005.D005Error) as error:
+        d005._bar_distance(
+            "d",
+            datetime(2024, 5, 1, 11, 40, tzinfo=UTC),
+            datetime(2024, 5, 1, 11, 40, tzinfo=UTC) + timedelta(seconds=150),
+        )
+    assert "M5 bar grid" in str(error.value)
+    for frame, expected in (
+        (_same_candle_frame(), [0]),
+        (_bullish_frame(), [1]),
+    ):
+        observation, snapshot, config = _primary_observation(frame)
+        record = d005.observe_d005_decision(observation, snapshot, config=config)
+        assert record["temporal_distance_signed_bars"] == expected
+    # The pre-OB fixture lands exactly on -1 in the descriptive universe
+    # (it is not an H003-qualifying distance by the ordering rule).
+    observation, snapshot, config = _primary_observation(_prev_candle_frame())
+    record = d005.observe_d005_decision(observation, snapshot, config=config)
+    same = [
+        item for item in record["temporal_fvg_universe"]
+        if item["fvg_direction"] == "bullish"
+    ]
+    assert [item["signed_bar_distance"] for item in same] == [-1]
+
+
+def _defective_d005_bytes() -> bytes:
+    """Exact committed bytes of the frozen (defective) TC001-baseline D005
+    tooling at 81c6a6f, snapshotted verbatim into the fixture tree; the
+    opt-in byte-identity test guards the copy against drift."""
+    return (Path(__file__).parent / "fixtures" / "d005_tooling_81c6a6f.py").read_bytes()
+
+
+def _exec_defective_d005_module():
+    source = _defective_d005_bytes()
+    module_name = "_d005_tooling_defective_81c6a6f"
+    assert module_name not in sys.modules
+    module = types.ModuleType(module_name)
+    module.__file__ = str(Path(__file__).parent / "fixtures" / "d005_tooling_81c6a6f.py")
+    module.__dict__["__name__"] = module_name
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    sys.modules[module_name] = module
+    return module
+
+
+def test_tc001_old_bug_reproduction_same_candle_and_next_candle():
+    """The frozen 81c6a6f tooling misclassifies both boundary cases — it
+    timestamps FVG formation with the completion candle's open_time.  The
+    defective bytes are executed in-process (no subprocess, no checkout).
+    No empirical Fold-01 values are involved."""
+    module = _exec_defective_d005_module()
+    # Same-candle case: the corrected clock requires AT_OB_CONFIRMATION / 0
+    # AND h003_temporal_association True; the defective tooling reports the
+    # completion open_time (one bar early) -> BEFORE / -1 and flips the H003
+    # membership decision to False.
+    observation, snapshot, config = _primary_observation(_same_candle_frame())
+    old_record = module.observe_d005_decision(observation, snapshot, config=config)
+    old_universe = [
+        u for u in old_record["temporal_fvg_universe"] if u["fvg_direction"] == "bullish"
+    ][0]
+    assert old_universe["formation_order_relative_to_ob"] == "BEFORE_OB_CONFIRMATION"
+    assert old_universe["signed_bar_distance"] == -1
+    assert old_record["h003_temporal_association"] is False
+    assert "fvg_open_time" in old_universe
+    assert "fvg_formation_available_at" not in old_universe
+    # Next-candle case: the corrected clock requires AFTER_OB_CONFIRMATION /
+    # +1; the defective tooling reports AT / 0.
+    observation2, snapshot2, config2 = _primary_observation(_bullish_frame())
+    old_next = module.observe_d005_decision(observation2, snapshot2, config=config2)
+    old_next_item = old_next["temporal_distance_records"][0]
+    assert old_next_item["formation_order_relative_to_ob"] == "AT_OB_CONFIRMATION"
+    assert old_next_item["signed_bar_distance"] == 0
+
+
+def test_tc001_defective_fixture_matches_committed_bytes():
+    """Byte-identity of the defective-tooling fixture copy against the real
+    committed blob at 81c6a6f (opt-in because the production check shells
+    out to git, which the suite firewall forbids)."""
+    import os
+    import subprocess
+
+    if os.environ.get("D005_TC001_VERIFY_COMMITTED_BYTES") != "1":
+        pytest.skip(
+            "subprocess git cat-file is prohibited inside the suite; run with "
+            "D005_TC001_VERIFY_COMMITTED_BYTES=1 to byte-verify the fixture copy"
+        )
+    committed = subprocess.run(
+        ["git", "cat-file", "blob",
+         D005_TC001_DEFECTIVE_COMMIT + ":backtests/phase8_v2_diagnostic_d005.py"],
+        cwd=".", capture_output=True, check=True,
+    ).stdout
+    assert committed == _defective_d005_bytes()
 
 
 def test_case_9_post_decision_fvg_excluded_causally():
@@ -431,11 +720,12 @@ def test_post_decision_fvg_is_never_counted():
     record = d005.observe_d005_decision(observation, snapshot, config=config)
     assert record["non_causal_rows_excluded"] >= 1
     assert all(
-        pd.Timestamp(u["fvg_open_time"]) <= pd.Timestamp(decision_at)
+        pd.Timestamp(u["fvg_formation_available_at"]) <= pd.Timestamp(decision_at)
         for u in record["temporal_fvg_universe"]
     )
     assert not any(
-        pd.Timestamp(u["fvg_open_time"]) == pd.Timestamp(frame["open_time"].iloc[33])
+        pd.Timestamp(u["fvg_formation_available_at"])
+        == pd.Timestamp(frame["available_at"].iloc[33])
         for u in record["temporal_fvg_universe"]
     )
 
@@ -588,7 +878,9 @@ def _d005_obs(decision_id, category, temporal, side="LONG"):
                 "signed_bar_distance": 4,
                 "absolute_bar_distance": 4,
                 "elapsed_minutes": 20.0,
-                "fvg_open_time": "2024-05-01T10:30:00+00:00",
+                "ob_confirmed_at": "2024-05-01T10:10:00+00:00",
+                "fvg_formation_available_at": "2024-05-01T10:30:00+00:00",
+                "fvg_completion_open_time": "2024-05-01T10:25:00+00:00",
                 "unfilled_at_decision": False,
                 "filled_before_decision": True,
                 "source_index": 31,
@@ -605,7 +897,9 @@ def _d005_obs(decision_id, category, temporal, side="LONG"):
                 "signed_bar_distance": 4,
                 "absolute_bar_distance": 4,
                 "elapsed_minutes": 20.0,
-                "fvg_open_time": "2024-05-01T10:30:00+00:00",
+                "ob_confirmed_at": "2024-05-01T10:10:00+00:00",
+                "fvg_formation_available_at": "2024-05-01T10:30:00+00:00",
+                "fvg_completion_open_time": "2024-05-01T10:25:00+00:00",
                 "unfilled_at_decision": False,
                 "filled_before_decision": True,
                 "source_index": 31,
@@ -617,7 +911,9 @@ def _d005_obs(decision_id, category, temporal, side="LONG"):
                 "signed_bar_distance": -10,
                 "absolute_bar_distance": 10,
                 "elapsed_minutes": -50.0,
-                "fvg_open_time": "2024-05-01T09:00:00+00:00",
+                "ob_confirmed_at": "2024-05-01T09:50:00+00:00",
+                "fvg_formation_available_at": "2024-05-01T09:00:00+00:00",
+                "fvg_completion_open_time": "2024-05-01T08:55:00+00:00",
                 "unfilled_at_decision": False,
                 "filled_before_decision": True,
                 "source_index": 6,

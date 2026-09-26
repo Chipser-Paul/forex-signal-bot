@@ -2175,6 +2175,50 @@
         "note": "the first real Fold-01 V002 strategy observation permanently consumed the second strategy-variant slot at the exposure timestamp 2026-09-25T21:44:00.712191+00:00"
       },
       "h007_binding": "H007 remains bound to this record as its primary formal empirical reference; the preregistered H007 statement is NOT rewritten and no post-hoc H007 disposition rule is invented; the formal outcome of R001 is the V002 opportunity classification OPPORTUNITY_INSUFFICIENT"
+    },
+    {
+      "correction_id": "phase8-v2-D005-TC001",
+      "record_type": "PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION",
+      "diagnostic_id": "phase8-v2-D005",
+      "hypothesis_id": "phase8-v2-H003",
+      "defect_class": "D005_PRE_EMPIRICAL_TEMPORAL_CLOCK_MISMATCH",
+      "defective_tooling_commit": "81c6a6f53a0e456a800f2fdddc957e34c1dc9064",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 81c6a6f53a0e456a800f2fdddc957e34c1dc9064, subject 'fix: align D005 temporal timestamps to causal availability'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit",
+      "defect_description": "the frozen D005 tooling identified the correct FVG completion row (source_index + 1) but timestamped FVG formation with that candle's open_time, while the canonical OB confirmation clock is the confirmation candle's available_at (block.confirmed_at, bot/strategy/order_blocks.py); the two sides of the temporal comparison therefore used different causal clocks, and on the canonical contiguous M5 grid (available_at(i) == open_time(i+1)) every FVG was mislabeled exactly one bar early: a true same-candle completion (0) was reported as -1 (BEFORE_OB_CONFIRMATION) and a true +1 (AFTER_OB_CONFIRMATION) as 0 (AT_OB_CONFIRMATION), shifting both ordering categories and the signed distance surface by one bar",
+      "corrected_fvg_formation_clock": "causal_frame.iloc[source_index + 1]['available_at'] - the completion (third) candle's causal availability, i.e. the instant the three-candle pattern becomes observable; emitted as fvg_formation_available_at; the completion candle's open_time is retained only as descriptive fvg_completion_open_time metadata and never drives BEFORE/AT/AFTER, signed bar distance, elapsed minutes or H003 membership",
+      "ob_clock_unchanged": "block.confirmed_at equals the OB confirmation candle's available_at (canonical detector, unchanged); both sides of the temporal comparison now use causal availability timestamps",
+      "completion_row_calculation_unchanged": "source_index + 1 - unchanged; detector attribution (source_index = i - 1) is untouched and no detector semantics changed",
+      "bar_distance_rule_unchanged": "signed M5 bar distance with the fail-closed grid invariant (seconds_difference %% 300 == 0 within tolerance) divided by 300; no manual -1/+1 compensation exists - the timestamps themselves are correct",
+      "h003_unchanged": "statement preserved verbatim: 'OB and FVG evidence may be causally related across a short temporal sequence rather than being required to appear as a strictly simultaneous state at one decision timestamp.'; ordering-only rule unchanged (at least one same-direction canonical FVG formed AT OR AFTER canonical OB confirmation; fill state descriptive only); no numeric lag, proximity rule or threshold introduced; H003 is not rewritten",
+      "headroom_rule_unchanged": "the 29-observation arithmetic feasibility bound (90 - 61), the TEMPORAL_VARIANT_HEADROOM_POSSIBLE / INSUFFICIENT classification and its necessary-condition-only status are unchanged",
+      "final_surface_reconciliation_unchanged": "get_unfilled_fvgs(causal_frame, 'M5', direction=htf_bias) exact reconciliation with the persisted surface is unchanged and remains fail closed",
+      "attrition_categories_unchanged": "the four preregistered category definitions are unchanged; because the former tooling mis-timestamped the temporal relationship, synthetic fixture membership between SAME_DIRECTION_FVG_EXISTED_BUT_FILLED and SAME_DIRECTION_FVG_PRE_OB_ONLY may legitimately move; no old synthetic classification is forced",
+      "regressions_added": [
+        "same-candle regression: valid synthetic frame where the FVG completion becomes causally available on the SAME M5 candle as the OB confirmation (verified against the real canonical detectors); requires fvg_formation_available_at == OB confirmed_at, formation_order_relative_to_ob == AT_OB_CONFIRMATION, signed_bar_distance == 0; the frozen 81c6a6f tooling reports the wrong coordinate (one bar early)",
+        "next-candle regression: FVG completion exactly one M5 candle after the OB confirmation; requires AFTER_OB_CONFIRMATION, signed_bar_distance == 1, elapsed_minutes == 5; the frozen tooling reports 0/AT for this case",
+        "previous-candle regression: FVG completion exactly one M5 candle before the OB confirmation; requires BEFORE_OB_CONFIRMATION, signed_bar_distance == -1, elapsed_minutes == -5",
+        "open-time descriptive invariance: completion open_time < formation available_at is proven for ordinary M5 candles, and separately that mutating fvg_completion_open_time cannot change the order category, signed distance or H003 membership (no consumer of the descriptive field)",
+        "old-bug reproduction: the same-candle and next-candle regressions are demonstrated to FAIL against the defective tooling bytes at 81c6a6f (byte-identical committed fixture, SHA-256 b8bc31fab2948c5828b44a08134f46d5b2641b6648d8366b941ad8aea1659468, executed in-process; no empirical Fold-01 values)"
+      ],
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D005.md section 21 'TC001 - Causal Formation Clock Clarification' appended; sections 1-20 and the original D005 scientific registration are NOT rewritten; historical document hashes preserved and verified from the committed Git blobs: initial Phase-A preregistration bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401 (df19e89a8afd72deda2b58c79f38a798daaead76), ordering-only correction d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941 (c615c3e9ae15f6c47b1b9da27b835d46a431b05c); the corrected full-document SHA-256 (2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8) is recorded in the tooling SPEC_SHA256 and the TC001 record",
+      "correction_timing": "pre-empirical: no D005 empirical access occurred before or during this correction; no data was observed when choosing the clock; all regression fixtures are synthetic",
+      "no_empirical_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no D005 run; no Tier B; no Fold 02-04; no 2025+; no holdout; all fixtures synthetic",
+      "v002_unchanged": "bot/strategy/variant_v002.py (canonical blob SHA 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4), the frozen V002 measurement tooling (backtests/phase8_v2_variant_v002_eval.py) and the TC001/TC002 records are NOT modified; V002 R001 and the Tier-B denial are not reopened",
+      "budget_impact": {
+        "diagnostics_executed": "3 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "note": "TC001 consumes ZERO diagnostic budget; diagnostics remain 3 / 12; D005 becomes permanently 4 / 12 ONLY when the corrected tooling first observes Fold 01 under separate supervisory authorization"
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true
+      },
+      "registered_utc": "2026-09-26T10:08:55Z"
     }
   ],
   "provenance_corrections": [

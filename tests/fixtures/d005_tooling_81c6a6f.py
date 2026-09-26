@@ -34,14 +34,6 @@ READ-ONLY diagnostic (frozen preregistration):
 * Temporal FVG universe: all causally detected canonical FVGs, categorized
   by formation relative to OB confirmation (BEFORE / AT / AFTER), direction
   (same / opposite) and fill state (unfilled at decision / filled before).
-* Causal formation clock (D005-TC001): the FVG formation timestamp is the
-  COMPLETION candle's ``available_at`` — the instant the three-candle
-  pattern becomes observable (completion row ``source_index + 1``,
-  unchanged).  The OB clock is the canonical ``block.confirmed_at``
-  (confirmation-candle ``available_at``).  Ordering and signed bar distance
-  compare availability to availability; the completion candle's
-  ``open_time`` is recorded descriptively only (``fvg_completion_open_time``)
-  and never drives ordering, distance or H003 membership.
 * H003 temporal association (spec section 9): ORDERING ONLY — a
   primary-population decision satisfies H003 iff at least one same-direction
   canonical FVG in the causal frame was formed AT OR AFTER canonical OB
@@ -104,7 +96,7 @@ H003_ID = "phase8-v2-H003"
 V002_ID = "phase6-development-v2-V002"
 CHARTER_ID = "phase8-v2-research-charter-v1-8527e3a5eec98f53"
 CHARTER_SHA256 = "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc"
-SPEC_SHA256 = "2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8"
+SPEC_SHA256 = "d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941"
 SPECIFICATION_DOCUMENT = "docs/PHASE8_V2_DIAGNOSTIC_D005.md"
 CLASSIFICATION = (
     "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE"
@@ -233,24 +225,11 @@ def _fvg_universe_record(
     *,
     decision_id: Any,
     zone: Mapping[str, Any],
-    fvg_formation_available_at: datetime,
-    fvg_completion_open_time: datetime | None,
+    fvg_open_time: datetime,
     block_confirmed_at: datetime,
     decision_at: datetime,
 ) -> dict[str, Any]:
-    """One temporal-universe record on the CAUSAL AVAILABILITY clock (TC001).
-
-    ``fvg_formation_available_at`` is the completion (third) candle's causal
-    ``available_at`` — the instant the three-candle FVG pattern becomes
-    observable.  ``block_confirmed_at`` is the canonical OB clock, which is
-    likewise the confirmation candle's ``available_at``
-    (``bot.strategy.order_blocks.detect_order_blocks``).  Ordering and
-    distance therefore compare causal availability to causal availability;
-    no mixed-clock comparison and no manual +/-1 compensation exists.
-    ``fvg_completion_open_time`` (when parseable) is DESCRIPTIVE metadata
-    only and never drives ordering, distance or H003 membership.
-    """
-    signed = _bar_distance(decision_id, block_confirmed_at, fvg_formation_available_at)
+    signed = _bar_distance(decision_id, block_confirmed_at, fvg_open_time)
     if signed > 0:
         order = "AFTER_OB_CONFIRMATION"
     elif signed < 0:
@@ -264,14 +243,7 @@ def _fvg_universe_record(
         "signed_bar_distance": signed,
         "absolute_bar_distance": abs(signed),
         "elapsed_minutes": float(signed * BAR_MINUTES),
-        "ob_confirmed_at": block_confirmed_at.astimezone(timezone.utc).isoformat(),
-        "fvg_formation_available_at": (
-            fvg_formation_available_at.astimezone(timezone.utc).isoformat()
-        ),
-        "fvg_completion_open_time": (
-            fvg_completion_open_time.astimezone(timezone.utc).isoformat()
-            if fvg_completion_open_time is not None else None
-        ),
+        "fvg_open_time": fvg_open_time.astimezone(timezone.utc).isoformat(),
         "unfilled_at_decision": not filled_before,
         "filled_before_decision": filled_before,
         "source_index": zone.get("source_index"),
@@ -418,39 +390,19 @@ def observe_d005_decision(
     same_direction_zones: list[Mapping[str, Any]] = []
     opposite_direction_count = 0
     for zone in universe_zones:
-        completion_index = int(zone["source_index"]) + 1
-        if completion_index >= len(causal_frame):
+        open_index = int(zone["source_index"]) + 1
+        if open_index >= len(causal_frame):
             raise ReconciliationError(
-                f"decision {decision_id!r}: FVG completion index outside the "
+                f"decision {decision_id!r}: FVG formation index outside the "
                 "causal frame"
             )
-        # TC001 causal formation clock: the pattern completes only when the
-        # THIRD candle is observable, so formation is the completion row's
-        # ``available_at`` (the same clock as the canonical OB
-        # ``confirmed_at``).  The completion row itself remains
-        # ``source_index + 1`` — detector attribution is unchanged.
-        fvg_formation_available_at = _parse_timestamp(
-            decision_id,
-            "fvg formation available_at",
-            causal_frame.iloc[completion_index]["available_at"],
+        fvg_open_time = _parse_timestamp(
+            decision_id, "fvg formation open_time", causal_frame.iloc[open_index]["open_time"]
         )
-        # Descriptive metadata only: the completion candle's open time.
-        # Parsed tolerantly (it must never gate anything) and recorded for
-        # clock-transparency; it cannot change ordering, distances or the
-        # H003 decision because none of them consume it.
-        try:
-            fvg_completion_open_time = _parse_timestamp(
-                decision_id,
-                "fvg completion open_time",
-                causal_frame.iloc[completion_index]["open_time"],
-            )
-        except D005Error:
-            fvg_completion_open_time = None
         record = _fvg_universe_record(
             decision_id=decision_id,
             zone=zone,
-            fvg_formation_available_at=fvg_formation_available_at,
-            fvg_completion_open_time=fvg_completion_open_time,
+            fvg_open_time=fvg_open_time,
             block_confirmed_at=block.confirmed_at.astimezone(timezone.utc),
             decision_at=decision_at,
         )
