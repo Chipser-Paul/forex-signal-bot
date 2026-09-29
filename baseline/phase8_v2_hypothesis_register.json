@@ -1128,7 +1128,7 @@
       "registered_utc": "2026-09-29T16:15:00Z",
       "budget_classification": "STRATEGY_VARIANT",
       "specification_document": "docs/PHASE8_V2_VARIANT_V003.md",
-      "specification_sha256": "placeholder recorded at governance-only preregistration; replaced by SHA-256 of final frozen spec document at implementation/tooling freeze",
+      "specification_sha256": "e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95",
       "specification_sha256_note": "placeholder recorded at governance-only preregistration; replaced by the SHA-256 of the final frozen spec document at the implementation/tooling freeze commit",
       "linked_hypothesis": "phase8-v2-H003",
       "supporting_evidence": [
