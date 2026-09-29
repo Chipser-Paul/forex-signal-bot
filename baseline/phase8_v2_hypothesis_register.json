@@ -1120,6 +1120,100 @@
       "budget_consumption_upon_first_empirical_result": "strategy variants becomes permanently 2 / 8 observed at the instant first Fold-01 V002 strategy behavior is empirically observed",
       "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
       "numeric_parameter_trials_consumed": 0
+    },
+    {
+      "variant_id": "phase6-development-v2-V003",
+      "title": "Causal Temporal FVG Evidence Memory",
+      "status": "REGISTERED_NOT_OBSERVED",
+      "registered_utc": "2026-09-29T16:15:00Z",
+      "budget_classification": "STRATEGY_VARIANT",
+      "specification_document": "docs/PHASE8_V2_VARIANT_V003.md",
+      "specification_sha256": "placeholder recorded at governance-only preregistration; replaced by SHA-256 of final frozen spec document at implementation/tooling freeze",
+      "specification_sha256_note": "placeholder recorded at governance-only preregistration; replaced by the SHA-256 of the final frozen spec document at the implementation/tooling freeze commit",
+      "linked_hypothesis": "phase8-v2-H003",
+      "supporting_evidence": [
+        "phase8-v2-D005-R001 SUPPORTED_BY_D005",
+        "phase6-development-v2-V002-R001 OPPORTUNITY_INSUFFICIENT"
+      ],
+      "predecessor_variant": "phase6-development-v2-V002",
+      "one_concept_rule": "one conceptual change: causal temporal FVG evidence memory — broadening the Gate-11 FVG confluence component from 'final unfilled FVG only' to (F_final OR F_temporal), where F_temporal requires a same-direction canonical FVG causally formed at or after the selected structural OB confirmation before the decision timestamp; historical fill status does not erase the occurrence of displacement imbalance evidence. All other components, OB semantics, score architecture (8/8, 2/1/2/1/2), and protected policies remain unchanged.",
+      "v002_baseline_preservation": "V003 is a strict superset of V002: when F_final is True, V003 executes the V002 final-surface branch identically, preserving exact V002 evidence, exact overlap metadata, and live FVG geometry. The temporal branch serves only as fallback when F_final is False.",
+      "live_zone_separation_rule": "strict separation of evidence from live entry geometry: historical filled temporal FVGs satisfy the confluence evidence requirement that displacement occurred after the OB, but NEVER populate context['fvg_zone'], strategy_state.fvg_zone, limit/pullback zones, stop loss, take profit, or RR geometry. Live fvg_zone is populated ONLY from the current unfilled final FVG surface (and is None for temporal-only evidence).",
+      "state_invariance_rule": "V003 evaluates evidence without mutating frozen strategy state: state.displacement_seen, state.fvg_zone, state.structure_state, state.liquidity_swept and all state fields remain completely unmutated by V003 historical evidence.",
+      "ob_semantics_preserved": "V003 order-block semantics are byte/behavior equivalent to V002: latest same-side canonical confirmed block, causal confirmation, consumed rejection, unmitigated/uninvalidated through decision, age > 30 bars alone does not reject.",
+      "causal_fvg_clock_and_ordering": "preserves D005 TC001 causal clock: FVG formation timestamp = completion candle available_at (source_index + 1), available_at <= decision_at, ordering rule: fvg_formation_available_at >= block.confirmed_at.",
+      "no_lag_threshold": "no numeric proximity, lag cutoff, session window, or ATR temporal threshold; numeric trials remain 0 / 4.",
+      "confluence_architecture_preserved": {
+        "weights": {
+          "HTF bias alignment": 2,
+          "premium/discount": 1,
+          "OB structure": 2,
+          "FVG structural relationship": 1,
+          "liquidity sweep": 2
+        },
+        "maximum": 8,
+        "threshold": "8/8 unchanged",
+        "v003_component_meanings": {
+          "two_point_ob_component": "canonical structurally-active OB present (unchanged from V002)",
+          "one_point_fvg_component": "V003 FVG evidence satisfied: V002 final-surface FVG associated OR causal temporal FVG memory associated"
+        }
+      },
+      "downstream_consistency_rule": "downstream canonical-strategy path consumes the same V003 structural-pair evidence via evaluate_v003_strategy; Gate 12/13 uses frozen determine_entry unchanged with ob_zone from active OB and fvg_zone = live_fvg_zone (None for temporal-only).",
+      "protected_unchanged": [
+        "causal candle availability",
+        "active-bar exclusion",
+        "HTF bias",
+        "liquidity sweep",
+        "displacement detector",
+        "FVG detector thresholds",
+        "internal structure Gate 10",
+        "premium/discount",
+        "session",
+        "news",
+        "DXY authority",
+        "regime",
+        "risk engine",
+        "broker safeguards",
+        "entry idempotency",
+        "consumption invariants",
+        "execution lifecycle",
+        "symbol allowlist",
+        "entry_model.determine_entry",
+        "strategy_state fields"
+      ],
+      "success_classification_preregistered": {
+        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 — merits continued research only; establishes neither sample sufficiency nor profitability",
+        "OPPORTUNITY_INSUFFICIENT": "0 < candidate_ready < 90",
+        "NO_CANDIDATES": "candidate_ready == 0",
+        "IMPLEMENTATION_FAILED": "only if V003 semantics are not functioning as specified"
+      },
+      "no_candidate_target_encoding": "the arithmetic headroom upper bound (61 + 36 = 97) is an upper bound only, NOT an expected candidate count; 97 / 90 must not be encoded as test expected outputs; tests use synthetic fixtures only; empirical result must derive naturally",
+      "two_phase_discipline": "Phase A governance-only preregistration committed and pushed before any implementation; Phase B implementation/tooling freeze only after remote resolves to Phase-A commit; no Fold-01 access during implementation or tooling work; no V003 empirical execution in this task",
+      "fold_boundary": "[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)",
+      "reserved_evidence": "Folds 02-04, 2025+ data and holdout remain inaccessible; Folds 02-04 remain reserved sequential confirmation evidence; V003 must first demonstrate candidate_ready >= 90 on contaminated Tier-A Fold 01 before any Tier B access",
+      "allowed_metric_surface": "structural metrics only: scheduled decisions, accounting buckets, Gate 8-13 funnel, candidate_ready count, candidate rate, candidate setup IDs, long/short distribution, weekly/time distribution, session distribution, duplicate/setup-consumption counts, V003 structural-active OB count, final-surface FVG evidence count, temporal-memory FVG evidence count, total V003 FVG evidence count, exact-overlap descriptive true/false, temporal FVG distance distribution; no performance metrics",
+      "prohibitions": [
+        "P&L",
+        "wins/losses",
+        "profit factor",
+        "expectancy",
+        "drawdown",
+        "Sharpe",
+        "trade-return distribution",
+        "account balance/equity outcome",
+        "Fold 02-04 access",
+        "2025+ data access",
+        "holdout access",
+        "Tier B access before candidate_ready >= 90 on Fold 01",
+        "candidate-count optimization toward 90",
+        "no ranking above 90",
+        "DXY weakening",
+        "numeric lag thresholds"
+      ],
+      "interpretation_rule": "possible outcomes: OPPORTUNITY_SUFFICIENT / OPPORTUNITY_INSUFFICIENT / NO_CANDIDATES / IMPLEMENTATION_FAILED; candidate_ready >= 90 means the variant merits continued research only and establishes neither sample sufficiency nor profitability; no ranking above 90; no optimization toward 90; selection requires supervisory review",
+      "budget_consumption_upon_first_empirical_result": "strategy variants becomes permanently 3 / 8 observed at the instant first Fold-01 V003 strategy behavior is empirically observed",
+      "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
+      "numeric_parameter_trials_consumed": 0
     }
   ],
   "result_records": [
