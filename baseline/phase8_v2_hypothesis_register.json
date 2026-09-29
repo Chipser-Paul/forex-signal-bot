@@ -532,9 +532,9 @@
         "OB-to-FVG temporal distance distributions (later diagnostic only)"
       ],
       "implementation_required": false,
-      "status": "REGISTERED",
-      "result": null,
-      "disposition": null
+      "status": "SUPPORTED_BY_D005",
+      "result": "phase8-v2-D005-R001",
+      "disposition": "SUPPORTED_BY_D005"
     },
     {
       "hypothesis_id": "phase8-v2-H004",
@@ -2399,6 +2399,254 @@
         "tier_b_sealed": true
       },
       "registered_utc": "2026-09-29T14:59:00Z"
+    },
+    {
+      "result_id": "phase8-v2-D005-R001",
+      "record_type": "DIAGNOSTIC_RESULT",
+      "diagnostic_id": "phase8-v2-D005",
+      "hypothesis_id": "phase8-v2-H003",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "lineage": {
+        "preregistration_commit": "df19e89a8afd72deda2b58c79f38a798daaead76",
+        "ordering_only_correction_commit": "c615c3e9ae15f6c47b1b9da27b835d46a431b05c",
+        "tc001_clock_correction_commit": "7c9608d5b9871414a830e38395d1a67f7efacad2",
+        "tc002_partition_boundary_commit": "05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6",
+        "tc003_canonical_loader_commit": "519902bc5db895f690568170909f82213be79545",
+        "s002_forensic_audit_id": "phase8-v2-S002",
+        "s002_report_sha256": "8c73ae26eb691a7299d8a8ebcff217cf715d4872142bc4ff3da38bb0f8cee7ac",
+        "s002_disposition": "PROVENANCE_INSUFFICIENT_TO_DISTINGUISH / CURRENT_CANONICAL_STORE_VERIFIED_INTACT",
+        "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D005.md",
+        "specification_sha256": "7f754232731139816be5597aedadc4a069ead06d53c10423a7a88cd3d5f83d26",
+        "measurement_tooling_path": "backtests/phase8_v2_diagnostic_d005.py",
+        "measurement_tooling_commit": "519902bc5db895f690568170909f82213be79545",
+        "measurement_tooling_fingerprint": "bf13cd30037d97c57ef0e478db4a436503da7edb4db1ea8b441c88f9b87cdb52",
+        "fingerprint_contract": "canonical_git_blob_v1",
+        "v002_implementation_commit": "4890dcbce8579f159224b653d94f634cc9017549",
+        "v002_strategy_module_git_blob_sha": "8272c28552c05067b6dc3ba039ee8df2dbbfb8b4"
+      },
+      "void_attempt_history": {
+        "attempt1": {
+          "classification": "BLOCKAGE_ARTIFACT — EMPIRICAL_EXPOSURE_OCCURRED — FROZEN_TOOLING_FAIL_CLOSED_AT_AGGREGATION — NOT R001 — NO RESULT SEALED",
+          "timestamp_utc": "2026-09-26T13:18:42.145570+00:00",
+          "blockage_artifact_sha256": "168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2",
+          "exact_cause": "aggregate_d005 asserted active_count == sum(four_cells) assuming associated was a subset of active; associated is not a subset of active; fail-closed at aggregation",
+          "observations_persisted": 0
+        },
+        "attempt2": {
+          "classification": "BLOCKAGE_ARTIFACT — CORRECTED_RERUN_FAILED_PRE_STORE_ACCESS — ZERO_EMPIRICAL_EXPOSURE — NOT R001 — NO RESULT SEALED",
+          "timestamp_utc": "2026-09-28T20:56:45.660600Z",
+          "blockage_artifact_sha256": "5a1c9482c569d0e614ef08f6e3fe9d8323381222de31487d4f608b2d8644f1cf",
+          "exact_cause": "CLI called FoldFeatureStore.open(args.store) but canonical infrastructure exposes only load_feature_store; fail-closed before store opened (zero empirical exposure)",
+          "observations_persisted": 0
+        },
+        "attempt3": {
+          "classification": "BLOCKAGE_ARTIFACT — COMPLETION_RERUN_FAILED_ROW_VERIFICATION — ZERO_EMPIRICAL_EXPOSURE — NOT R001 — NO RESULT SEALED",
+          "timestamp_utc": "2026-09-29T15:18:51.011401+00:00",
+          "blockage_artifact_sha256": "20a4dbe152821af1a2c09f42094473351b52399d94e8bd7b661f6a12897be449",
+          "exact_cause": "transient zlib decompression error during load_feature_store(verify_rows=True) at row 1572; static S002 audit cleared store as 100% byte-intact",
+          "observations_persisted": 0
+        },
+        "attempt4": {
+          "classification": "SUCCESSFUL_EMPIRICAL_COMPLETION",
+          "started_utc": "2026-09-29T15:46:22.1605167Z",
+          "finished_utc": "2026-09-29T15:53:15.1822061Z",
+          "outcome": "phase8-v2-D005_result.json sealed successfully"
+        }
+      },
+      "execution_window_utc": {
+        "budget_exposure_first_store_load": "2026-09-26T13:18:42.145570+00:00",
+        "attempt4_started": "2026-09-29T15:46:22.1605167Z",
+        "attempt4_finished": "2026-09-29T15:53:15.1822061Z"
+      },
+      "input_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "fold01_boundary": [
+          "2024-04-01T00:00:00+00:00",
+          "2024-06-08T00:00:00+00:00"
+        ],
+        "identity_verified_before_observation": true,
+        "rows_verify_sha256_passed": true,
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767"
+      },
+      "h003_disposition": "SUPPORTED_BY_D005",
+      "h003_disposition_basis": "Preregistered qualitative rule satisfied: primary population (42 decisions with structurally active OB but without final same-direction FVG) is material and not near-zero; 36 of 42 (85.7%) carry at least one same-direction canonical FVG formed at or after canonical OB confirmation in the causal frame. The qualifying temporal offsets are highly structured and non-diffuse (median signed distance = 1.0 bar / 5.0 minutes, P25=1.0, P50=1.0, P75=1.0; 36 of 43 qualifying associations occur at exactly bar +1). Arithmetic headroom bound satisfied (36 >= 29). Failure mode (temporally diffuse or absent OB/FVG pairs) is refuted on Fold-01. Counterweight recorded: all 113 causal same- and opposite-direction FVGs in qualifying decisions had filled before the decision timestamp. No profitability or candidate prediction is implied; V003 decision requires separate supervisory authorization.",
+      "preregistered_structural_summaries": {
+        "decision_accounting": {
+          "scheduled": 13269,
+          "reducer_classified": 7316,
+          "missing_history": 4815,
+          "unavailable_input": 1138,
+          "evaluation_error": 0,
+          "reconciles": true
+        },
+        "gate_funnel": {
+          "gate_8_liquidity": {
+            "entered": 7316,
+            "passed": 3607,
+            "failed": 3709
+          },
+          "gate_9_displacement": {
+            "entered": 3607,
+            "passed": 1489,
+            "failed": 2118
+          },
+          "gate_10_internal_structure": {
+            "entered": 1489,
+            "passed": 526,
+            "failed": 963
+          },
+          "gate_11_confluence_score": {
+            "entered": 526,
+            "passed": 1,
+            "failed": 525
+          },
+          "canonical_strategy": {
+            "entered": 1,
+            "passed": 0,
+            "failed": 1
+          }
+        },
+        "D005_population": {
+          "primary_population": 42,
+          "h003_side_counts": {
+            "LONG": 17,
+            "SHORT": 25
+          },
+          "four_cell_contingency": {
+            "ACTIVE_ASSOCIATED": 102,
+            "ACTIVE_NOT_ASSOCIATED": 42,
+            "NONACTIVE_ASSOCIATED": 8,
+            "NONACTIVE_NOT_ASSOCIATED": 374,
+            "sums_to_entrants_exactly": true,
+            "active_marginal_reconciles": true,
+            "associated_marginal_reconciles": true,
+            "associated_is_not_a_subset_of_active": true,
+            "marginals_are_reconciliation_totals_only": true,
+            "marginal_subtraction_prohibited": true
+          },
+          "reference_populations_partition": {
+            "R1_active_with_final_same_direction_fvg": 102,
+            "R2_active_without_final_same_direction_fvg": 42,
+            "R3_v002_non_active": 382,
+            "partitions_entrants_exactly": true,
+            "primary_equals_R2": true
+          },
+          "primary_decision_id_set_reconciles_exactly": true
+        },
+        "h003_temporal_association": {
+          "h003_temporal_association_decisions": 36,
+          "never_a_candidate_count": true,
+          "structural_count_only": true
+        },
+        "headroom_feasibility": {
+          "classification": "TEMPORAL_VARIANT_HEADROOM_POSSIBLE",
+          "tier_a_arithmetic_headroom_observations": 29,
+          "necessary_condition_only": true
+        },
+        "final_surface_attrition": {
+          "categories": {
+            "NO_SAME_DIRECTION_FVG_EVER": 1,
+            "SAME_DIRECTION_FVG_EXISTED_BUT_FILLED": 36,
+            "SAME_DIRECTION_FVG_PRE_OB_ONLY": 4,
+            "OPPOSITE_DIRECTION_ONLY": 1
+          },
+          "reconciles_to_primary_population": true,
+          "category_definitions_preregistered": true
+        },
+        "temporal_distance_surface_summary": {
+          "count": 43,
+          "signed_min": 1,
+          "signed_max": 87,
+          "absolute_min": 1,
+          "absolute_max": 87,
+          "median_signed": 1.0,
+          "quantiles_signed": {
+            "p25": 1.0,
+            "p50": 1.0,
+            "p75": 1.0
+          },
+          "exact_integer_histogram_signed": {
+            "1": 36,
+            "2": 1,
+            "6": 3,
+            "87": 3
+          }
+        },
+        "temporal_fvg_universe_surface": {
+          "causal_fvg_count_total": 113,
+          "causal_fvg_count_same_direction": 93,
+          "causal_fvg_count_opposite_direction": 20,
+          "formation_orders": {
+            "BEFORE_OB_CONFIRMATION": 69,
+            "AT_OB_CONFIRMATION": 0,
+            "AFTER_OB_CONFIRMATION": 44
+          },
+          "fill_states": {
+            "filled_before_decision": 113,
+            "unfilled_at_decision": 0
+          },
+          "non_causal_rows_excluded_total": 0
+        },
+        "v002_reference_surface": {
+          "gate11_entrants_observed": 526,
+          "legacy_score_passed_count": 1,
+          "legacy_score_failed_count": 525,
+          "v002_structurally_active_count": 144,
+          "v002_associated_same_direction_fvg_count": 110,
+          "exact_overlap_descriptive_true": 67,
+          "exact_overlap_descriptive_false": 43,
+          "exact_overlap_descriptive_not_available": 0,
+          "v002_pair_state_counts": {
+            "ACTIVE": 144,
+            "MITIGATED": 92,
+            "INVALIDATED": 15,
+            "UNAVAILABLE": 275
+          },
+          "h007_pair_state_reason_distribution": {
+            "structurally_active_block": 144,
+            "block_already_mitigated": 92,
+            "close_below_bullish_zone": 9,
+            "close_above_bearish_zone": 6,
+            "no_confirmed_block": 275
+          }
+        }
+      },
+      "output": {
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_diagnostics/phase8-v2-D005/fold01/phase8-v2-D005_result.json",
+        "sha256": "fc852ed282ffe06036ba27b098086444d6eba37c3d7cf275b8f30ebd2d7efebc",
+        "bytes": 23699,
+        "read_back_verified": true
+      },
+      "result_document": "docs/PHASE8_V2_DIAGNOSTIC_D005_RESULT.md",
+      "d005_is_read_only": true,
+      "counterfactual_arithmetic_performed": false,
+      "no_lag_optimization_performed": true,
+      "no_profitability_metrics": true,
+      "v002_strategy_module_unchanged": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "budget_after_result": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "D005 Attempt 4 completes the diagnostic slot permanently consumed at Attempt 1; diagnostics remain 4 / 12 (never incremented to 5 / 12); variants remain 2 / 8; numeric trials remain 0 / 4."
+      },
+      "v003_status": "NOT CREATED — Tier B remains sealed — Supervisory H003/V003 Decision Required"
     }
   ],
   "provenance_corrections": [
