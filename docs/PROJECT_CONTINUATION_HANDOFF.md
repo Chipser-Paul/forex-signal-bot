@@ -586,3 +586,18 @@ Copy-paste for a fresh agent session:
   - Section 23: `test_regression_score_contamination_prevented` (proves alternate/legacy truthy fields do not manufacture 8/8 Gate-11 passes)
 - **Budget & Status:** Diagnostics `4 / 12`, strategy variants `2 / 8` (only becomes `3 / 8` upon future authorized Fold-01 empirical execution), numeric trials `0 / 4`. Upward revision lock ACTIVE.
 - **Next decision point (supervisory):** Authorize empirical execution of V003 on Tier-A Fold 01 (`fold-01-a8b406884ab3525a`) using corrected frozen tooling `backtests/phase8_v2_variant_v003_eval.py` (which will consume variant budget slot `3 / 8`); or close the V2 research cycle. HARD STOP: V003 empirical execution awaits supervisory authorization.
+
+## Update — 2026-09-29: V003 R001 — first empirical observation published — OPPORTUNITY_INSUFFICIENT (canonical state for future sessions)
+
+- **V003 empirical execution completed:** Executed committed CLI `python -m backtests.phase8_v2_variant_v003_eval` on authorized Fold-01 store `fold-01-a8b406884ab3525a` (13,269 snapshots). Sealed external result artifact `C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json` (45,221 bytes, SHA-256 `50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8`, read-back verified). Authoritative narrative: `docs/PHASE8_V2_VARIANT_V003_RESULT.md`.
+- **Key metrics & funnels:**
+  - Gate-11 entrants: 526
+  - V003 Gate-11 pass (8/8): 138 (vs 102 in V002; 36 rescued by temporal FVG evidence memory, matching D005 Attempt 4)
+  - Canonical strategy pass: 110 (vs 80 in V002)
+  - Gate-12/13 entry ready (`candidate_ready`): **81** (vs 61 in V002; +20 candidates from temporal FVG memory; LONG 48 / SHORT 33; rate 0.153992)
+  - Candidate setup IDs: 81 unique persisted setup IDs (`s8n1_…`), 0 duplicates (`81 + 0 == 81`)
+  - V002 final-branch candidates preserved 100% (61/61 bit-for-bit identical to V002 R001)
+- **Opportunity classification:** **`OPPORTUNITY_INSUFFICIENT`** (`0 < 81 < 90`, mechanical; 90 threshold not reached).
+- **Budget transition:** First empirical store observation occurred at `2026-09-29T18:27:20.872944+00:00`. Strategy variants permanently **`3 / 8` observed**. Diagnostics remain `4 / 12`, numeric trials `0 / 4`. Upward revision lock ACTIVE.
+- **Sealed evidence:** Folds 02–04, holdout, and 2025+ data remain strictly sealed. Tier B remains sealed. V004 NOT created.
+- **Next decision point (supervisory):** With V003 measured and opportunity-insufficient on Fold 01 (`81 < 90`), supervisory review must decide whether to close the V2 development cycle on Fold-01 evidence or formulate next research within remaining budget (8 diagnostics, 5 variants). Tier B remains strictly sealed.

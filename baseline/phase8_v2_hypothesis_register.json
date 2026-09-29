@@ -2789,6 +2789,142 @@
         "data_2025_plus": true,
         "tier_b_sealed": true
       }
+    },
+    {
+      "result_id": "phase6-development-v2-V003-R001",
+      "record_type": "STRATEGY_VARIANT_RESULT",
+      "variant_id": "phase6-development-v2-V003",
+      "hypothesis_id": "phase8-v2-H003",
+      "supporting_diagnostic_id": "phase8-v2-D005",
+      "predecessor_variant_id": "phase6-development-v2-V002",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V003 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "lineage": {
+        "d005_result_baseline_commit": "4d037f893c9f93dae32e5aa6af6b404fc3445b1f",
+        "phase_a_preregistration_commit": "18dc9889cf119623e56026d529e9546808125444",
+        "implementation_freeze_commit": "82cf09b92fdcd67af8b560f6d0e296dbc618ebd1",
+        "tc001_measurement_observer_correction_commit": "39817b3994a2d73e6c80eaf37579e8e3b3020b65",
+        "specification_document": "docs/PHASE8_V2_VARIANT_V003.md",
+        "specification_sha256": "e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95",
+        "implementation_module": "bot/strategy/variant_v003.py",
+        "implementation_module_git_blob_sha256": "c25f110c15c60bc5b32cffc0b3870de6d5d5144c",
+        "tooling_commit": "39817b3994a2d73e6c80eaf37579e8e3b3020b65",
+        "tooling_fingerprint_sha256": "40df72bd13902199504fb89cbd5d64184b923cffce1f211d041cffacc743c9b9",
+        "fingerprint_contract": "canonical_git_blob_v1"
+      },
+      "executed": true,
+      "empirical_exposure_utc": "2026-09-29T18:27:20.872944+00:00",
+      "valid_run_started_utc": "2026-09-29T18:27:33Z",
+      "valid_run_finished_utc": "2026-09-29T19:10:27Z",
+      "store_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "coverage": "fold-01/full",
+        "rows_rehashed_before_observation": "verify_rows=True full row-digest + gate-event-id re-derivation over all 13269 rows",
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767",
+        "store_compatibility_decision": "B — preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
+      },
+      "output": {
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V003 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
+        "sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8",
+        "bytes": 45221,
+        "read_back_verified": true
+      },
+      "decision_accounting": {
+        "scheduled": 13269,
+        "reducer_classified": 7316,
+        "missing_history": 4815,
+        "unavailable_input": 1138,
+        "evaluation_error": 0,
+        "reconciles": true
+      },
+      "gate_11_population": {
+        "rule": "all decisions that legitimately entered frozen Gate 11 (gate_11_confluence_score present); historical boolean descriptive only",
+        "gate11_entrants_observed": 526,
+        "frozen_gate11_entered": 526,
+        "reconciles": true,
+        "legacy_score_passed_count": 1,
+        "legacy_score_failed_count": 525
+      },
+      "V003_structural_pair_surface": {
+        "v003_structurally_active_count": 144,
+        "v003_final_surface_fvg_evidence_count": 110,
+        "v003_temporal_memory_fvg_evidence_count": 97,
+        "v003_total_fvg_evidence_count": 207,
+        "exact_overlap_descriptive_true": 67,
+        "exact_overlap_descriptive_false": 43,
+        "v003_pair_state_counts": {
+          "ACTIVE": 144,
+          "INVALIDATED": 15,
+          "MITIGATED": 92,
+          "UNAVAILABLE": 275
+        }
+      },
+      "V003_variant_funnel": {
+        "gate_11_v003": {
+          "entered": 526,
+          "passed": 138,
+          "failed": 388
+        },
+        "canonical_strategy_v003": {
+          "entered": 138,
+          "passed": 110,
+          "failed": 28
+        },
+        "gate_12_13_rr_entry_v003": {
+          "entered": 110,
+          "passed": 81,
+          "failed": 29
+        },
+        "funnel_chain_reconciles": "candidate_ready 81 <= strategy pass 110 <= gate11 pass 138 <= entrants 526; entered-chains verified fail-closed inside the tooling"
+      },
+      "candidate_surface": {
+        "candidate_ready": 81,
+        "candidate_rate": 0.153992,
+        "candidate_long_count": 48,
+        "candidate_short_count": 33,
+        "candidate_final_surface_count": 61,
+        "candidate_temporal_memory_count": 20,
+        "unique_candidate_setup_ids": 81,
+        "duplicate_candidate_setup_id_occurrences": 0,
+        "setup_id_reconciliation_holds": true,
+        "candidate_entry_modes_unique": [
+          "conservative"
+        ],
+        "candidate_entry_types_unique": [
+          "partial"
+        ],
+        "note": "full setup-ID and decision-ID lists are sealed verbatim in the external result JSON; counts and reconciliation only are restated here"
+      },
+      "opportunity_classification": "OPPORTUNITY_INSUFFICIENT",
+      "opportunity_classification_basis": "mechanical application of the preregistered rule: 0 < candidate_ready (81) < 90; no ranking above 90 and no optimization toward 90 was performed; 90 remains the frozen Tier-A research target",
+      "live_zone_separation_verified": true,
+      "state_invariance_verified": true,
+      "no_counterfactuals_computed": true,
+      "no_profitability_metrics": true,
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "result_document": "docs/PHASE8_V2_VARIANT_V003_RESULT.md",
+      "budget_after_result": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "the first real Fold-01 V003 strategy observation permanently consumed the third strategy-variant slot at the exposure timestamp 2026-09-29T18:27:20.872944+00:00"
+      },
+      "h003_binding": "H003 remains bound to this record as its primary formal empirical reference; the preregistered H003 statement is NOT rewritten; the formal outcome of R001 is the V003 opportunity classification OPPORTUNITY_INSUFFICIENT (81 candidates < 90 threshold)"
     }
   ],
   "provenance_corrections": [
