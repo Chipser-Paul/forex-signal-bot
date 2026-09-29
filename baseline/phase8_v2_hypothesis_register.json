@@ -2741,6 +2741,54 @@
         "note": "D005 Attempt 4 completes the diagnostic slot permanently consumed at Attempt 1; diagnostics remain 4 / 12 (never incremented to 5 / 12); variants remain 2 / 8; numeric trials remain 0 / 4."
       },
       "v003_status": "NOT CREATED — Tier B remains sealed — Supervisory H003/V003 Decision Required"
+    },
+    {
+      "correction_id": "phase6-development-v2-V003-TC001",
+      "record_type": "PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION",
+      "variant_id": "phase6-development-v2-V003",
+      "defect_class": "V003_PRE_EMPIRICAL_MEASUREMENT_OBSERVER_BASELINE_DRIFT",
+      "defective_tooling_commit": "82cf09b92fdcd67af8b560f6d0e296dbc618ebd1",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 82cf09b92fdcd67af8b560f6d0e296dbc618ebd1, subject 'fix: preserve V002 observer semantics in V003 measurement'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "registered_utc": "2026-09-29T17:35:00Z",
+      "exact_five_observer_drifts": {
+        "bias_fallback": "Defective observer normalized raw_bias with .lower() and defaulted invalid/missing values to 'bullish' (bias = raw_bias if raw_bias in ('bullish', 'bearish') else 'bullish'). V002 fails closed by raising an error on missing/FLAT bias.",
+        "premium_discount_source": "Defective observer read pd_flag from ob_result.in_discount_or_premium with a default of True. V002 sources premium/discount strictly from liquidity_context.structure_context using direction-specific discount_zone (bullish) or premium_zone (bearish) and defaults missing flags to False.",
+        "liquidity_sweep_source": "Defective observer OR'd payload.get('liquidity_signal') with (payload.get('liquidity_context') or {}).get('liquidity_swept'). V002 sources sweep strictly from bool(payload.get('liquidity_signal')) without fallback.",
+        "strategy_adapter": "Defective observer invoked evaluate_v003_strategy with adapter='replay'. V002 invokes evaluate_v002_strategy with adapter='live'.",
+        "symbol": "Defective observer derived symbol as str(payload.get('symbol') or 'XAUUSDm'). V002 hardcodes production symbol='XAUUSDm'."
+      },
+      "corrected_v002_equivalent_semantics": {
+        "htf_bias": "htf_bias = str(payload.get('htf_bias') or ''); side = {'bullish': StrategySide.LONG, 'bearish': StrategySide.SHORT}.get(htf_bias, StrategySide.FLAT); if side is StrategySide.FLAT: raise V003EvalError(...)",
+        "premium_discount": "structure_context = (payload.get('liquidity_context') or {}).get('structure_context') or {}; pd_flag = bool(structure_context.get('discount_zone' if htf_bias == 'bullish' else 'premium_zone'))",
+        "liquidity_sweep": "sweep_flag = bool(payload.get('liquidity_signal'))",
+        "strategy_adapter": "evaluate_v003_strategy(adapter='live', ...)",
+        "symbol": "symbol='XAUUSDm'",
+        "context_inputs": "dxy_context, news_context, session_context, consumed_block_ids, StrategyConfig, score weights 2/1/2/1/2, score threshold 8/8, setup-state reconstruction, Gate 12/13 entry readiness strictly match V002."
+      },
+      "v003_strategy_implementation_unchanged": true,
+      "strategy_module_diff": "bot/strategy/variant_v003.py = 0 bytes changed (canonical blob SHA c25f110c15c60bc5b32cffc0b3870de6d5d5144c unchanged)",
+      "specification_sha_unchanged": true,
+      "specification_document": "docs/PHASE8_V2_VARIANT_V003.md",
+      "specification_sha256": "e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95",
+      "h003_unchanged": "H003 statement, rationale, metric surface and supporting D005 evidence disposition remain unchanged.",
+      "d005_unchanged": "D005 result and disposition remain SUPPORTED_BY_D005; D005 tooling and results are not modified.",
+      "no_empirical_v003_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; no replay; no Tier B; no 2025+; no holdout; all tests synthetic.",
+      "budget_impact": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "budget_lock": "ACTIVE",
+        "note": "TC001 consumes ZERO strategy-variant budget; variants remain 2 / 8; V003 becomes 3 / 8 ONLY when corrected TC001 tooling first observes actual Fold-01 V003 behavior under separate supervisory authorization."
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      }
     }
   ],
   "provenance_corrections": [

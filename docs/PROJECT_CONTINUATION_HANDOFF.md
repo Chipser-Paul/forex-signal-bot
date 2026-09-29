@@ -560,3 +560,29 @@ Copy-paste for a fresh agent session:
   - Regression & security: 428 regression tests passed (4 skipped), 22 security tests passed (10 subtests passed).
 - **Budget & Governance:** Diagnostics `4 / 12`, strategy variants `2 / 8` (only becomes `3 / 8` upon separate future authorized Fold-01 empirical execution), numeric trials `0 / 4`. Upward revision lock ACTIVE. Zero Fold-01 store reads or runs during this task; Tier B (Folds 02–04), 2025+ data, and holdout remain strictly sealed.
 - **Next decision point (supervisory):** Authorize empirical execution of V003 on Tier-A Fold 01 (`fold-01-a8b406884ab3525a`) using frozen tooling `backtests/phase8_v2_variant_v003_eval.py` (which will consume variant budget slot `3 / 8`); or close the V2 research cycle. HARD STOP: V003 empirical execution awaits supervisory authorization.
+
+## Update — 2026-09-29: V003 TC001 — V002-baseline observer semantics restored in measurement tooling (NO empirical execution; awaiting supervisory execution authorization)
+
+- **Defect class `V003_PRE_EMPIRICAL_MEASUREMENT_OBSERVER_BASELINE_DRIFT` (register record `phase6-development-v2-V003-TC001`, defective commit `82cf09b92fdcd67af8b560f6d0e296dbc618ebd1`):** Pre-empirical observer deviations from V002 detected in `backtests/phase8_v2_variant_v003_eval.py` in non-FVG inputs:
+  1. *htf_bias:* normalized with `.lower()` and defaulted to `"bullish"`. Corrected to fail closed by raising `V003EvalError` on missing/unresolved bias.
+  2. *premium/discount:* sourced from `ob_result.in_discount_or_premium` with `True` default. Corrected to source from `liquidity_context.structure_context` directionally (`discount_zone` / `premium_zone`) with `False` default.
+  3. *liquidity sweep:* OR'd with `liquidity_swept`. Corrected to read strictly `bool(payload.get("liquidity_signal"))`.
+  4. *strategy adapter:* passed `adapter="replay"`. Corrected to `adapter="live"`.
+  5. *symbol:* derived from payload. Corrected to hardcoded `"XAUUSDm"`.
+- **Invariance:**
+  - `bot/strategy/variant_v003.py` diff is 0 bytes (Git blob `c25f110c15c60bc5b32cffc0b3870de6d5d5144c` unchanged).
+  - `docs/PHASE8_V2_VARIANT_V003.md` spec SHA-256 `e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95` unchanged.
+  - V002 strategy, V002 tooling, H003 statement, and D005 tooling/results unchanged.
+  - Live-zone separation and strategy state invariance strictly preserved.
+  - Zero Fold-01 reads or runs; Tier B, 2025+ data, and holdout remain strictly sealed.
+- **Proof surface (`tests/test_phase8_v2_v003_eval_tooling.py`, 22 passed):**
+  - Section 16: `test_regression_unresolved_bias_fails_closed`
+  - Section 17: `test_regression_premium_discount_source`
+  - Section 18: `test_regression_no_true_default_for_premium_discount`
+  - Section 19: `test_regression_sweep_source_no_or_fallback`
+  - Section 20: `test_regression_adapter_and_symbol_passed_to_strategy`
+  - Section 21: `test_v002_v003_non_fvg_input_equivalence` (proves exact observer equality when $F_{\text{final}} == \text{True}$)
+  - Section 22: `test_temporal_only_difference_from_v002` (proves FVG component is the sole difference when $F_{\text{final}} == \text{False}$ and $F_{\text{temporal}} == \text{True}$)
+  - Section 23: `test_regression_score_contamination_prevented` (proves alternate/legacy truthy fields do not manufacture 8/8 Gate-11 passes)
+- **Budget & Status:** Diagnostics `4 / 12`, strategy variants `2 / 8` (only becomes `3 / 8` upon future authorized Fold-01 empirical execution), numeric trials `0 / 4`. Upward revision lock ACTIVE.
+- **Next decision point (supervisory):** Authorize empirical execution of V003 on Tier-A Fold 01 (`fold-01-a8b406884ab3525a`) using corrected frozen tooling `backtests/phase8_v2_variant_v003_eval.py` (which will consume variant budget slot `3 / 8`); or close the V2 research cycle. HARD STOP: V003 empirical execution awaits supervisory authorization.

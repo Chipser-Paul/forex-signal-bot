@@ -107,12 +107,71 @@ AUTHORIZED_FOLD01_STORE_BASENAME = "fold-01-a8b406884ab3525a"
 FOLD01_START_MS = int(datetime.fromisoformat(FOLD01_START).timestamp() * 1000)
 FOLD01_END_MS = int(datetime.fromisoformat(FOLD01_END).timestamp() * 1000)
 
+_PROVENANCE = {
+    "research_identity": "phase6-development-v2",
+    "variant_id": V003_ID,
+    "hypothesis_id": H003_ID,
+    "specification_document": SPECIFICATION_DOCUMENT,
+    "specification_sha256": SPEC_SHA256,
+    "implementation_module": IMPLEMENTATION_MODULE,
+    "tooling": TOOLING_RELPATH,
+    "fingerprint_contract": FINGERPRINT_CONTRACT,
+}
+
 _STANDALONE_YEAR_PART = re.compile(r"^\d{4}$")
 _ISO_YEAR_PREFIX_PART = re.compile(r"^(?:20|19)\d{2}-")
 _STRUCTURAL_YEAR_MARKER = re.compile(r"year=(\d{4})")
 _FOLD_STORE_PART = re.compile(r"^fold-\d{2}-")
 
 HOLDOUT_TOKENS = ("holdout", "hold_out", "final_validation", "validation_fold")
+
+
+def provenance(
+    *,
+    implementation_commit: str,
+    tooling_commit: str,
+    store_identity: Mapping[str, Any],
+    generated_at: str | None = None,
+    blob_source=None,
+) -> dict[str, Any]:
+    """Provenance bound to the V003 implementation commit and this tooling."""
+    from bot.scientific.canonical_bytes import canonical_file_digest  # noqa: PLC0415
+
+    if not implementation_commit or len(implementation_commit) != 40:
+        raise V003EvalError("V003 implementation commit identity invalid")
+    if not tooling_commit or len(tooling_commit) != 40:
+        raise V003EvalError("tooling commit identity invalid")
+    try:
+        tooling_fingerprint = canonical_file_digest(
+            TOOLING_RELPATH,
+            commit=tooling_commit,
+            repo=REPO_ROOT,
+            blob_source=(
+                blob_source if blob_source is not None else _canonical_blob_source()
+            ),
+        )
+    except Exception as error:  # fail closed: no worktree/normalized fallback
+        raise V003EvalError(f"V003 tooling fingerprint unresolvable: {error}") from error
+    blob = json.dumps(store_identity, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return {
+        **_PROVENANCE,
+        "implementation_commit": implementation_commit,
+        "tooling_commit": tooling_commit,
+        "tooling_fingerprint": tooling_fingerprint,
+        "fold_store_identity_sha256": hashlib.sha256(blob.encode("utf-8")).hexdigest(),
+        "generated_at_utc": generated_at or _iso(datetime.now(timezone.utc)),
+    }
+
+
+def _canonical_blob_source():
+    """Production committed-byte source: real Git plumbing on this repo."""
+    from bot.scientific.canonical_bytes import make_git_blob_source  # noqa: PLC0415
+
+    return make_git_blob_source(REPO_ROOT)
+
+
+def _iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat()
 
 
 class V003EvalError(RuntimeError):
@@ -271,69 +330,86 @@ def observe_v003_decision(
     row: Mapping[str, Any],
     snapshot: Any,
     prior_state_record: Any,
-    decision_result_record: Any,
     *,
     config: Any,
+    decision_result_record: Any = None,
 ) -> dict[str, Any]:
     """Evaluate V003 structural-pair evidence and downstream strategy for one entrant."""
     from bot.strategy.models import StrategySide  # noqa: PLC0415
 
+    decision_id = row.get("decision_id")
     payload = json.loads(snapshot.gate_payload)
-    decision_id = row["decision_id"]
+    rows = list(payload.get("entry_rows") or [])
+    fvgs = list(payload.get("fvgs") or [])
+    htf_bias = str(payload.get("htf_bias") or "")
     decision_at = datetime.fromtimestamp(
         int(snapshot.available_at_ms) / 1000, tz=timezone.utc
     )
-    raw_bias = str(payload.get("htf_bias") or "").lower()
-    bias = raw_bias if raw_bias in ("bullish", "bearish") else "bullish"
-    requested_side = StrategySide.LONG if bias == "bullish" else StrategySide.SHORT
+    side = {
+        "bullish": StrategySide.LONG,
+        "bearish": StrategySide.SHORT,
+    }.get(htf_bias, StrategySide.FLAT)
 
-    rows = list(payload.get("entry_rows") or [])
+    if side is StrategySide.FLAT:
+        raise V003EvalError(
+            f"Gate-11 entrant {decision_id!r} lacks a resolved htf_bias; "
+            "V003 refuses to map it to FLAT"
+        )
+
     frame = _entry_frame(rows)
-    fvgs = list(payload.get("fvgs") or [])
     consumed_ids = _consumed_ids_from_record(prior_state_record)
 
     pair = evaluate_v003_structural_pair(
         frame,
-        requested_side,
+        side,
         decision_at,
         config,
         fvgs=fvgs,
         consumed_ids=consumed_ids,
     )
 
-    pd_flag = bool((payload.get("ob_result") or {}).get("in_discount_or_premium", True))
-    sweep_flag = bool(
-        payload.get("liquidity_signal")
-        or (payload.get("liquidity_context") or {}).get("liquidity_swept")
+    dxy_context = dict(payload.get("dxy_context") or {})
+    news_context = dict(payload.get("news_context") or {})
+    session_context = dict(payload.get("session_context") or {})
+    structure_context = (
+        (payload.get("liquidity_context") or {})
+        .get("structure_context")
+        or {}
+    )
+
+    pd_flag = bool(
+        structure_context.get(
+            "discount_zone"
+            if htf_bias == "bullish"
+            else "premium_zone"
+        )
+    )
+
+    sweep_flag = bool(payload.get("liquidity_signal"))
+
+    evidence = _evidence(pd_flag, sweep_flag)
+    strategy = evaluate_v003_strategy(
+        adapter="live",
+        symbol="XAUUSDm",
+        decision_at=decision_at,
+        side=htf_bias,
+        entry_frame=frame,
+        htf_bias=htf_bias,
+        dxy_context=dxy_context,
+        news_context=news_context,
+        session_context=session_context,
+        evidence=evidence,
+        fvgs=fvgs,
+        config=config,
+        consumed_block_ids=consumed_ids,
     )
 
     score = score_v003_setup(
         pair=pair,
-        htf_bias=bias,
+        htf_bias=htf_bias,
         price_in_discount_or_premium=pd_flag,
         liquidity_swept=sweep_flag,
     )
-    gate11_passed = bool(score["passes_threshold"])
-
-    strategy_eligible = False
-    if gate11_passed:
-        evidence = _evidence(pd_flag, sweep_flag)
-        strategy_res = evaluate_v003_strategy(
-            adapter="replay",
-            symbol=str(payload.get("symbol") or "XAUUSDm"),
-            decision_at=decision_at,
-            side=bias,
-            entry_frame=frame,
-            htf_bias=bias,
-            dxy_context=dict(payload.get("dxy_context") or {}),
-            news_context=dict(payload.get("news_context") or {}),
-            session_context=dict(payload.get("session_context") or {}),
-            evidence=evidence,
-            fvgs=fvgs,
-            config=config,
-            consumed_block_ids=consumed_ids,
-        )
-        strategy_eligible = bool(getattr(strategy_res, "decision", None) in ("ENTER_BUY", "ENTER_SELL"))
 
     setup_id, entry, entry_ready = _v003_entry_readiness(
         row=row,
@@ -344,35 +420,48 @@ def observe_v003_decision(
         payload=payload,
         pair=pair,
         score=score,
-        strategy_eligible=strategy_eligible,
+        strategy_eligible=bool(strategy.entry_eligible),
         config=config,
     )
 
-    legacy_gate11_passed = bool((row.get("gate_results") or {}).get("gate_11_confluence_score"))
+    legacy_canonical_fvg_in_ob = bool(
+        (row.get("overlap") or {}).get("canonical_fvg_in_ob")
+    )
+    legacy_score_passed = bool(
+        (row.get("score") or {}).get("passes_threshold")
+        if "score" in row
+        else (row.get("gate_results") or {}).get("gate_11_confluence_score")
+    )
 
     return {
         "decision_id": decision_id,
         "available_at_ms": int(snapshot.available_at_ms),
         "v003_pair_state": pair.state,
         "v003_pair_reason": pair.reason,
+        "v003_structurally_active": bool(pair.structurally_active),
         "v003_side": pair.side.value if hasattr(pair.side, "value") else str(pair.side),
         "v003_block_id": pair.block_id,
-        "v003_age_bars": pair.age_bars,
-        "v003_structurally_active": pair.structurally_active,
-        "v003_final_fvg_associated": pair.final_fvg_associated,
-        "v003_temporal_fvg_evidence": pair.temporal_fvg_evidence,
-        "v003_fvg_evidence": pair.v003_fvg_evidence,
+        "v003_age_bars": int(pair.age_bars),
+        "v003_final_fvg_associated": bool(pair.final_fvg_associated),
+        "v003_temporal_fvg_evidence": bool(pair.temporal_fvg_evidence),
+        "v003_fvg_evidence": bool(pair.v003_fvg_evidence),
         "v003_fvg_evidence_source": pair.fvg_evidence_source,
-        "v003_exact_overlap_descriptive": pair.exact_overlap,
+        "v003_fvg_direction": pair.fvg_direction,
+        "v003_exact_overlap_descriptive": (
+            None if pair.exact_overlap is None else bool(pair.exact_overlap)
+        ),
         "v003_temporal_fvg_offset_bars": pair.temporal_fvg_offset_bars,
         "v003_temporal_fvg_count": pair.temporal_fvg_count,
-        "v003_gate11_score": score["score"],
-        "v003_gate11_passed": gate11_passed,
-        "v003_strategy_eligible": strategy_eligible,
-        "v003_entry_ready": entry_ready,
+        "v003_gate11_score": score,
+        "v003_gate11_passed": bool(score["passes_threshold"]),
+        "v003_strategy_eligible": bool(strategy.entry_eligible),
+        "v003_strategy_reasons": [str(reason) for reason in strategy.reasons],
+        "v003_strategy_order_block_state": strategy.order_block.value,
         "v003_setup_id": setup_id,
         "v003_entry": entry,
-        "legacy_score_passed": legacy_gate11_passed,
+        "v003_entry_ready": bool(entry_ready),
+        "legacy_canonical_fvg_in_ob": legacy_canonical_fvg_in_ob,
+        "legacy_score_passed": legacy_score_passed,
     }
 
 
@@ -623,56 +712,72 @@ def run_v003(
     *,
     implementation_commit: str,
     tooling_commit: str,
+    blob_source=None,
 ) -> tuple[dict[str, Any], bytes]:
-    """Execute V003 structural measurement over Fold-01 feature store."""
+    """Execute preregistered V003 measurement over a Fold-01 feature store.
+
+    Loop discipline is the frozen D001/V002 one; the V003 observer is the
+    only variant semantics.  Fails closed on boundary, store-compatibility,
+    accounting or structural violations.  Returns ``(document, bytes)``.
+    """
     from bot.strategy.config import StrategyConfig  # noqa: PLC0415
+    from bot.strategy.setup_state import (  # noqa: PLC0415
+        StrategyState,
+        record_from_state,
+    )
 
-    check_store_boundary(store.identity)
+    identity = store.identity
+    check_store_boundary(dict(identity))
     config = StrategyConfig()
-
-    snapshots = store.snapshots()
-    first_snapshot = next(iter(snapshots), None)
-    if first_snapshot is not None:
-        assert_store_semantic_compatibility(first_snapshot)
-
-    accounting = {
-        "scheduled": 0,
-        "reducer_classified": 0,
-        "missing_history": 0,
-        "unavailable_input": 0,
-        "evaluation_error": 0,
-    }
+    seed_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    state_record = record_from_state(
+        StrategyState(event_time=seed_time), event_at=seed_time,
+    )
+    buckets = {"missing_history": 0, "unavailable_input": 0, "evaluation_error": 0}
     rows: list[dict[str, Any]] = []
     v003_observations: list[dict[str, Any]] = []
-
-    prior_state_record: Any = None
-    for snapshot in snapshots:
-        accounting["scheduled"] += 1
-        category = classify_snapshot(snapshot)
-        accounting[category] += 1
-        if category != "reducer_classified":
+    scheduled = 0
+    for snapshot in _snapshot_rows(store):
+        scheduled += 1
+        bucket = classify_snapshot(snapshot)
+        if bucket is not None:
+            name, _status = bucket
+            buckets[name] += 1
             continue
-
-        decision_row, decision_res_record, next_state_record = (
-            evaluate_orchestration_decision(snapshot, prior_state_record=prior_state_record)
+        if _reference_check_failed(snapshot):
+            buckets["evaluation_error"] += 1
+            continue
+        prior_state_record = state_record
+        row, next_record = evaluate_orchestration_decision(
+            snapshot, prior_state_record,
         )
-        rows.append(decision_row)
-
-        # Check if decision entered Gate 11
-        gate_res = decision_row.get("gate_results") or {}
-        if "gate_11_confluence_score" in gate_res:
-            obs = observe_v003_decision(
-                decision_row,
-                snapshot,
-                prior_state_record,
-                decision_res_record,
-                config=config,
+        if row["action"] == "error":
+            buckets["evaluation_error"] += 1
+            continue
+        rows.append(row)
+        gate11_entered = "gate_11_confluence_score" in (
+            row.get("gate_results") or {}
+        )
+        if gate11_entered:
+            assert_store_semantic_compatibility(snapshot)
+            v003_observations.append(
+                observe_v003_decision(
+                    row,
+                    snapshot,
+                    prior_state_record,
+                    config=config,
+                    decision_result_record=next_record,
+                )
             )
-            v003_observations.append(obs)
+        state_record = next_record
 
-        prior_state_record = next_state_record
-
-    reconcile_accounting(accounting)
+    reconcile_accounting(
+        scheduled=scheduled,
+        classified=len(rows),
+        missing_history=buckets["missing_history"],
+        unavailable_input=buckets["unavailable_input"],
+        evaluation_error=buckets["evaluation_error"],
+    )
     funnel = _gate_funnel(rows)
     aggregated = aggregate_v003(v003_observations)
 
@@ -685,23 +790,21 @@ def run_v003(
         "specification_document": SPECIFICATION_DOCUMENT,
         "specification_sha256": SPEC_SHA256,
         "classification": CLASSIFICATION,
-        "provenance": {
-            "research_identity": "phase6-development-v2",
-            "variant_id": V003_ID,
-            "hypothesis_id": H003_ID,
-            "specification_document": SPECIFICATION_DOCUMENT,
-            "specification_sha256": SPEC_SHA256,
-            "implementation_module": IMPLEMENTATION_MODULE,
-            "implementation_commit": implementation_commit,
-            "tooling": TOOLING_RELPATH,
-            "tooling_commit": tooling_commit,
-            "fingerprint_contract": FINGERPRINT_CONTRACT,
-            "fold_store_identity_sha256": store.identity.get("identity_sha256"),
-            "fold01_boundary": [FOLD01_START, FOLD01_END],
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        },
+        "provenance": provenance(
+            implementation_commit=implementation_commit,
+            tooling_commit=tooling_commit,
+            store_identity=dict(identity),
+            blob_source=blob_source,
+        ),
         "fold01_boundary": [FOLD01_START, FOLD01_END],
-        "decision_accounting": accounting,
+        "decision_accounting": {
+            "scheduled": scheduled,
+            "reducer_classified": len(rows),
+            "missing_history": buckets["missing_history"],
+            "unavailable_input": buckets["unavailable_input"],
+            "evaluation_error": buckets["evaluation_error"],
+            "reconciles": True,
+        },
         "gate_funnel": funnel,
         "V003_structural_pair_surface": aggregated["V003_structural_pair_surface"],
         "V003_variant_funnel": aggregated["V003_variant_funnel"],

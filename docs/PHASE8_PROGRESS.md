@@ -1895,3 +1895,30 @@ step: supervisory review before D002 or Variant 1.
   - `tests/test_phase8_v2_v003_eval_tooling.py`: 14 passed (covers store path validation, holdout/2025+ refusal, banned metrics, funnel consistency, setup ID reconciliation, and atomic write).
   - Regression & security: 428 regression tests passed (4 skipped), 22 security tests passed (10 subtests passed).
 - **Budget & Governance:** Diagnostics `4 / 12`, strategy variants `2 / 8` (only becomes `3 / 8` upon separate future authorized Fold-01 empirical execution), numeric trials `0 / 4`. Upward revision lock ACTIVE. Zero Fold-01 store reads or runs during this task; Tier B (Folds 02–04), 2025+ data, and holdout remain strictly sealed. HARD STOP: Tooling frozen; Fold-01 empirical execution awaits supervisory authorization.
+
+## Update — 2026-09-29: V003 TC001 — V002-baseline observer semantics restored in measurement tooling (NO empirical execution)
+
+- **Defect class `V003_PRE_EMPIRICAL_MEASUREMENT_OBSERVER_BASELINE_DRIFT` (registered `phase6-development-v2-V003-TC001`):** Supervisory review of the frozen V003 tooling (`82cf09b92fdcd67af8b560f6d0e296dbc618ebd1`) detected five observer deviations from V002 in inputs unrelated to the preregistered H003 change ($F_{\text{v003}} = F_{\text{final}} \lor F_{\text{temporal}}$):
+  1. *Bias fallback:* Defective observer normalized `raw_bias` with `.lower()` and defaulted invalid/missing values to `"bullish"`. Corrected to fail closed by raising `V003EvalError` if bias is missing or FLAT, matching V002.
+  2. *Premium/discount:* Defective observer read `ob_result.in_discount_or_premium` with a `True` default. Corrected to derive strictly from `liquidity_context.structure_context` using `discount_zone` (for bullish) and `premium_zone` (for bearish), defaulting missing flags to `False`, matching V002.
+  3. *Liquidity sweep:* Defective observer OR'd with `liquidity_context.liquidity_swept`. Corrected to read strictly `bool(payload.get("liquidity_signal"))` without fallback, matching V002.
+  4. *Strategy adapter:* Defective observer called `evaluate_v003_strategy` with `adapter="replay"`. Corrected to `adapter="live"`, matching V002.
+  5. *Symbol:* Defective observer derived symbol as `str(payload.get("symbol") or "XAUUSDm")`. Corrected to hardcoded `symbol="XAUUSDm"`, matching V002.
+- **Invariance:**
+  - `bot/strategy/variant_v003.py` remains 100% UNCHANGED (0-byte diff, canonical Git blob `c25f110c15c60bc5b32cffc0b3870de6d5d5144c`).
+  - Spec `docs/PHASE8_V2_VARIANT_V003.md` remains 100% UNCHANGED (SHA-256 `e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95`).
+  - V002 strategy, V002 tooling, H003 statement, and D005 tooling/results remain completely unchanged.
+  - Live-zone separation and strategy state invariance strictly preserved.
+  - Zero Fold-01 reads or replays; Tier B (Folds 02–04), 2025+ data, and holdout remain strictly sealed.
+- **Regressions added (`tests/test_phase8_v2_v003_eval_tooling.py`, 22 passed):**
+  - Section 16: `test_regression_unresolved_bias_fails_closed`
+  - Section 17: `test_regression_premium_discount_source`
+  - Section 18: `test_regression_no_true_default_for_premium_discount`
+  - Section 19: `test_regression_sweep_source_no_or_fallback`
+  - Section 20: `test_regression_adapter_and_symbol_passed_to_strategy`
+  - Section 21: `test_v002_v003_non_fvg_input_equivalence` (proves exact observer equality when $F_{\text{final}} == \text{True}$)
+  - Section 22: `test_temporal_only_difference_from_v002` (proves FVG component is the sole difference when $F_{\text{final}} == \text{False}$ and $F_{\text{temporal}} == \text{True}$)
+  - Section 23: `test_regression_score_contamination_prevented` (proves alternate/legacy truthy fields do not manufacture 8/8 Gate-11 passes)
+- **Suite status:** 22 eval-tooling tests passed, 20 variant & downstream tests passed, 423 Phase 8 v2 regression tests passed (4 skipped), 69 canonical-byte and security tests passed (10 subtests). `git diff --check` clean.
+- **Budget:** Diagnostics `4 / 12`, strategy variants `2 / 8` observed (only becomes `3 / 8` upon future authorized Fold-01 empirical execution), numeric trials `0 / 4`. Upward revision lock ACTIVE.
+- **HARD STOP:** Tooling corrected and frozen; Fold-01 empirical execution awaits supervisory authorization.
