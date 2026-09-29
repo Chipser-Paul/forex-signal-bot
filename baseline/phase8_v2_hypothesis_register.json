@@ -2295,6 +2295,110 @@
         "tier_b_sealed": true
       },
       "registered_utc": "2026-09-26T14:29:57Z"
+    },
+    {
+      "correction_id": "phase8-v2-D005-TC003",
+      "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_CORRECTION",
+      "diagnostic_id": "phase8-v2-D005",
+      "hypothesis_id": "phase8-v2-H003",
+      "primary_defect_class": "D005_CLI_NONEXISTENT_FEATURE_STORE_OPEN_API",
+      "defective_tooling_commit": "05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6",
+      "attempt1_blockage_binding": {
+        "classification": "EMPIRICAL_EXECUTION_BLOCKED",
+        "blockage_artifact_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_diagnostics/phase8-v2-D005/fold01/phase8-v2-D005_ATTEMPT1_BLOCKAGE.json",
+        "blockage_artifact_sha256": "168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2",
+        "blockage_artifact_bytes": 3692,
+        "original_exposure_timestamp_utc": "2026-09-26T13:18:42.145570+00:00",
+        "exact_attempt1_error_incident_history_only": "ReconciliationError: primary population 42 != structurally-active without final FVG R2=34 - recorded as incident history ONLY; never a test oracle; the diagnostic slot it permanently consumed remains 4 / 12",
+        "artifact_verified_unmodified_before_and_after_tc003": true
+      },
+      "attempt2_blockage_binding": {
+        "classification": "PRE_OBSERVATION_CLI_STORE_CONSTRUCTION_FAILURE",
+        "blockage_artifact_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_diagnostics/phase8-v2-D005/fold01/phase8-v2-D005_ATTEMPT2_BLOCKAGE.json",
+        "blockage_artifact_sha256": "5a1c9482c569d0e614ef08f6e3fe9d8323381222de31487d4f608b2d8644f1cf",
+        "blockage_artifact_bytes": 6690,
+        "corrected_rerun_start_utc": "2026-09-28T20:56:32.229086+00:00",
+        "failure_timestamp_utc": "2026-09-28T20:56:45.660600+00:00",
+        "exact_failure_verbatim": "AttributeError: type object 'FoldFeatureStore' has no attribute 'open'",
+        "failure_stage": "committed CLI main() store construction immediately AFTER the TC002 pre-open boundary check validate_authorized_store_path PASSED for the exact authorized store basename fold-01-a8b406884ab3525a and BEFORE any store construction, row read or observation",
+        "empirical_exposure": "ZERO",
+        "failure_log": {
+          "path": "C:/Users/chips/forex-signal-bot-data/phase8/logs/d005_rerun.log",
+          "sha256": "5ed6b39041fc86b2907e463bc4a0644b2e83b91a57b8e7b4465981f8da610b66",
+          "bytes": 407
+        },
+        "no_d005_result_exists": true,
+        "no_r001_exists": true,
+        "no_observation_surface_exists": true,
+        "repository_unchanged_by_attempt2": true,
+        "artifact_verified_unmodified_before_and_after_tc003": true
+      },
+      "additional_diagnostic_budget_consumed": "ZERO",
+      "exact_defect": {
+        "committed_cli_code": "main() imported the canonical store CLASS and called FoldFeatureStore.open(args.store); the canonical infrastructure module bot/validation/market_feature_store.py defines class FoldFeatureStore only as the loaded read-only store object type and provides NO open classmethod or static method; the canonical loader is the module-level function load_feature_store(path, *, verify_rows: bool = False) -> FoldFeatureStore, so the committed CLI could never construct the store through the frozen call",
+        "latency_history": "the defective call entered the D005 tooling at the original freeze 81c6a6f53a0e456a800f2fdddc957e34c1dc9064 and stayed latent through TC001 (7c9608d5) and TC002 (05f4e6a9) because both correction commits changed only the adjacent boundary-check line and the committed test battery exercises run_d005 with injected stores, never the CLI store-construction line; D005 Attempt 1 reached the store only through an untracked bypass driver",
+        "defect_class": "execution plumbing only - no scientific semantics involved"
+      },
+      "canonical_loader_correction": {
+        "old": "from bot.validation.market_feature_store import FoldFeatureStore; FoldFeatureStore.open(args.store)",
+        "new": "from bot.validation.market_feature_store import load_feature_store; store = load_feature_store(Path(args.store), verify_rows=True)",
+        "no_custom_loader_wrapper_class_monkeypatch_or_shim": true,
+        "no_new_foldfeaturestore_open": true,
+        "core_infrastructure_zero_diff": "bot/validation/market_feature_store.py must have ZERO diff; the defect belongs to D005 CLI wiring",
+        "cli_performs_full_store_verification": "the committed CLI itself now invokes load_feature_store with verify_rows=True, performing completion-marker validation, store file-byte hash verification, feature schema validation, row-count validation, full row-digest recomputation and gate-event-ID re-derivation; a separate untracked verification probe is no longer required for scientific correctness"
+      },
+      "required_cli_failure_order": [
+        "1. parse arguments",
+        "2. validate_authorized_store_path(args.store)",
+        "3. load_feature_store(Path(args.store), verify_rows=True)",
+        "4. run_d005(...)",
+        "5. write_result(...)",
+        "if step 2 or 3 fails: zero D005 observation occurs; if step 4 begins: the already-consumed D005 diagnostic remains 4 / 12"
+      ],
+      "tc002_path_guard_unchanged": "validate_authorized_store_path is NOT modified; the authorized store basename remains fold-01-a8b406884ab3525a; all TC002 boundary regressions remain green: authorized hash path accepted; holdout rejected; final_validation rejected; standalone 2025+ path rejected; year=2025+ rejected; ISO 2025+ path rejected; Fold-02 rejected; historical store fold-01-1d710826193a6767 rejected; no weakening",
+      "tc002_set_partition_unchanged": "four-cell contingency, marginal reconciliation totals-only, exact primary-ID set equality, R1/R2/R3, aggregate_d005(...) and all D005 primary-population semantics are NOT modified; TC003 changes store construction ONLY",
+      "tc001_clock_unchanged": "FVG completion row remains source_index + 1; formation timestamp remains the completion candle's available_at; OB clock remains block.confirmed_at; availability compared to availability; signed M5 distances unchanged; all TC001 same/previous/next-candle regressions remain green",
+      "h003_unchanged": "statement preserved verbatim: 'OB and FVG evidence may be causally related across a short temporal sequence rather than being required to appear as a strictly simultaneous state at one decision timestamp.'; status remains REGISTERED with result and disposition null; H003 remains unresolved and is NOT interpreted by TC003",
+      "v002_unchanged": "bot/strategy/variant_v002.py (canonical blob SHA 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4) and the frozen V002 measurement tooling are NOT modified; V003 is NOT created",
+      "scientific_invariance": "per-decision temporal observer, _fvg_universe_record, four-cell aggregator, H003 association calculation, temporal-distance summary, headroom rule and banned-concept guards are byte/source unchanged; only CLI store-construction plumbing plus TC003 provenance/governance/test coverage may change",
+      "tc003_regression_coverage_synthetic_only": [
+        "test_tc003_main_uses_canonical_loader_exactly_once_with_verify_rows",
+        "test_tc003_main_execution_order_validate_load_run_write",
+        "test_tc003_preopen_refusal_is_zero_observation",
+        "test_tc003_load_failure_is_pre_observation",
+        "test_tc003_corrected_tooling_constructs_store_only_through_canonical_api",
+        "test_tc003_defective_cli_reproduces_attempt2_failure",
+        "test_tc003_attempt2_fixture_bytes_match_frozen_commit (opt-in byte identity)"
+      ],
+      "attempt2_defective_fixture": {
+        "fixture_path": "tests/fixtures/d005_tooling_05f4e6a9.py",
+        "source_commit": "05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6",
+        "canonical_fingerprint_of_defective_bytes": "38b04d159f89116ac3d593a99cf513462213655d60a313716675712e6c236c02",
+        "fingerprint_contract": "canonical_git_blob_v1"
+      },
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D005.md section 23 'TC003 - Canonical Feature-Store Loader Correction' appended; sections 1-22 and the original D005 scientific registration are NOT rewritten; historical document hashes preserved: initial Phase-A preregistration bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401 (df19e89a8afd72deda2b58c79f38a798daaead76), ordering-only correction d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941 (c615c3e9ae15f6c47b1b9da27b835d46a431b05c), TC001 causal-clock correction 2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8 (7c9608d5b9871414a830e38395d1a67f7efacad2), TC002 partition/boundary correction b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11 (05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6); the new full-document SHA-256 7f754232731139816be5597aedadc4a069ead06d53c10423a7a88cd3d5f83d26 is recorded in the corrected tooling's SPEC_SHA256 and this record",
+      "corrected_spec_sha256": "7f754232731139816be5597aedadc4a069ead06d53c10423a7a88cd3d5f83d26",
+      "corrected_tooling_identity_reference": "the unique TC003 commit that publishes this record (parent 05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6, subject 'fix: load D005 feature store through canonical API'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit; its canonical_git_blob_v1 fingerprint of backtests/phase8_v2_diagnostic_d005.py is recomputed from the committed Git blob during the TC003 push/verify step and reported in the governance report (the fingerprint cannot be finalized before the commit exists)",
+      "correction_timing": "post-exposure: D005 Attempt 1 permanently consumed the diagnostic slot (diagnostics 4 / 12); Attempt 2 had ZERO empirical exposure; this correction performs NO empirical access of any kind - no Fold store is opened (not even with verify_rows=False), all regression fixtures are synthetic; a future corrected D005 empirical completion remains 4 / 12 and must NOT become 5 / 12",
+      "no_empirical_access": true,
+      "no_fold_store_opened": "no Fold-01, Fold-02/03/04, 2025+ or holdout store read during TC003; the prohibited historical store fold-01-1d710826193a6767 NOT read; all tests use synthetic or mocked stores",
+      "hard_stop_after_freeze": "after TC003 is frozen and remotely verified D005 is NOT executed; a corrected empirical completion still requires separate supervisory authorization",
+      "v003_not_created": true,
+      "budget_impact": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "2 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "note": "TC003 consumes ZERO diagnostic budget: diagnostics remain the permanent 4 / 12 from the D005 attempt-1 exposure; variants remain 2 / 8; numeric trials remain 0 / 4; a future corrected D005 completion stays 4 / 12 and must NOT become 5 / 12"
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "registered_utc": "2026-09-29T14:59:00Z"
     }
   ],
   "provenance_corrections": [

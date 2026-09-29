@@ -105,7 +105,7 @@ H003_ID = "phase8-v2-H003"
 V002_ID = "phase6-development-v2-V002"
 CHARTER_ID = "phase8-v2-research-charter-v1-8527e3a5eec98f53"
 CHARTER_SHA256 = "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc"
-SPEC_SHA256 = "7f754232731139816be5597aedadc4a069ead06d53c10423a7a88cd3d5f83d26"
+SPEC_SHA256 = "b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11"
 SPECIFICATION_DOCUMENT = "docs/PHASE8_V2_DIAGNOSTIC_D005.md"
 CLASSIFICATION = (
     "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE"
@@ -1205,10 +1205,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tooling-commit", required=True)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args(argv)
-    from bot.validation.market_feature_store import load_feature_store  # noqa: PLC0415
+    from bot.validation.market_feature_store import FoldFeatureStore  # noqa: PLC0415
 
     validate_authorized_store_path(args.store)
-    store = load_feature_store(Path(args.store), verify_rows=True)
+    store = FoldFeatureStore.open(args.store)
     document, rendered = run_d005(
         store,
         v002_implementation_commit=args.v002_implementation_commit,

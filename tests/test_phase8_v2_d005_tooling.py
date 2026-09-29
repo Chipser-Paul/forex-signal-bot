@@ -1472,3 +1472,208 @@ def test_tc002_attempt1_fixture_bytes_match_frozen_commit():
     assert committed == (
         Path(__file__).parent / "fixtures" / "d005_tooling_7c9608d5.py"
     ).read_bytes()
+
+# ---------------------------------------------------------------------------
+# D005-TC003: canonical feature-store loader at the CLI boundary (synthetic
+# only — the real Fold-01 store is NEVER opened in these tests).
+# ---------------------------------------------------------------------------
+
+TC003_DEFECTIVE_COMMIT = "05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6"
+_TC003_SYNTHETIC_STORE = (
+    "C:/data/phase8/evidence/market-feature-store/fold-01-a8b406884ab3525a"
+)
+
+
+def _tc003_argv(output_dir) -> list[str]:
+    return [
+        "--store", _TC003_SYNTHETIC_STORE,
+        "--v002-implementation-commit", "4890dcbce8579f159224b653d94f634cc9017549",
+        "--tooling-commit", TC003_DEFECTIVE_COMMIT,
+        "--output-dir", str(output_dir),
+    ]
+
+
+def _tc003_instrument(monkeypatch, *, validate_error=None, loader_error=None):
+    """Patch the corrected CLI's collaborators with synthetic fakes and
+    record the exact call sequence.  The canonical loader is patched at its
+    SOURCE module (bot.validation.market_feature_store) because main()
+    imports it at call time; validate/run/write are patched on the tooling
+    module where main() resolves them."""
+    import bot.validation.market_feature_store as mfs
+
+    calls: list[tuple] = []
+
+    class _FakeLoadedStore:
+        identity = {"fold_id": "synthetic-fold-01"}
+
+    def fake_validate(path):
+        calls.append(("validate", path))
+        if validate_error is not None:
+            raise validate_error
+
+    def fake_loader(path, *, verify_rows=False):
+        calls.append(("load", Path(path), verify_rows))
+        if loader_error is not None:
+            raise loader_error
+        return _FakeLoadedStore()
+
+    def fake_run(store, *, v002_implementation_commit, tooling_commit):
+        calls.append(("run", store, v002_implementation_commit, tooling_commit))
+        return ({"synthetic": True}, b"synthetic-bytes")
+
+    def fake_write(document, rendered, output_dir):
+        calls.append(("write", output_dir))
+        return (Path(output_dir) / "phase8-v2-D005_result.json", "0" * 64)
+
+    monkeypatch.setattr(d005, "validate_authorized_store_path", fake_validate)
+    monkeypatch.setattr(mfs, "load_feature_store", fake_loader)
+    monkeypatch.setattr(d005, "run_d005", fake_run)
+    monkeypatch.setattr(d005, "write_result", fake_write)
+    return calls
+
+
+def test_tc003_main_uses_canonical_loader_exactly_once_with_verify_rows(
+    monkeypatch, tmp_path
+):
+    """D005-TC003: the corrected CLI constructs the store ONLY through the
+    canonical load_feature_store API, exactly once, with the exact supplied
+    store Path and verify_rows=True.  FoldFeatureStore.open is neither
+    referenced nor required (it does not exist on the canonical class)."""
+    import bot.validation.market_feature_store as mfs
+
+    # The canonical class provides no 'open' constructor at all.
+    assert not hasattr(mfs.FoldFeatureStore, "open")
+    assert callable(mfs.load_feature_store)
+
+    calls = _tc003_instrument(monkeypatch)
+    assert d005.main(_tc003_argv(tmp_path)) == 0
+    loads = [entry for entry in calls if entry[0] == "load"]
+    assert len(loads) == 1
+    _, store_path, verify_rows = loads[0]
+    assert store_path == Path(_TC003_SYNTHETIC_STORE)
+    assert verify_rows is True
+
+
+def test_tc003_main_execution_order_validate_load_run_write(monkeypatch, tmp_path):
+    """D005-TC003: main() executes validate -> load -> run -> write, in
+    exactly that order, and returns 0 (successful plumbing regression with
+    stubbed dependencies — no empirical market data, no real store)."""
+    calls = _tc003_instrument(monkeypatch)
+    return_code = d005.main(_tc003_argv(tmp_path))
+    assert return_code == 0
+    stages = [entry[0] for entry in calls]
+    assert stages == ["validate", "load", "run", "write"]
+    # run received the loaded synthetic store and the supplied identities
+    _, loaded_store, v002_commit, tooling_commit = calls[2]
+    assert loaded_store.identity == {"fold_id": "synthetic-fold-01"}
+    assert v002_commit == "4890dcbce8579f159224b653d94f634cc9017549"
+    assert tooling_commit == TC003_DEFECTIVE_COMMIT
+    # write received the supplied output directory
+    assert calls[3][1] == tmp_path
+
+
+def test_tc003_preopen_refusal_is_zero_observation(monkeypatch, tmp_path):
+    """D005-TC003: a path-validation refusal raises BEFORE the loader, run
+    and writer are invoked — the zero-exposure boundary behavior."""
+    calls = _tc003_instrument(
+        monkeypatch, validate_error=d005.BoundaryError("synthetic pre-open refusal")
+    )
+    with pytest.raises(d005.BoundaryError):
+        d005.main(_tc003_argv(tmp_path))
+    assert [entry[0] for entry in calls] == ["validate"]
+
+
+def test_tc003_load_failure_is_pre_observation(monkeypatch, tmp_path):
+    """D005-TC003: a store-integrity failure (canonical loader raises) leaves
+    run_d005 and write_result uncalled; the loader was invoked first with
+    verify_rows=True."""
+    calls = _tc003_instrument(
+        monkeypatch,
+        loader_error=RuntimeError("synthetic store integrity failure"),
+    )
+    with pytest.raises(RuntimeError, match="store integrity"):
+        d005.main(_tc003_argv(tmp_path))
+    stages = [entry[0] for entry in calls]
+    assert stages == ["validate", "load"]
+    assert calls[1][2] is True  # loader got verify_rows=True before failing
+
+
+def test_tc003_corrected_tooling_constructs_store_only_through_canonical_api():
+    """Structural source proof: the corrected tooling contains ZERO
+    FoldFeatureStore references; the canonical load_feature_store call with
+    verify_rows=True is the only production store-construction path; the
+    path guard precedes it."""
+    source = Path(d005.__file__).read_text(encoding="utf-8")
+    assert "FoldFeatureStore" not in source
+    assert "load_feature_store" in source
+    import re as _re
+
+    construction = _re.search(
+        r"validate_authorized_store_path\(args\.store\)\n"
+        r"    store = load_feature_store\(Path\(args\.store\), verify_rows=True\)",
+        source,
+    )
+    assert construction is not None, (
+        "the CLI must call the path guard first and then construct the store "
+        "through load_feature_store(..., verify_rows=True)"
+    )
+
+
+def test_tc003_defective_cli_reproduces_attempt2_failure(monkeypatch, tmp_path):
+    """D005-TC003 old-bug reproduction: the exact committed defective bytes
+    (05f4e6a9) reach FoldFeatureStore.open and fail with the exact Attempt-2
+    AttributeError because the canonical class lacks that member.  The
+    TC002 pre-open guard is silenced in the defective bytes so the failure
+    lands exactly on the store-construction line.  No empirical store is
+    opened (the failure precedes any I/O)."""
+    import bot.validation.market_feature_store as mfs
+
+    assert not hasattr(mfs.FoldFeatureStore, "open")  # the exact defect
+    module = _tc003_defective_module()
+    monkeypatch.setattr(module, "validate_authorized_store_path", lambda path: None)
+    with pytest.raises(AttributeError, match="has no attribute 'open'"):
+        module.main(_tc003_argv(tmp_path))
+
+
+def _tc003_defective_bytes() -> bytes:
+    """Exact committed bytes of the TC002-freeze (defective CLI store
+    construction) D005 tooling at 05f4e6a9, snapshotted verbatim into the
+    fixture tree; the opt-in byte-identity test guards the copy against
+    drift."""
+    return (
+        Path(__file__).parent / "fixtures" / "d005_tooling_05f4e6a9.py"
+    ).read_bytes()
+
+
+def _tc003_defective_module():
+    source = _tc003_defective_bytes()
+    module_name = "_d005_tooling_attempt2_05f4e6a9"
+    assert module_name not in sys.modules
+    module = types.ModuleType(module_name)
+    module.__file__ = str(
+        Path(__file__).parent / "fixtures" / "d005_tooling_05f4e6a9.py"
+    )
+    module.__dict__["__name__"] = module_name
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    sys.modules[module_name] = module
+    return module
+
+
+def test_tc003_attempt2_fixture_bytes_match_frozen_commit():
+    """Byte-identity of the attempt-2 (TC002-freeze) tooling snapshot against
+    the committed 05f4e6a9 blob (opt-in; real git plumbing is outside the
+    suite firewall)."""
+    import os
+    import subprocess
+
+    if os.environ.get("D005_TC003_VERIFY_COMMITTED_BYTES") != "1":
+        pytest.skip(
+            "subprocess git cat-file is prohibited inside the suite; run with "
+            "D005_TC003_VERIFY_COMMITTED_BYTES=1 to byte-verify the fixture copy"
+        )
+    committed = subprocess.run(
+        ["git", "cat-file", "blob",
+         TC003_DEFECTIVE_COMMIT + ":backtests/phase8_v2_diagnostic_d005.py"],
+        cwd=".", capture_output=True, check=True,
+    ).stdout
+    assert committed == _tc003_defective_bytes()

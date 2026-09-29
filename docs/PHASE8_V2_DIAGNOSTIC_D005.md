@@ -453,3 +453,159 @@ preregistration `bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a74740
 (7c9608d5b9871414a830e38395d1a67f7efacad2).  The new full-document SHA-256
 after this append is recorded in the register TC002 record and the corrected
 tooling's `SPEC_SHA256`.
+## 23. TC003 — Canonical Feature-Store Loader Correction
+
+Record type: `POST_EXPOSURE_MEASUREMENT_TOOLING_CORRECTION` (governance ID
+`phase8-v2-D005-TC003`).  Defect class:
+`D005_CLI_NONEXISTENT_FEATURE_STORE_OPEN_API`.  Defective tooling commit:
+`05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6` (TC002).  TC003 changes D005 CLI
+store-construction plumbing ONLY.  This section is appended; sections 1-22
+and the original D005 scientific registration are NOT rewritten.
+
+### 23.1 Attempt-2 blockage (zero empirical exposure)
+
+The corrected D005 rerun (Attempt 2) was launched through the normal
+committed CLI per the rerun authorization, with the exact authorized store
+path `fold-01-a8b406884ab3525a`:
+
+* Corrected-rerun start (UTC): `2026-09-28T20:56:32.229086+00:00`.
+* The TC002 pre-open boundary check `validate_authorized_store_path`
+  PASSED — the authorized hash-path store basename was accepted exactly as
+  TC002 intended.
+* The CLI then failed at store construction, BEFORE any store
+  construction, row read, completion-marker validation or observation:
+  `AttributeError: type object 'FoldFeatureStore' has no attribute 'open'`
+  at the committed `main()` line 1211.  Failure timestamp (UTC, from the
+  sealed failure-log mtime): `2026-09-28T20:56:45.660600+00:00`.
+* Empirical exposure: **ZERO**.  No D005 observation surface was computed,
+  no result JSON was written, no R001 was created, no diagnostic budget was
+  consumed or incremented (diagnostics remain permanently 4 / 12 from
+  Attempt 1).  Attempt 2 classification:
+  `PRE_OBSERVATION_CLI_STORE_CONSTRUCTION_FAILURE`.
+
+External evidence, never committed, preserved unmodified in the D005
+Fold-01 diagnostic directory:
+
+* `phase8-v2-D005_ATTEMPT1_BLOCKAGE.json` — SHA-256
+  `168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2`,
+  3,692 bytes (Attempt 1, `EMPIRICAL_EXECUTION_BLOCKED`, original exposure
+  `2026-09-26T13:18:42.145570+00:00`).
+* `phase8-v2-D005_ATTEMPT2_BLOCKAGE.json` — SHA-256
+  `5a1c9482c569d0e614ef08f6e3fe9d8323381222de31487d4f608b2d8644f1cf`,
+  6,690 bytes (Attempt 2, zero exposure).
+* Failure log `phase8/logs/d005_rerun.log` — SHA-256
+  `5ed6b39041fc86b2907e463bc4a0644b2e83b91a57b8e7b4465981f8da610b66`,
+  407 bytes.
+
+### 23.2 Exact defect
+
+The committed CLI imported the canonical store CLASS and called a
+nonexistent member:
+
+```python
+from bot.validation.market_feature_store import FoldFeatureStore
+store = FoldFeatureStore.open(args.store)
+```
+
+The canonical infrastructure module
+`bot/validation/market_feature_store.py` defines `class FoldFeatureStore`
+only as the loaded read-only store OBJECT type and provides no `open`
+classmethod or static method; the canonical loader is the module-level
+function `load_feature_store(path, *, verify_rows: bool = False)`.
+`FoldFeatureStore.open` has never existed in any committed revision of the
+infrastructure module (the call entered the D005 tooling at the original
+freeze `81c6a6f` and stayed latent through TC001 and TC002 because the
+committed battery exercises `run_d005` with injected stores, never the
+CLI's store-construction line; Attempt 1 had reached the store only through
+an untracked bypass driver).  This is an execution-plumbing defect only.
+
+### 23.3 Canonical repair
+
+The CLI now uses the real canonical API directly:
+
+```python
+from bot.validation.market_feature_store import load_feature_store
+store = load_feature_store(Path(args.store), verify_rows=True)
+```
+
+No D005 custom store loader, no wrapper class, no monkeypatched runtime
+production behavior, no new `FoldFeatureStore.open`, and no compatibility
+shim in core infrastructure are introduced.  The defect belongs to D005 CLI
+wiring; `bot/validation/market_feature_store.py` must have ZERO diff.
+
+Required CLI failure order (unchanged semantics, now with the real loader):
+
+1. parse arguments;
+2. `validate_authorized_store_path(args.store)`;
+3. `load_feature_store(Path(args.store), verify_rows=True)`;
+4. `run_d005(...)`;
+5. `write_result(...)`.
+
+If step 2 or 3 fails, zero D005 observation occurs.  If step 4 begins, the
+already-consumed D005 diagnostic remains 4 / 12.
+
+### 23.4 Full row verification at the CLI boundary
+
+The committed CLI itself now performs the canonical full store
+verification (`verify_rows=True`): completion-marker validation, store
+file-byte hash verification, feature schema validation, row-count
+validation, full row-digest recomputation and gate-event-ID re-derivation.
+A separate untracked verification probe is no longer required for
+scientific correctness.
+
+### 23.5 What TC003 does NOT change
+
+* TC002 path guard: `validate_authorized_store_path` is untouched; the
+  authorized store basename remains `fold-01-a8b406884ab3525a`; all TC002
+  boundary regressions (authorized hash path accepted; holdout,
+  final-validation, standalone 2025+, `year=2025+`, ISO 2025+, Fold-02 and
+  historical store refused) remain green.  No weakening.
+* TC002 set partition: four-cell contingency, marginal reconciliation
+  totals-only, exact primary-ID set equality and R1/R2/R3 are untouched;
+  `aggregate_d005(...)` and all D005 primary-population semantics are
+  unchanged.
+* TC001 clock: `source_index + 1`, the completion-candle `available_at`
+  formation clock, the OB `confirmed_at` clock, the
+  availability-to-availability comparison and signed M5 distances are
+  unchanged.
+* H003: statement byte-identical; status remains `REGISTERED` with result
+  and disposition null.  H003 remains unresolved and is not interpreted by
+  TC003.
+* V002 strategy and evaluator: unchanged (blob `8272c28552c05067b6dc3ba039ee8df2dbbfb8b4`).
+* Budget: TC003 consumes zero additional budget (diagnostics 4 / 12;
+  variants 2 / 8; numeric 0 / 4); a future corrected D005 completion
+  remains 4 / 12, never 5 / 12.
+* No V003 is created; Tier B remains sealed.
+
+### 23.6 Required regression coverage (synthetic only)
+
+All TC003 regressions are synthetic; the real Fold-01 store is NEVER opened
+during TC003 (not even with `verify_rows=False`): the corrected `main()`
+must call the canonical loader exactly once with the exact supplied store
+Path and `verify_rows=True`; execution order must be exactly
+validate -> load -> run -> write; path-validation failure must raise before
+loader, run and writer; loader failure must leave run and writer uncalled;
+the success plumbing path must return 0 with stubbed dependencies; and the
+defective committed bytes at `05f4e6a9` must be preserved as a fixture and
+proven to fail at `FoldFeatureStore.open` (old-bug reproduction).  No
+empirical market data and no empirical counts are involved.
+
+### 23.7 Historical specification hashes
+
+All preserved: initial Phase-A preregistration
+`bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401`
+(df19e89a8afd72deda2b58c79f38a798daaead76); ordering-only correction
+`d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941`
+(c615c3e9ae15f6c47b1b9da27b835d46a431b05c); TC001 causal-clock correction
+`2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8`
+(7c9608d5b9871414a830e38395d1a67f7efacad2); TC002 partition/boundary
+correction `b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11`
+(05f4e6a9d0f5c4465d82e48a50a559c07ceed7b6).  The new full-document SHA-256
+after this TC003 append is computed on the committed bytes and recorded in
+the register TC003 record and the corrected tooling's `SPEC_SHA256`.
+
+### 23.8 Hard stop
+
+After the TC003 correction is frozen and remotely verified, D005 is NOT
+executed.  A corrected empirical completion still requires separate
+supervisory authorization.
