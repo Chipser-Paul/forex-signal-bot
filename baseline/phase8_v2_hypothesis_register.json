@@ -126,12 +126,11 @@
         "diagnostic": "phase8-v2-D001",
         "result_record": "phase8-v2-D001-R001"
       }
-    }
-,
+    },
     {
       "record_id": "phase6-development-v2-V001-MR001",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T18:00:57Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -142,7 +141,7 @@
       "exposure_timestamp_utc": "2026-09-23T15:23:28.661013+00:00",
       "blockage_artifact_sha256": "55a382dce5f00752e70ed03cb244db5f1277a471b78b43055819b3f118a03432",
       "defect_description": "Frozen evaluator run_v001_evaluation passed stringified provenance mappings into reject_holdout_path, a filesystem-path scanner; hash-hex fragments of real 64-hex SHA-256 digests (e.g. '4600', '8871' from input_index_sha256 e460066f4...) were misclassified as future-year path components, deterministically refusing every conforming store with BoundaryError '2025+ evidence path refused' before any metric emission.",
-      "defect_class": "MEASUREMENT_TOOLING_CATEGORY_ERROR \u2014 NOT A STRATEGY FAILURE",
+      "defect_class": "MEASUREMENT_TOOLING_CATEGORY_ERROR — NOT A STRATEGY FAILURE",
       "structural_metrics_emitted_before_failure": 0,
       "outcome_classification_at_blockage": "EMPIRICAL_EXECUTION_BLOCKED",
       "h005_disposition_at_blockage": "INCONCLUSIVE_V001",
@@ -169,7 +168,7 @@
     {
       "record_id": "phase6-development-v2-V001-MR002",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T18:53:15Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -201,7 +200,7 @@
         "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22"
       },
       "repair_scope": "State seed/carry only in backtests/phase8_v2_variant_v001_eval.py: canonical seed _seed_state_record() = record_from_state(StrategyState(event_time=datetime(2024,1,1,tzinfo=UTC)), event_at=seed); loop carry now matches D001 exactly (advance only on non-error rows; error rows keep the prior valid record). Metric surface, observer, boundary checks, density target, outcome classifications and H005 rules unchanged.",
-      "blockage_status_language_correction": "The second blockage was never an empirical result; correct historical status is 'V001 EMPIRICAL MEASUREMENT BLOCKED \u2014 MR002 TOOLING REPAIR REQUIRED \u2014 NO R001 RESULT'. No tracked repository document contained the erroneous success-style footer (verified by scan at MR002 time); the footer appeared only in the assistant's conversational report of the failed attempt, and the sealed external blockage artifact is immutable and preserved unchanged.",
+      "blockage_status_language_correction": "The second blockage was never an empirical result; correct historical status is 'V001 EMPIRICAL MEASUREMENT BLOCKED — MR002 TOOLING REPAIR REQUIRED — NO R001 RESULT'. No tracked repository document contained the erroneous success-style footer (verified by scan at MR002 time); the footer appeared only in the assistant's conversational report of the failed attempt, and the sealed external blockage artifact is immutable and preserved unchanged.",
       "additional_diagnostic_budget_consumed": 0,
       "additional_strategy_variant_budget_consumed": 0,
       "additional_numeric_parameter_trials_consumed": 0,
@@ -217,7 +216,7 @@
     {
       "record_id": "phase6-development-v2-V001-MR003",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T22:18:47Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -249,7 +248,7 @@
         "decision_snapshots": 13269,
         "not_opened_during_mr003": true
       },
-      "third_blockage_status_language": "V001 R001 MEASUREMENT BLOCKED \u2014 THIRD MEASUREMENT-TOOLING DEFECT \u2014 MR003 REQUIRED \u2014 NO R001 RESULT",
+      "third_blockage_status_language": "V001 R001 MEASUREMENT BLOCKED — THIRD MEASUREMENT-TOOLING DEFECT — MR003 REQUIRED — NO R001 RESULT",
       "no_new_strategy_exposure": true,
       "additional_diagnostic_budget_consumed": 0,
       "additional_strategy_variant_budget_consumed": 0,
@@ -266,7 +265,7 @@
     {
       "record_id": "phase8-v2-D003-TC001",
       "record_type": "PRE_EMPIRICAL_TOOLING_CORRECTION",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T18:43:06Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -284,14 +283,14 @@
       "d001_unchanged": true,
       "v001_unchanged": true,
       "empirical_store_status": "fold-01-a8b406884ab3525a untouched; Folds 02-04, holdout and 2025+ untouched",
-      "tooling_identity_rule": "the corrected commit is the ONLY tooling identity authorized for future D003 empirical execution; commit 882b4c9 is recorded as PRE_EMPIRICAL_SUPERSEDED_TOOLING \u2014 PRIOR_STATE_WIRING_DEFECT and must never be used for empirical D003 execution",
+      "tooling_identity_rule": "the corrected commit is the ONLY tooling identity authorized for future D003 empirical execution; commit 882b4c9 is recorded as PRE_EMPIRICAL_SUPERSEDED_TOOLING — PRIOR_STATE_WIRING_DEFECT and must never be used for empirical D003 execution",
       "d003_status_after_correction": "REGISTERED_NOT_EXECUTED",
       "scope": "Pre-empirical implementation wiring only. The D003 scientific question, hypotheses, metric surface, population, disposition rules and prohibited outputs are unchanged."
     },
     {
       "record_id": "phase8-v2-D003-TC002",
       "record_type": "PRE_EMPIRICAL_TOOLING_CORRECTION",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T20:39:16Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -302,9 +301,9 @@
       "supersedes_nothing": true,
       "empirical_execution_has_occurred": false,
       "diagnostic_budget_status": "1 / 12 executed; D003 has consumed zero budget",
-      "old_calculation": "sha256(Path(__file__).read_bytes()) \u2014 legacy_worktree_bytes_v0 behavior over checkout-materialized bytes, which can differ between LF and CRLF worktrees for an identical commit",
+      "old_calculation": "sha256(Path(__file__).read_bytes()) — legacy_worktree_bytes_v0 behavior over checkout-materialized bytes, which can differ between LF and CRLF worktrees for an identical commit",
       "declared_contract": "canonical_git_blob_v1",
-      "corrected_calculation": "canonical_file_digest('backtests/phase8_v2_diagnostic_d003.py', commit=tooling_commit, repo=repository root) via bot.scientific.canonical_bytes \u2014 SHA-256 of the committed Git blob at the explicitly supplied tooling commit; checkout-independent, commit-content-sensitive, fail-closed on unresolvable identity",
+      "corrected_calculation": "canonical_file_digest('backtests/phase8_v2_diagnostic_d003.py', commit=tooling_commit, repo=repository root) via bot.scientific.canonical_bytes — SHA-256 of the committed Git blob at the explicitly supplied tooling commit; checkout-independent, commit-content-sensitive, fail-closed on unresolvable identity",
       "regression_proof": "four synthetic regressions in tests/test_phase8_v2_d003_tooling.py (test_tc002_*) pass against the corrected module and fail against the legacy worktree-byte implementation; LF/CRLF independence, commit sensitivity, fail-closed behavior and full-run provenance binding are each proven",
       "strategy_unchanged": true,
       "metric_surface_unchanged": true,
@@ -319,7 +318,7 @@
     {
       "record_id": "phase8-v2-D003-TC003",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO NEW EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO NEW EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T22:43:46Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -329,9 +328,9 @@
       "degenerate_attempt_output_sha256": "6637338401bd5133a53c4dbed455cff757b6459b85549088e17fe228a00488df",
       "degenerate_attempt_output_bytes": 4735,
       "attempt1_blockage_artifact_sha256": "764de0ea6fba632845b00da8f8c03950e8d0cbc69e5d6864821bafe0765b9a46",
-      "attempt1_output_classification": "VOID_ATTEMPT_OUTPUT \u2014 D003 ATTEMPT 1 \u2014 OBSERVER_EXTRACTION_DEFECT \u2014 NOT R001",
+      "attempt1_output_classification": "VOID_ATTEMPT_OUTPUT — D003 ATTEMPT 1 — OBSERVER_EXTRACTION_DEFECT — NOT R001",
       "exact_defect": "observe_decision read row['gate_context'] (score/ob/fvgs/bias_resolution), a key the frozen D001 adapter row contract never publishes; D001 exposes flattened canonical surfaces directly as row['score'], row['ob'], row['fvg'], row['overlap'], row['direction']; every gate_context-derived surface (B-H) degenerated to constant artifacts while accounting and the gate funnel stayed faithful, producing an internally inconsistent document (Gate-11 passed 1 with zero recorded component passes)",
-      "correction": "all preregistered surfaces are now extracted from the frozen flattened D001 row; fields flattened away by D001 (per-check awarded points, raw first-FVG geometry, ATR) are recovered from the CURRENT decision's persisted render after full \u00a79 reconciliation, with the decision_result_record (current next_record) kept strictly separate from the causal prior_state_record (TC001) that alone drives consumed-id and lifecycle semantics; Gate-11 self-consistency and direction fail-closed invariants added (the attempt-1 degenerate pattern now raises); htf_bias for the canonical lifecycle now comes from row['ob']['direction'] (bullish/bearish only, never FLAT)",
+      "correction": "all preregistered surfaces are now extracted from the frozen flattened D001 row; fields flattened away by D001 (per-check awarded points, raw first-FVG geometry, ATR) are recovered from the CURRENT decision's persisted render after full §9 reconciliation, with the decision_result_record (current next_record) kept strictly separate from the causal prior_state_record (TC001) that alone drives consumed-id and lifecycle semantics; Gate-11 self-consistency and direction fail-closed invariants added (the attempt-1 degenerate pattern now raises); htf_bias for the canonical lifecycle now comes from row['ob']['direction'] (bullish/bearish only, never FLAT)",
       "regression_proof": "seven TC003 regressions exercise the REAL evaluate_orchestration_decision adapter row over synthetic data (gate_context absence, Gate-11 pass surface with frozen weights, Gate-11 fail surface, attempt-1 degeneracy fail-closed, six render-mismatch fail-closed cases, four row-surface-mismatch fail-closed cases, decision-result-record lifecycle separation) and all fail against the attempt-1 tooling",
       "valid_interpretive_metrics_emitted_by_attempt_1": false,
       "h002_disposition_recorded": false,
@@ -357,7 +356,7 @@
     {
       "record_id": "phase8-v2-D003-TC004",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO NEW EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO NEW EMPIRICAL ACCESS",
       "created_utc": "2026-09-25T00:35:55Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -395,7 +394,6 @@
       "tooling_identity_rule": "the TC004 commit becomes the ONLY tooling identity authorized for a future corrected D003 rerun; a successful R001 must bind the preregistration, original tooling, TC001, TC002, TC003, TC004, both void attempt output/blockage hash pairs, the original exposure timestamp, the TC003 rerun timestamp, the final corrected-rerun timestamp and the preserved Fold-01 store hashes",
       "scope": "Post-exposure measurement tooling only. The D003 scientific question, hypotheses, metric surface, population, disposition rules and prohibited outputs are unchanged."
     }
-
   ],
   "charter": {
     "identity": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
@@ -423,12 +421,12 @@
       "upward_revision_lock": "Per charter section 11: before the first strategy-variant result is observed the charter may still be corrected during supervisory review; after the first strategy-variant result is observed, upward budget revision is prohibited. No variant result has been observed."
     },
     "authoritative_time_semantics": [
-    "For scientific preregistration chronology the authoritative publication event is the canonical Git commit containing the registration; the commit SHA is the immutable publication anchor (Git author dates alone are not the scientific identity).",
-    "Git commit identity and timestamp must be recorded for every registration.",
-    "User-entered registered_utc metadata may not precede or contradict the actual publication event.",
-    "Future registration tooling must generate UTC timestamps from the current execution time rather than a manually supplied placeholder.",
-    "Any mismatch is corrected append-only (provenance_corrections) and never hidden."
-  ]
+      "For scientific preregistration chronology the authoritative publication event is the canonical Git commit containing the registration; the commit SHA is the immutable publication anchor (Git author dates alone are not the scientific identity).",
+      "Git commit identity and timestamp must be recorded for every registration.",
+      "User-entered registered_utc metadata may not precede or contradict the actual publication event.",
+      "Future registration tooling must generate UTC timestamps from the current execution time rather than a manually supplied placeholder.",
+      "Any mismatch is corrected append-only (provenance_corrections) and never hidden."
+    ]
   },
   "hypotheses": [
     {
@@ -473,7 +471,9 @@
       "expected_qualitative_effect": "If H001 is relevant, decisions reaching the structural stage should show that OB availability, FVG availability, and exact-overlap availability fail at materially different rates rather than all failing because neither structure exists.",
       "expected_frequency_effect": "Qualitative only at this stage: relaxation of a sufficient-but-possibly-overstrict geometric conjunction would be expected to increase candidate frequency; no number is predicted and none may be computed by D001.",
       "potential_failure_mode": "If OB and FVG availability themselves are near-zero, or the overlap conjunction is not a material attrition point (rates similar to structure absence), the geometric relationship is not the binding constraint and H001 is unsupported for V2 purposes.",
-      "data_permitted": ["TIER_A_FOLD01"],
+      "data_permitted": [
+        "TIER_A_FOLD01"
+      ],
       "metrics_permitted": [
         "gate reach funnel counts",
         "OB state/reason decomposition",
@@ -502,7 +502,9 @@
       "expected_qualitative_effect": "If H002 is relevant, the diagnostic should reveal concentration in one or more specific OB subpredicate failures (e.g. a single lifecycle state dominating BlockState outcomes) rather than an absence of all OB-like structure.",
       "expected_frequency_effect": "Qualitative only: relieving a dominant single subpredicate failure would be expected to increase valid-OB availability; no number is predicted and none may be computed by D001.",
       "potential_failure_mode": "If OB-like structure is genuinely rare (no_confirmed_block dominates with little concentration elsewhere), the conjunction is not the bottleneck and H002 is unsupported.",
-      "data_permitted": ["TIER_A_FOLD01"],
+      "data_permitted": [
+        "TIER_A_FOLD01"
+      ],
       "metrics_permitted": [
         "BlockState outcome distribution",
         "canonical failure-reason counts and co-occurrence counts",
@@ -527,7 +529,9 @@
       "expected_qualitative_effect": "If H003 is relevant, OB and FVG detections should exhibit short, structured temporal offsets rather than being restricted to same-bar co-occurrence; measurable only by a later dedicated diagnostic.",
       "expected_frequency_effect": "Qualitative only: a temporal-association rule would be expected to broaden admissible evidence relative to strict simultaneity; no number is predicted.",
       "potential_failure_mode": "If causal OB/FVG pairs are temporally diffuse or absent, temporal association is not economically meaningful for this strategy.",
-      "data_permitted": ["TIER_A_FOLD01"],
+      "data_permitted": [
+        "TIER_A_FOLD01"
+      ],
       "metrics_permitted": [
         "OB-to-FVG temporal distance distributions (later diagnostic only)"
       ],
@@ -600,7 +604,9 @@
       "expected_qualitative_effect": "If H007 is relevant, one coherent structural-pair concept (structurally-active same-side canonical block plus same-direction final canonical FVG, exact overlap not mandatory) will admit a materially larger pair surface than the frozen exact-overlap conjunction while remaining a strict structural predicate, without weakening any other gate, DXY authority or protected semantic.",
       "expected_frequency_effect": "Qualitative only: replacing the frozen conjunction with one coherent pair concept would be expected to increase candidate frequency relative to the frozen semantics; no number is predicted and none may be computed before a separately authorized V002 empirical execution.",
       "potential_failure_mode": "If the structural-pair concept collapses toward absence of structure (near-zero structural-active blocks or no same-direction FVG association), or the enlarged pair surface comes only from weakening non-structural protections, H007 is unsupported for V2 purposes.",
-      "data_permitted": ["TIER_A_FOLD01"],
+      "data_permitted": [
+        "TIER_A_FOLD01"
+      ],
       "metrics_permitted": [
         "structural-active OB counts",
         "associated same-direction final FVG counts",
@@ -648,9 +654,17 @@
       "budget_consumption_upon_first_execution": "1 / 12",
       "status": "REGISTERED_NOT_EXECUTED",
       "registered_utc": "2026-09-21T00:00:00Z",
-      "linked_hypotheses": ["phase8-v2-H001", "phase8-v2-H002"],
-      "referenced_later_directions": ["phase8-v2-H003"],
-      "fold_boundary": ["2024-04-01T00:00:00Z", "2024-06-08T00:00:00Z"]
+      "linked_hypotheses": [
+        "phase8-v2-H001",
+        "phase8-v2-H002"
+      ],
+      "referenced_later_directions": [
+        "phase8-v2-H003"
+      ],
+      "fold_boundary": [
+        "2024-04-01T00:00:00Z",
+        "2024-06-08T00:00:00Z"
+      ]
     },
     {
       "diagnostic_id": "phase8-v2-D002",
@@ -696,12 +710,12 @@
       "registered_utc": "2026-09-24T11:45:05Z",
       "linked_hypothesis": "phase8-v2-H002",
       "h002_boundary": "H002 statement remains exactly the registered hypothesis concerning conjunctively restrictive canonical order-block conditions; not rewritten after V001. Disposition rule fixed in the specification BEFORE any empirical execution.",
-      "h001_boundary": "CONTEXTUAL_ONLY \u2014 H001 remains INCONCLUSIVE_D001; D003 reproduces OB/FVG pair and overlap counts descriptively and does not resolve H001 (no separately preregistered H001 decision rule precedes execution).",
+      "h001_boundary": "CONTEXTUAL_ONLY — H001 remains INCONCLUSIVE_D001; D003 reproduces OB/FVG pair and overlap counts descriptively and does not resolve H001 (no separately preregistered H001 decision rule precedes execution).",
       "h003_boundary": "NOT_TESTED_BY_D003",
-      "h005_note": "SUPPORTED_BY_V001 \u2014 already disposed; not reopened by D003",
+      "h005_note": "SUPPORTED_BY_V001 — already disposed; not reopened by D003",
       "scientific_question": "Among decisions that legitimately reach Gate 11, what is the exact frozen-score component composition, and how does the canonical order-block lifecycle (evaluate_order_block) classify the same decisions compared with the persisted legacy/acquisition ob_result.valid surface?",
       "motivation_binding": "V001 R001 (result commit 72bdcb7c9b3a520c501efbc9b2aa2139cc0ba455; outcome FUNCTIONAL_REPAIR_NO_CANDIDATES; H005 SUPPORTED_BY_V001; candidate_ready 0; Gate-10 1489->526, Gate-11 526->1, final canonical 1->0; one persisted OB/FVG pair with canonical overlap true) motivates D003 but is NEVER a test oracle and establishes nothing about which lifecycle state dominates or that any threshold should change.",
-      "primary_population": "Decisions that (1) pass canonical snapshot classification, (2) pass the reference check, (3) evaluate successfully through the canonical orchestration path, (4) pass Gate 10, and (5) enter Gate 11 \u2014 derived naturally at execution time; no observed count may be encoded into tooling or tests.",
+      "primary_population": "Decisions that (1) pass canonical snapshot classification, (2) pass the reference check, (3) evaluate successfully through the canonical orchestration path, (4) pass Gate 10, and (5) enter Gate 11 — derived naturally at execution time; no observed count may be encoded into tooling or tests.",
       "preregistered_metric_surface": {
         "A_accounting": [
           "scheduled_snapshots",
@@ -789,8 +803,7 @@
       "no_v002": true,
       "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D003.md",
       "specification_sha256": "2b5204925a700cc2faa817835e77d298d778138f811bdfb2ad06cfe9c007cc46"
-    }
-,
+    },
     {
       "diagnostic_id": "phase8-v2-D004",
       "title": "Expired Order-Block Structural Fate Decomposition",
@@ -999,8 +1012,8 @@
       "strategy_rejection_context": "R_STRATEGY_REJECT records the exact frozen v003_strategy_reasons distribution and explicitly labels protected classes (regime; bias; DXY; session; news; symbol/allowlist; consumed/lifecycle safety) according to the actual emitted reason strings; no 'candidates if protection removed' computation; never V004 headroom.",
       "no_rr_pullback_rejection_claim": "Verified frozen-code contract: at V003 score 8, once readiness/early-entry permits continuation, structure direction is bullish/bearish and frozen liquidity alignment is valid, determine_entry returns a conservative partial entry unconditionally - no RR, pullback-distance, FVG-distance or limit-distance rejection gate exists on this path; therefore no D006 category may be named RR_TOO_LOW, PULLBACK_TOO_FAR, FVG_DISTANCE_FAIL or LIMIT_DISTANCE_FAIL unless the frozen source changes before execution, in which case the task STOPs due to baseline mismatch.",
       "production_parity_requirement": "Synthetic regressions must prove the diagnostic rejection classifier agrees exactly with frozen determine_entry: for each category an independent copied state is classified and a second independent copy runs the frozen model - E1-E4 imply determine_entry returns None; a valid ready/aligned case returns a non-null entry; no production state mutation leaks into the diagnostic chain.",
-      "h008_disposition_rule": "SUPPORTED_BY_D006 only for clear concentration in one or a small number of coherent frozen state/readiness/liquidity mechanisms argued from exact raw counts, concentration, economic/state-machine coherence and the final-vs-temporal source comparison (no numerical cutoff); NOT_SUPPORTED_BY_D006 for diffuse or economically-valid-absence failures; INCONCLUSIVE_D006 for unmapped rejections, non-reproducing baseline, indistinguishable predicates or ambiguous population. No V004 follows automatically from any disposition.",
-      "v003_baseline_reproduction_contract": "Future D006 execution must FIRST reproduce V003's frozen surface using the V003 strategy blob, corrected TC001 tooling semantics and the same authorized store; the runtime MAY load the sealed V003 R001 result and require equality for prior observed surfaces (Gate-11 entrant identity/count; V003 Gate-11 pass set/count; canonical-strategy pass set/count; candidate-ready set/count; setup IDs); no empirical numbers are hardcoded - they are read from the sealed prior result; any mismatch raises D006 BASELINE REPRODUCTION FAILURE, STOPs and forbids interpretation.",
+      "h008_disposition_rule": "H008_SUPERVISORY_INTERPRETATION_REQUIRED when E5 = 0 and primary_count > 0, accompanied by descriptive concentration metrics; support or non-support must never be automatically assigned by an arbitrary numerical percentage; INCONCLUSIVE_D006 for unmapped rejections (E5 > 0), zero primary population, or non-reproducing baseline. No V004 follows automatically from any disposition.",
+      "v003_baseline_reproduction_contract": "Future D006 execution must FIRST reproduce V003's frozen surface using the V003 strategy blob, corrected TC001 tooling semantics and the same authorized store; upstream stages (entrants, gate-11 passers, canonical-strategy passers) reconcile by exact count against the prior funnel; candidate stage reconciles by exact count, exact decision ID set, and setup IDs; newly reproduced upstream decision ID sets are hashed and sealed under contract FIRST_IDENTITY_SEALED_BY_D006; baseline reproduction status is reported as SEALED_V003_BASELINE_RECONCILED; any mismatch raises D006 BASELINE REPRODUCTION FAILURE, STOPs and forbids interpretation.",
       "primary_id_reconciliation": "The primary D006 population IDs must equal canonical_strategy_pass_set - candidate_ready_set EXACTLY (set equality; count equality alone insufficient; no duplicates; no missing primary member; no extra non-primary member).",
       "prohibited_counterfactuals": "No candidate_ready under any removed/broadened/expanded condition: no state condition removed, no liquidity alignment broadened, no expiry removed, no early-entry expansion, no displacement copied from temporal evidence, no score-10 or alternate-state evaluation; the only permitted candidate count is the already observed frozen V003 result used for provenance/reconciliation; no protected-semantic weakening (DXY, news, session, regime, symbol allowlist, risk, daily limits, cascade controls, score threshold, score weights); no numeric parameter trial (state expiry minutes, liquidity timeout bars, score values, OB expiry, FVG lag, RR, distance thresholds - numeric budget 0 / 4).",
       "banned_output_guard": "Structurally rejected output keys/phrases (semantic variants included): candidate_if, rescued_candidates, would_pass, if_removed, alternate_expiry, alternate_state, alternate_score, score_10_candidate, relaxed_liquidity, pnl, profit, win_rate, expectancy, drawdown, sharpe, returns, closed_trades.",
@@ -1019,7 +1032,8 @@
       "two_phase_discipline": "Phase A (this record + docs/PHASE8_V2_DIAGNOSTIC_D006.md) preregisters the hypothesis, diagnostic and tooling contract; Phase B implements and freeze-commits synthetic-tested tooling (backtests/phase8_v2_diagnostic_d006.py) with a HARD STOP before any real Fold-01 access; the tooling is NOT executed by the freeze task; empirical execution requires separate supervisory authorization.",
       "v004_status": "NOT CREATED - no strategy code, no variant registration, no Tier-B release; any execution-semantic variant requires its own preregistration under the same two-phase discipline.",
       "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D006.md",
-      "specification_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
+      "specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
+      "specification_phase_a_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
     }
   ],
   "strategy_variants": [
@@ -1314,7 +1328,10 @@
         "bytes": 4901,
         "read_back_verified": true
       },
-      "fold01_boundary": ["2024-04-01T00:00:00+00:00", "2024-06-08T00:00:00+00:00"],
+      "fold01_boundary": [
+        "2024-04-01T00:00:00+00:00",
+        "2024-06-08T00:00:00+00:00"
+      ],
       "input_provenance": {
         "fold_store": "fold-01-1d710826193a6767",
         "fold_store_sha256": "1d710826193a67671e99f968160b2f8d586444f749a7f39e94c3ce6c04b0255e",
@@ -1332,28 +1349,96 @@
         "reconciles": true
       },
       "preregistered_structural_summaries": {
-        "actions": {"skip": 1489, "wait": 5827},
-        "reasons": {"displacement_missing": 2118, "internal_structure_missing": 963, "liquidity_sweep_missing": 3709, "score_below_threshold": 526},
+        "actions": {
+          "skip": 1489,
+          "wait": 5827
+        },
+        "reasons": {
+          "displacement_missing": 2118,
+          "internal_structure_missing": 963,
+          "liquidity_sweep_missing": 3709,
+          "score_below_threshold": 526
+        },
         "gate_funnel": {
-          "gate_8_liquidity": {"entered": 7316, "passed": 3607, "failed": 3709, "pass_rate": 0.493029},
-          "gate_9_displacement": {"entered": 3607, "passed": 1489, "failed": 2118, "pass_rate": 0.412808},
-          "gate_10_internal_structure": {"entered": 1489, "passed": 526, "failed": 963, "pass_rate": 0.353257},
-          "gate_11_confluence_score": {"entered": 526, "passed": 0, "failed": 526, "pass_rate": 0.0}
+          "gate_8_liquidity": {
+            "entered": 7316,
+            "passed": 3607,
+            "failed": 3709,
+            "pass_rate": 0.493029
+          },
+          "gate_9_displacement": {
+            "entered": 3607,
+            "passed": 1489,
+            "failed": 2118,
+            "pass_rate": 0.412808
+          },
+          "gate_10_internal_structure": {
+            "entered": 1489,
+            "passed": 526,
+            "failed": 963,
+            "pass_rate": 0.353257
+          },
+          "gate_11_confluence_score": {
+            "entered": 526,
+            "passed": 0,
+            "failed": 526,
+            "pass_rate": 0.0
+          }
         },
-        "ob_reason_counts": {"None": 6790, "ob_aligned": 4, "ob_invalidated": 75, "ob_mitigated": 307, "ob_no_displacement": 61, "ob_outside_pd_zone": 79},
-        "ob_type_counts": {"None": 6790, "order_block": 526},
-        "ob_direction_counts": {"bearish": 2576, "bullish": 4740},
-        "ob_condition_counts": {"mitigated_true": 382, "in_pd_zone_true": 4},
-        "fvg_direction_counts": {"None": 7316},
-        "score_distribution": {"5": 522, "7": 4},
+        "ob_reason_counts": {
+          "None": 6790,
+          "ob_aligned": 4,
+          "ob_invalidated": 75,
+          "ob_mitigated": 307,
+          "ob_no_displacement": 61,
+          "ob_outside_pd_zone": 79
+        },
+        "ob_type_counts": {
+          "None": 6790,
+          "order_block": 526
+        },
+        "ob_direction_counts": {
+          "bearish": 2576,
+          "bullish": 4740
+        },
+        "ob_condition_counts": {
+          "mitigated_true": 382,
+          "in_pd_zone_true": 4
+        },
+        "fvg_direction_counts": {
+          "None": 7316
+        },
+        "score_distribution": {
+          "5": 522,
+          "7": 4
+        },
         "score_check_pass_counts": {
-          "HTF bias aligns with trade direction": {"passed": 526, "failed": 0},
-          "Price located in premium/discount zone": {"passed": 526, "failed": 0},
-          "Valid order block present": {"passed": 4, "failed": 522},
-          "FVG overlaps the order block zone": {"passed": 0, "failed": 526},
-          "Liquidity sweep occurred before entry": {"passed": 526, "failed": 0}
+          "HTF bias aligns with trade direction": {
+            "passed": 526,
+            "failed": 0
+          },
+          "Price located in premium/discount zone": {
+            "passed": 526,
+            "failed": 0
+          },
+          "Valid order block present": {
+            "passed": 4,
+            "failed": 522
+          },
+          "FVG overlaps the order block zone": {
+            "passed": 0,
+            "failed": 526
+          },
+          "Liquidity sweep occurred before entry": {
+            "passed": 526,
+            "failed": 0
+          }
         },
-        "direction_consistency": {"same": 526, "opposite": 0, "undefined_no_ob": 6790},
+        "direction_consistency": {
+          "same": 526,
+          "opposite": 0,
+          "undefined_no_ob": 6790
+        },
         "ob_x_fvg_x_overlap_counts": {
           "valid_ob=False/fvg_present=False/overlap=False": 7312,
           "valid_ob=True/fvg_present=False/overlap=False": 4
@@ -1519,7 +1604,7 @@
         "research_density_target": 90
       },
       "output": {
-        "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V001 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V001 — FOLD01 — NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_variants/phase6-development-v2-V001/fold01/phase6-development-v2-V001_result.json",
         "sha256": "63e3be0a73960a1189670afd17feb67061c5c75e351438dbd1afb7343f0d8d11",
@@ -1576,10 +1661,10 @@
       "void_attempt_history": {
         "attempt1_output_sha256": "6637338401bd5133a53c4dbed455cff757b6459b85549088e17fe228a00488df",
         "attempt1_blockage_sha256": "764de0ea6fba632845b00da8f8c03950e8d0cbc69e5d6864821bafe0765b9a46",
-        "attempt1_classification": "VOID_ATTEMPT_OUTPUT \u2014 NOT R001",
+        "attempt1_classification": "VOID_ATTEMPT_OUTPUT — NOT R001",
         "tc003_rerun1_output_sha256": "5c8c2a8b84ce816f8c34e80a99e89cd03281fbc6c0b655562dc5b9136c215450",
         "tc003_rerun1_blockage_sha256": "e28f976c356ae28b591fca594340faf5dea8491ba9ed2d80f36efb256dd0235a",
-        "tc003_rerun1_classification": "VOID_CORRECTED_RERUN_OUTPUT \u2014 NOT R001",
+        "tc003_rerun1_classification": "VOID_CORRECTED_RERUN_OUTPUT — NOT R001",
         "both_artifact_pairs_preserved_intact": true
       },
       "execution_window_utc": {
@@ -1787,7 +1872,7 @@
         "all_pass": true
       },
       "output": {
-        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_diagnostics/phase8-v2-D003/fold01/tc004-rerun1/phase8-v2-D003_result.json",
         "sha256": "71f85982c3170c689678682184ccc2d3fe291bc74372a47e3dc8aed3a6d1b096",
@@ -2094,10 +2179,19 @@
       },
       "synthesis_arithmetic": {
         "d003_eligible_ob_plus_final_fvg_same_direction_pairs": 60,
-        "d003_direction_agreement": {"agree": 60, "disagree": 0},
-        "d003_canonical_overlap": {"true": 39, "false": 21},
+        "d003_direction_agreement": {
+          "agree": 60,
+          "disagree": 0
+        },
+        "d003_canonical_overlap": {
+          "true": 39,
+          "false": 21
+        },
         "d004_expired_untouched_with_same_direction_final_fvg": 42,
-        "d004_canonical_overlap_among_those": {"true": 22, "false": 20},
+        "d004_canonical_overlap_among_those": {
+          "true": 22,
+          "false": 20
+        },
         "population_disjointness": "D003 ELIGIBLE and D004 EXPIRED_UNTOUCHED populations are lifecycle-disjoint (ELIGIBLE blocks are untouched through decision with age <= 30 by construction; EXPIRED_UNTOUCHED blocks have age > 30), so simple addition composes one coherent structural surface without double counting",
         "same_direction_structurally_intact_ob_fvg_pairs": 102,
         "exact_canonical_overlaps": 61,
@@ -2282,7 +2376,12 @@
         "legacy_score_failed_count": 525
       },
       "structural_pair_surface": {
-        "v002_pair_state_counts": {"ACTIVE": 144, "INVALIDATED": 15, "MITIGATED": 92, "UNAVAILABLE": 275},
+        "v002_pair_state_counts": {
+          "ACTIVE": 144,
+          "INVALIDATED": 15,
+          "MITIGATED": 92,
+          "UNAVAILABLE": 275
+        },
         "h007_pair_state_reason_distribution": {
           "block_already_mitigated": 92,
           "close_above_bearish_zone": 6,
@@ -2291,20 +2390,43 @@
           "structurally_active_block": 144
         },
         "v002_structurally_active_count": 144,
-        "v002_sides": {"LONG": 149, "SHORT": 102, "FLAT": 275},
+        "v002_sides": {
+          "LONG": 149,
+          "SHORT": 102,
+          "FLAT": 275
+        },
         "v002_associated_same_direction_fvg_count": 110,
         "exact_overlap_descriptive_true": 67,
         "exact_overlap_descriptive_false": 43,
         "exact_overlap_descriptive_not_available": 0,
         "v002_structural_active_age_summary": {
-          "count": 144, "min": 0, "max": 113, "median": 13.5,
-          "quantiles": {"p25": 5.8, "p50": 13.5, "p75": 41.2}
+          "count": 144,
+          "min": 0,
+          "max": 113,
+          "median": 13.5,
+          "quantiles": {
+            "p25": 5.8,
+            "p50": 13.5,
+            "p75": 41.2
+          }
         }
       },
       "v002_variant_funnel": {
-        "gate_11_v002": {"entered": 526, "passed": 102, "failed": 424},
-        "canonical_strategy_v002": {"entered": 102, "passed": 80, "failed": 22},
-        "gate_12_13_rr_entry_v002": {"entered": 80, "passed": 61, "failed": 19},
+        "gate_11_v002": {
+          "entered": 526,
+          "passed": 102,
+          "failed": 424
+        },
+        "canonical_strategy_v002": {
+          "entered": 102,
+          "passed": 80,
+          "failed": 22
+        },
+        "gate_12_13_rr_entry_v002": {
+          "entered": 80,
+          "passed": 61,
+          "failed": 19
+        },
         "funnel_chain_reconciles": "candidate_ready 61 <= strategy pass 80 <= gate11 pass 102 <= entrants 526; entered-chains verified fail-closed inside the tooling"
       },
       "candidate_surface": {
@@ -2319,8 +2441,12 @@
         "candidate_age_bars_max": 113,
         "candidate_descriptive_overlap_true": 25,
         "candidate_descriptive_overlap_false": 36,
-        "candidate_entry_modes_unique": ["conservative"],
-        "candidate_entry_types_unique": ["partial"],
+        "candidate_entry_modes_unique": [
+          "conservative"
+        ],
+        "candidate_entry_types_unique": [
+          "partial"
+        ],
         "note": "full setup-ID and decision-ID lists are sealed verbatim in the external result JSON; counts and reconciliation only are restated here"
       },
       "opportunity_classification": "OPPORTUNITY_INSUFFICIENT",
@@ -3006,6 +3132,44 @@
         "note": "the first real Fold-01 V003 strategy observation permanently consumed the third strategy-variant slot at the exposure timestamp 2026-09-29T18:27:20.872944+00:00"
       },
       "h003_binding": "H003 remains bound to this record as its primary formal empirical reference; the preregistered H003 statement is NOT rewritten; the formal outcome of R001 is the V003 opportunity classification OPPORTUNITY_INSUFFICIENT (81 candidates < 90 threshold)"
+    },
+    {
+      "correction_id": "phase8-v2-D006-TC001",
+      "record_type": "PRE_EMPIRICAL_MEASUREMENT_TOOLING_CORRECTION",
+      "diagnostic_id": "phase8-v2-D006",
+      "hypothesis_id": "phase8-v2-H008",
+      "defect_class": "D006_PRE_EMPIRICAL_INTERPRETATION_AND_BASELINE_CONTRACT_MISMATCH",
+      "defective_tooling_commit": "32a4186917b40fd60cd9a96197c9aae50dcb7782",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 32a4186917b40fd60cd9a96197c9aae50dcb7782, subject 'fix: align D006 interpretation and baseline contract'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit",
+      "defects_addressed": {
+        "defect_a_unpreregistered_percentage_cutoff": "The frozen Phase-B tooling mechanically branched concentration_ratio >= 0.50 into SUPPORTED_BY_D006 or NOT_SUPPORTED_BY_D006. This violated specification Section 16 and Section 1.1 which prohibit arbitrary numeric percentage cutoffs. Corrected by removing the 50% cutoff; when E5 = 0 and primary_count > 0, the tooling emits H008_SUPERVISORY_INTERPRETATION_REQUIRED along with descriptive concentration metrics (dominant category, dominant count, dominant share, top-two categories, top-two count, top-two share, and source breakdowns); when E5 > 0, outputs INCONCLUSIVE_D006.",
+        "defect_b_baseline_reproduction_contract": "The frozen Phase-B tooling contract required exact decision ID set equality for upstream stages (Gate-11 entrants, Gate-11 passers, canonical-strategy passers) against the sealed V003 R001 artifact (phase6-development-v2-V003_result.json). However, the sealed V003 result artifact only persists aggregate counts for upstream funnel stages and persists decision IDs only for the candidate stage (candidate_ready: 81). Corrected so upstream stages reconcile by exact count against the prior result funnel, while candidate stage reconciles by exact count (81), exact candidate decision ID set equality, and candidate setup IDs. Newly reproduced upstream decision ID sets are hashed with SHA-256 and sealed under contract FIRST_IDENTITY_SEALED_BY_D006 with status SEALED_V003_BASELINE_RECONCILED. Within D006, primary decision IDs strictly equal canonical_strategy_pass_set - candidate_ready_set as an exact set equality."
+      },
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D006.md section 24 'TC001 — H008 Disposition and V003 Baseline-Reproduction Contract Correction' appended; historical Phase-A hash preserved as a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6 (18,280 bytes); corrected specification SHA-256 fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb (22,552 bytes) bound in tooling and register",
+      "historical_specification_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6",
+      "corrected_specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
+      "correction_timing": "pre-empirical: no D006 empirical access occurred before or during this correction; all fixtures synthetic",
+      "no_empirical_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no empirical D006 run; no Tier B; all fixtures synthetic",
+      "v003_v002_unchanged": "bot/strategy/variant_v003.py, backtests/phase8_v2_variant_v003_eval.py, strategies/smc_engine/entry_model.py, strategies/smc_engine/strategy_state.py, bot/strategy/variant_v002.py, backtests/phase8_v2_variant_v002_eval.py, D005 tooling and all risk/news/DXY/session files are 0-byte diff",
+      "budget_impact": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_revision_lock": "ACTIVE",
+        "tier_b": "SEALED",
+        "v004": "NOT_CREATED",
+        "note": "TC001 consumes ZERO diagnostic budget; diagnostics remain 4 / 12; D006 becomes permanently 5 / 12 ONLY when the corrected tooling first observes Fold 01 under separate supervisory authorization"
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "registered_utc": "2026-10-01T17:00:00Z"
     }
   ],
   "provenance_corrections": [

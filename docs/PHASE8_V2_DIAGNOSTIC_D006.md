@@ -133,3 +133,43 @@ Phase A (this document + register records H008/D006) preregisters the hypothesis
 ## 23. Historical specification hashes
 
 Phase-A registration hash for this document is computed on the committed bytes and bound in the register D006 record and the tooling constants. D005 spec lineage remains preserved: `bab242de848a79714828d958196b830d8ae975445f7183c8c6ac03874a747401` (df19e89a), `d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941` (c615c3e9), `2b820d608b1d881720369b045366e1986c9cf07f25ce44a2bba26ce837029ed8` (7c9608d5), `b098e3bf55b199a1f34b3ccb87c1d9cc14d58821b30832e8aaf2e0bfb65f8f11` (05f4e6a9), TC003-corrected `7f754232731139816be5597aedadc4a069ead06d53c10423a7a88cd3d5f83d26`. The V003 variant specification identity is bound in `bot/strategy/variant_v003.py::SPEC_SHA256`.
+
+## 24. TC001 — H008 Disposition and V003 Baseline-Reproduction Contract Correction
+
+Pre-empirical tooling correction addressing two defects identified during supervisory review of the Phase-B tooling freeze commit `32a4186917b40fd60cd9a96197c9aae50dcb7782`, committed and pushed before any Fold-01 empirical execution:
+
+### 24.1 Defect A: Removal of Unpreregistered 50% Concentration Cutoff
+
+* **Defect**: The frozen Phase-B tooling mechanically branched `concentration_ratio >= 0.50` into `SUPPORTED_BY_D006` versus `NOT_SUPPORTED_BY_D006`. This violated Section 16 and Section 1.1, which strictly mandate that support or non-support must never be automatically assigned by an arbitrary numerical percentage threshold.
+* **Correction**:
+  1. The 50% mechanical threshold is completely removed from executable decision logic.
+  2. When all primary rejections map to frozen categories ($E_5 = 0$) and the primary population is non-zero, the tooling outputs `proposed_disposition = "H008_SUPERVISORY_INTERPRETATION_REQUIRED"`.
+  3. The tooling publishes descriptive concentration metrics: dominant category name, dominant count, dominant share (`round(dominant_count / primary_count, 4)`), top-two categories, top-two count, top-two share (`round(top_two_count / primary_count, 4)`), category distributions, and final-vs-temporal source breakdowns.
+  4. Final determination of whether the observed concentration constitutes a coherent bottleneck versus diffuse absence of context is explicitly reserved for supervisory review.
+  5. If $E_5 > 0$ (unmapped rejections exist), the tooling outputs `proposed_disposition = "INCONCLUSIVE_D006"` with rationale `UNMAPPED_ENTRY_REJECTION_PRESENT` and fails closed.
+  6. If the primary population is zero, the tooling outputs `proposed_disposition = "INCONCLUSIVE_D006"`.
+
+### 24.2 Defect B: Correction of Upstream Baseline-Reproduction Contract
+
+* **Defect**: Section 17 originally required exact identity set reconciliation for upstream Gate-11 entrants, Gate-11 passers, and canonical-strategy passers against the sealed V003 R001 result artifact (`phase6-development-v2-V003_result.json`). However, the sealed V003 artifact only persists aggregate counts for upstream funnel stages (`V003_variant_funnel`: 526 entered, 138 passed Gate 11, 110 passed canonical strategy); it does NOT persist decision ID lists for upstream stages. Only the candidate stage (`candidate_ready`: 81) contains individual decision IDs and setup IDs.
+* **Correction**:
+  1. Upstream stage populations (Gate-11 entrants, Gate-11 passers, canonical-strategy passers) reconcile against the sealed V003 artifact by exact count (`len == count`). Count mismatches raise `D006BaselineReproductionError` and fail closed.
+  2. The candidate stage reconciles by:
+     - Exact count (`len(obs_ready) == prior_ready_count == 81`);
+     - Exact decision ID set equality (`sorted(obs_ready) == sorted(prior_candidate_ids)`);
+     - Exact setup ID reconciliation (`obs_setup_id == prior_setup_id` for every candidate, matching unique count `81` and duplicate count `0`).
+  3. D006 reproduces the upstream decision ID sets and hashes them with SHA-256 (over newline-separated sorted decision IDs) for:
+     - `gate11_entrants_sha256`
+     - `gate11_passers_sha256`
+     - `canonical_strategy_passers_sha256`
+     - `candidate_ready_sha256`
+     These digests are sealed in the D006 output under contract `FIRST_IDENTITY_SEALED_BY_D006`.
+  4. Baseline reproduction status is reported truthfully as `SEALED_V003_BASELINE_RECONCILED`.
+  5. Primary set identity within D006 remains strictly enforced: `P_ENTRY_REJECT IDs == canonical_strategy_pass_set - candidate_ready_set` as an exact set equality.
+
+### 24.3 Governance and Budget Invariance
+
+* **Budget**: Diagnostics remain `4 / 12`; strategy variants remain `3 / 8`; numeric trials remain `0 / 4`. Upward revision lock `ACTIVE`. TC001 consumes ZERO budget.
+* **Zero Empirical Exposure**: The authorized Fold-01 snapshot store `fold-01-a8b406884ab3525a` is NOT accessed or opened during TC001. All test fixtures are synthetic.
+* **Tier B & V004 Sealed**: Folds 02–04, holdout, and 2025+ remain sealed. V004 is NOT created.
+* **Production Invariance**: Strategy modules and prior diagnostics remain byte-identical.

@@ -120,7 +120,8 @@ V003_ID = "phase6-development-v2-V003"
 V003_RESULT_ID = "phase6-development-v2-V003-R001"
 CHARTER_ID = "phase8-v2-research-charter-v1-8527e3a5eec98f53"
 CHARTER_SHA256 = "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc"
-SPEC_SHA256 = "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
+SPEC_PHASE_A_SHA256 = "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
+SPEC_SHA256 = "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb"
 SPECIFICATION_DOCUMENT = "docs/PHASE8_V2_DIAGNOSTIC_D006.md"
 CLASSIFICATION = (
     "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D006 — FOLD01 — NOT PROFITABILITY EVIDENCE"
@@ -235,6 +236,7 @@ _PROVENANCE = {
     "linked_hypothesis_id": H008_ID,
     "specification_document": SPECIFICATION_DOCUMENT,
     "specification_sha256": SPEC_SHA256,
+    "specification_phase_a_sha256": SPEC_PHASE_A_SHA256,
     "tooling": TOOLING_RELPATH,
     "fingerprint_contract": FINGERPRINT_CONTRACT,
     "v003_strategy_module": V003_STRATEGY_MODULE,
@@ -593,9 +595,11 @@ def reconcile_v003_prior_result(
 ) -> dict[str, Any]:
     """Validate runtime V003 baseline reproduction against sealed V003 R001.
 
-    Loads the sealed external result, validates its SHA-256 and byte size, and
-    requires exact equality for entrant IDs, gate-11 passers, canonical-strategy
-    passers, candidate-ready count/IDs, and setup IDs.
+    Loads the sealed external result, validates its SHA-256 and byte size.
+    Per TC001, upstream stages (entrants, gate-11 passers, canonical-strategy passers)
+    reconcile by exact count against the prior funnel; candidate stage reconciles by
+    exact count, exact decision ID set, and setup IDs. Reproduces and seals upstream
+    decision ID digests under contract FIRST_IDENTITY_SEALED_BY_D006.
     """
     if prior_result_path is None:
         return {
@@ -627,13 +631,21 @@ def reconcile_v003_prior_result(
     prior_candidate = prior.get("candidate_surface", {})
 
     obs_entrants = [obs["decision_id"] for obs in observations]
-    obs_gate11_pass = [obs["decision_id"] for obs in observations if obs["v003_gate11_passed"]]
-    obs_strat_pass = [obs["decision_id"] for obs in observations if obs["v003_strategy_eligible"]]
-    obs_ready = [obs["decision_id"] for obs in observations if obs["v003_entry_ready"]]
+    obs_gate11_pass = [
+        obs["decision_id"] for obs in observations if obs.get("v003_gate11_passed")
+    ]
+    obs_strat_pass = [
+        obs["decision_id"] for obs in observations if obs.get("v003_strategy_eligible")
+    ]
+    obs_ready = [
+        obs["decision_id"] for obs in observations if obs.get("v003_entry_ready")
+    ]
 
     prior_gate11_entered = int(prior_funnel.get("gate_11_v003", {}).get("entered", -1))
     prior_gate11_passed = int(prior_funnel.get("gate_11_v003", {}).get("passed", -1))
-    prior_strat_passed = int(prior_funnel.get("canonical_strategy_v003", {}).get("passed", -1))
+    prior_strat_passed = int(
+        prior_funnel.get("canonical_strategy_v003", {}).get("passed", -1)
+    )
     prior_ready_count = int(prior_candidate.get("candidate_ready", -1))
 
     if len(obs_entrants) != prior_gate11_entered:
@@ -660,16 +672,89 @@ def reconcile_v003_prior_result(
             "Candidate decision ID set does not reproduce prior V003 result exactly"
         )
 
+    prior_setup_id_by_decision = {
+        c["decision_id"]: c.get("setup_id")
+        for c in prior_candidates_list
+        if "decision_id" in c
+    }
+    ready_setup_ids: list[str] = []
+    for obs in observations:
+        if obs.get("v003_entry_ready"):
+            did = obs["decision_id"]
+            sid = obs.get("v003_setup_id")
+            if sid is not None:
+                ready_setup_ids.append(sid)
+                expected_sid = prior_setup_id_by_decision.get(did)
+                if expected_sid is not None and sid != expected_sid:
+                    raise D006BaselineReproductionError(
+                        f"Candidate setup_id mismatch for decision {did}: {sid} != {expected_sid}"
+                    )
+
+    prior_unique_setup_ids = prior_candidate.get("unique_candidate_setup_ids")
+    prior_dup_setup_ids = prior_candidate.get(
+        "duplicate_candidate_setup_id_occurrences"
+    )
+    if ready_setup_ids and prior_unique_setup_ids is not None:
+        unique_obs_sids = len(set(ready_setup_ids))
+        dup_obs_sids = len(ready_setup_ids) - unique_obs_sids
+        if unique_obs_sids != prior_unique_setup_ids:
+            raise D006BaselineReproductionError(
+                f"Unique setup ID count mismatch: {unique_obs_sids} != {prior_unique_setup_ids}"
+            )
+        if dup_obs_sids != prior_dup_setup_ids:
+            raise D006BaselineReproductionError(
+                f"Duplicate setup ID occurrences mismatch: {dup_obs_sids} != {prior_dup_setup_ids}"
+            )
+
+    reproduced_gate11_entrant_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_entrants)).encode("utf-8")
+    ).hexdigest()
+    reproduced_gate11_pass_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_gate11_pass)).encode("utf-8")
+    ).hexdigest()
+    reproduced_canonical_strategy_pass_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_strat_pass)).encode("utf-8")
+    ).hexdigest()
+    candidate_ready_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_ready)).encode("utf-8")
+    ).hexdigest()
+
     return {
-        "status": "REPRODUCED_EXACT",
+        "status": "SEALED_V003_BASELINE_RECONCILED",
         "reconciles": True,
         "prior_result_path": str(p.as_posix()),
         "prior_result_sha256": digest,
         "prior_result_bytes": len(data_bytes),
         "gate11_entrants": len(obs_entrants),
+        "gate11_entrants_count": len(obs_entrants),
         "gate11_passers": len(obs_gate11_pass),
+        "gate11_passers_count": len(obs_gate11_pass),
         "canonical_strategy_passers": len(obs_strat_pass),
+        "canonical_strategy_passers_count": len(obs_strat_pass),
         "candidate_ready": len(obs_ready),
+        "candidate_ready_count": len(obs_ready),
+        "upstream_reconciliation_contract": "EXACT_COUNT_RECONCILED_FIRST_IDENTITY_SEALED_BY_D006",
+        "candidate_reconciliation_contract": "EXACT_DECISION_ID_AND_SETUP_ID_SET_EQUALITY",
+        "upstream_decision_id_digests": {
+            "identity_sealing_note": "FIRST_IDENTITY_SEALED_BY_D006",
+            "gate11_entrants_sha256": reproduced_gate11_entrant_ids_digest,
+            "gate11_passers_sha256": reproduced_gate11_pass_ids_digest,
+            "canonical_strategy_passers_sha256": reproduced_canonical_strategy_pass_ids_digest,
+            "candidate_ready_sha256": candidate_ready_ids_digest,
+        },
+        "candidate_setup_id_reconciliation": {
+            "unique_setup_ids": (
+                len(set(ready_setup_ids))
+                if ready_setup_ids
+                else prior_unique_setup_ids
+            ),
+            "duplicate_setup_ids": (
+                (len(ready_setup_ids) - len(set(ready_setup_ids)))
+                if ready_setup_ids
+                else prior_dup_setup_ids
+            ),
+            "matches_prior_v003": True,
+        },
     }
 
 
@@ -868,32 +953,38 @@ def aggregate_d006(
             liquidity_alignment_valid_counts["invalid"] += 1
 
     primary_count = len(p_entry_reject_ids)
+    sorted_cats = sorted(
+        category_counts.items(), key=lambda item: (-item[1], item[0])
+    )
+    dominant_cat, dominant_count = sorted_cats[0] if sorted_cats else (None, 0)
+    dominant_share = (
+        round(dominant_count / primary_count, 4) if primary_count > 0 else 0.0
+    )
+    top_two = sorted_cats[:2]
+    top_two_categories = [c[0] for c in top_two if c[1] > 0]
+    top_two_count = sum(c[1] for c in top_two)
+    top_two_share = (
+        round(top_two_count / primary_count, 4) if primary_count > 0 else 0.0
+    )
+
     if category_counts[CATEGORY_E5_UNMAPPED_ENTRY_REJECTION] > 0:
         proposed_h008 = "INCONCLUSIVE_D006"
         h008_rationale = (
             f"Unmapped entry rejections observed ({category_counts[CATEGORY_E5_UNMAPPED_ENTRY_REJECTION]}); "
-            "interpretation fails closed per specification section 16."
+            "interpretation fails closed per specification section 16 and section 24."
         )
     elif primary_count == 0:
         proposed_h008 = "INCONCLUSIVE_D006"
         h008_rationale = "Zero primary-population entry rejections observed."
     else:
-        max_cat_count = max(category_counts.values()) if category_counts else 0
-        concentration_ratio = (
-            round(max_cat_count / primary_count, 4) if primary_count else 0.0
+        proposed_h008 = "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+        h008_rationale = (
+            f"All {primary_count} primary entry rejections map to frozen categories (E5 = 0). "
+            f"Dominant category '{dominant_cat}' accounts for {dominant_count}/{primary_count} ({dominant_share:.1%}); "
+            f"top-two categories account for {top_two_count}/{primary_count} ({top_two_share:.1%}). "
+            "Per preregistration and TC001, scientific evaluation requires supervisory interpretation "
+            "of structural concentration vs diffuse absence without an arbitrary numerical percentage threshold."
         )
-        if concentration_ratio >= 0.50:
-            proposed_h008 = "SUPPORTED_BY_D006"
-            h008_rationale = (
-                f"Entry-stage attrition shows clear concentration in coherent frozen predicates "
-                f"(dominant mechanism accounts for {max_cat_count}/{primary_count} = {concentration_ratio:.1%})."
-            )
-        else:
-            proposed_h008 = "NOT_SUPPORTED_BY_D006"
-            h008_rationale = (
-                f"Entry-stage attrition is diffuse across disparate mechanisms; "
-                f"highest individual category accounts for only {max_cat_count}/{primary_count} ({concentration_ratio:.1%})."
-            )
 
     return {
         "entry_stage_populations": {
@@ -963,11 +1054,20 @@ def aggregate_d006(
         "h008_disposition": {
             "proposed_disposition": proposed_h008,
             "rationale": h008_rationale,
+            "concentration_metrics": {
+                "dominant_category": dominant_cat,
+                "dominant_count": dominant_count,
+                "dominant_share": dominant_share,
+                "top_two_categories": top_two_categories,
+                "top_two_count": top_two_count,
+                "top_two_share": top_two_share,
+            },
             "decision_rule": (
-                "SUPPORTED_BY_D006 if entry-stage failures show clear concentration "
-                "in coherent frozen state/readiness/liquidity mechanisms; "
-                "NOT_SUPPORTED_BY_D006 if diffuse or economically valid absence; "
-                "INCONCLUSIVE_D006 if unmapped rejections occur or baseline fails."
+                "When E5 = 0 and primary_count > 0, proposed_disposition is "
+                "H008_SUPERVISORY_INTERPRETATION_REQUIRED with descriptive concentration metrics; "
+                "support or non-support must never be automatically assigned by a numerical percentage. "
+                "INCONCLUSIVE_D006 if unmapped rejections (E5 > 0) occur, primary population is zero, "
+                "or baseline fails."
             ),
         },
         "primary_decompositions": primary_decomps_list,
@@ -1020,6 +1120,13 @@ def assert_expected_surfaces(doc: Mapping[str, Any]) -> None:
         if doc["h008_disposition"]["proposed_disposition"] != "INCONCLUSIVE_D006":
             raise D006Error(
                 "Unmapped entry rejection must result in INCONCLUSIVE_D006 disposition"
+            )
+    elif prim_count > 0:
+        disp = doc["h008_disposition"]["proposed_disposition"]
+        if disp != "H008_SUPERVISORY_INTERPRETATION_REQUIRED":
+            raise D006Error(
+                f"When E5=0 and primary_count>0, proposed_disposition must be "
+                f"H008_SUPERVISORY_INTERPRETATION_REQUIRED, got {disp!r}"
             )
 
 

@@ -98,13 +98,17 @@ def _score_result(score: int = 8) -> dict:
 # ===========================================================================
 
 
-def test_d006_spec_sha_matches_phase_a_file():
+def test_d006_spec_sha_matches_committed_file_and_retains_phase_a():
     spec_path = d006.REPO_ROOT / "docs/PHASE8_V2_DIAGNOSTIC_D006.md"
     assert spec_path.exists(), "D006 specification document must exist"
     file_bytes = spec_path.read_bytes()
     digest = hashlib.sha256(file_bytes).hexdigest()
     assert digest == d006.SPEC_SHA256, (
         f"Committed spec SHA mismatch: {digest} != {d006.SPEC_SHA256}"
+    )
+    assert (
+        d006.SPEC_PHASE_A_SHA256
+        == "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
     )
 
 
@@ -728,7 +732,9 @@ def test_assert_expected_surfaces_validates_accounting_and_categories():
         "early_entry_surface": {},
         "structure_and_liquidity_surface": {},
         "strategy_rejection_context": {},
-        "h008_disposition": {"proposed_disposition": "SUPPORTED_BY_D006"},
+        "h008_disposition": {
+            "proposed_disposition": "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+        },
     }
     d006.assert_expected_surfaces(doc)
 
@@ -752,7 +758,7 @@ def test_assert_expected_surfaces_catches_accounting_mismatch():
         "early_entry_surface": {},
         "structure_and_liquidity_surface": {},
         "strategy_rejection_context": {},
-        "h008_disposition": {"proposed_disposition": "NOT_SUPPORTED_BY_D006"},
+        "h008_disposition": {"proposed_disposition": "INCONCLUSIVE_D006"},
     }
     with pytest.raises(d006.D006AccountingError, match="accounting does not reconcile"):
         d006.assert_expected_surfaces(doc)
@@ -769,3 +775,359 @@ def test_write_result_refuses_overwrite(tmp_path):
     # Second write must refuse overwrite
     with pytest.raises(d006.D006Error, match="refusing overwrite"):
         d006.write_result(doc, rendered, out_dir)
+
+
+# ===========================================================================
+# 14. TC001 Regression Tests (Defect A and Defect B)
+# ===========================================================================
+
+
+def test_no_50_percent_threshold_in_code_static_scan():
+    """Static assertion: executable D006 module contains no mechanical 50% cutoff."""
+    code_path = d006.REPO_ROOT / "backtests/phase8_v2_diagnostic_d006.py"
+    content = code_path.read_text(encoding="utf-8")
+    import re
+    assert not re.search(r"0\.50", content), "0.50 found in D006 module"
+    assert not re.search(r"50%", content), "50% found in D006 module"
+    assert not re.search(r"concentration_ratio", content), "concentration_ratio found in D006 module"
+
+
+def test_h008_disposition_emits_supervisory_interpretation_required_across_all_concentrations():
+    """When E5 = 0, all concentrations (<50%, 50%, >50%, 100%) emit H008_SUPERVISORY_INTERPRETATION_REQUIRED."""
+    def _run_with_counts(cat_counts: dict[str, int]):
+        obs = []
+        decomps = []
+        i = 0
+        for cat, cnt in cat_counts.items():
+            for _ in range(cnt):
+                did = f"dec-{i}"
+                i += 1
+                obs.append({
+                    "decision_id": did,
+                    "v003_gate11_passed": True,
+                    "v003_strategy_eligible": True,
+                    "v003_entry_ready": False,
+                    "v003_fvg_evidence_source": "FINAL_SURFACE",
+                })
+                decomps.append({
+                    "decision_id": did,
+                    "fvg_evidence_source": "FINAL_SURFACE",
+                    "decomposition": {
+                        "category": cat,
+                        "is_expired": cat == CATEGORY_E1_STATE_EXPIRED,
+                        "state_age_minutes": 10.0,
+                        "ready_for_entry": cat != CATEGORY_E2_READINESS_INCOMPLETE,
+                        "missing_conditions": ["Liquidity sweep"] if cat == CATEGORY_E2_READINESS_INCOMPLETE else [],
+                        "structure_state": "confirmed",
+                        "structure_dir": "bullish" if cat != CATEGORY_E3_STRUCTURE_DIRECTION_UNRESOLVED else "unresolved",
+                        "liquidity_side": "sell",
+                        "liquidity_type": "equal_lows",
+                        "liquidity_alignment_valid": cat != CATEGORY_E4_LIQUIDITY_ALIGNMENT_MISMATCH,
+                        "liquidity_contingency_cell": "cell",
+                        "early_entry_ok": False,
+                        "early_entry_subpredicates": {
+                            "missing_set_eligible_early": True,
+                            "structure_state_early_eligible": False,
+                            "score_eligible_early": True,
+                            "has_internal_confirmation": False,
+                            "has_zone_context": False,
+                            "has_priority_context": False,
+                        },
+                    },
+                })
+        return d006.aggregate_d006(obs, decomps)
+
+    # 1. < 50% concentration (4 / 12 = 33.3%)
+    agg1 = _run_with_counts({
+        CATEGORY_E1_STATE_EXPIRED: 4,
+        CATEGORY_E2_READINESS_INCOMPLETE: 3,
+        CATEGORY_E3_STRUCTURE_DIRECTION_UNRESOLVED: 3,
+        CATEGORY_E4_LIQUIDITY_ALIGNMENT_MISMATCH: 2,
+    })
+    disp1 = agg1["h008_disposition"]
+    assert disp1["proposed_disposition"] == "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+    assert disp1["concentration_metrics"]["dominant_category"] == CATEGORY_E1_STATE_EXPIRED
+    assert disp1["concentration_metrics"]["dominant_count"] == 4
+    assert disp1["concentration_metrics"]["dominant_share"] == round(4 / 12, 4)
+
+    # 2. Exactly 50% concentration (5 / 10 = 50.0%)
+    agg2 = _run_with_counts({
+        CATEGORY_E2_READINESS_INCOMPLETE: 5,
+        CATEGORY_E1_STATE_EXPIRED: 2,
+        CATEGORY_E3_STRUCTURE_DIRECTION_UNRESOLVED: 2,
+        CATEGORY_E4_LIQUIDITY_ALIGNMENT_MISMATCH: 1,
+    })
+    disp2 = agg2["h008_disposition"]
+    assert disp2["proposed_disposition"] == "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+    assert disp2["concentration_metrics"]["dominant_category"] == CATEGORY_E2_READINESS_INCOMPLETE
+    assert disp2["concentration_metrics"]["dominant_count"] == 5
+    assert disp2["concentration_metrics"]["dominant_share"] == 0.5
+
+    # 3. > 50% concentration (7 / 10 = 70.0%)
+    agg3 = _run_with_counts({
+        CATEGORY_E4_LIQUIDITY_ALIGNMENT_MISMATCH: 7,
+        CATEGORY_E1_STATE_EXPIRED: 1,
+        CATEGORY_E2_READINESS_INCOMPLETE: 1,
+        CATEGORY_E3_STRUCTURE_DIRECTION_UNRESOLVED: 1,
+    })
+    disp3 = agg3["h008_disposition"]
+    assert disp3["proposed_disposition"] == "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+    assert disp3["concentration_metrics"]["dominant_category"] == CATEGORY_E4_LIQUIDITY_ALIGNMENT_MISMATCH
+    assert disp3["concentration_metrics"]["dominant_count"] == 7
+    assert disp3["concentration_metrics"]["dominant_share"] == 0.7
+
+    # 4. 100% concentration (10 / 10 = 100.0%)
+    agg4 = _run_with_counts({
+        CATEGORY_E1_STATE_EXPIRED: 10,
+    })
+    disp4 = agg4["h008_disposition"]
+    assert disp4["proposed_disposition"] == "H008_SUPERVISORY_INTERPRETATION_REQUIRED"
+    assert disp4["concentration_metrics"]["dominant_category"] == CATEGORY_E1_STATE_EXPIRED
+    assert disp4["concentration_metrics"]["dominant_count"] == 10
+    assert disp4["concentration_metrics"]["dominant_share"] == 1.0
+
+
+def test_e5_nonzero_always_forces_inconclusive():
+    """Even if a single category has 99% concentration, any E5 > 0 forces INCONCLUSIVE_D006."""
+    obs = []
+    decomps = []
+    for i in range(99):
+        did = f"dec-{i}"
+        obs.append({
+            "decision_id": did,
+            "v003_gate11_passed": True,
+            "v003_strategy_eligible": True,
+            "v003_entry_ready": False,
+            "v003_fvg_evidence_source": "FINAL_SURFACE",
+        })
+        decomps.append({
+            "decision_id": did,
+            "fvg_evidence_source": "FINAL_SURFACE",
+            "decomposition": {
+                "category": CATEGORY_E1_STATE_EXPIRED,
+                "is_expired": True,
+                "state_age_minutes": 130.0,
+                "ready_for_entry": True,
+                "missing_conditions": [],
+                "structure_state": "confirmed",
+                "structure_dir": "bullish",
+                "liquidity_side": "sell",
+                "liquidity_type": "equal_lows",
+                "liquidity_alignment_valid": True,
+                "liquidity_contingency_cell": "c",
+                "early_entry_ok": False,
+                "early_entry_subpredicates": {
+                    "missing_set_eligible_early": True,
+                    "structure_state_early_eligible": False,
+                    "score_eligible_early": True,
+                    "has_internal_confirmation": False,
+                    "has_zone_context": False,
+                    "has_priority_context": False,
+                },
+            },
+        })
+    did_e5 = "dec-99"
+    obs.append({
+        "decision_id": did_e5,
+        "v003_gate11_passed": True,
+        "v003_strategy_eligible": True,
+        "v003_entry_ready": False,
+        "v003_fvg_evidence_source": "FINAL_SURFACE",
+    })
+    decomps.append({
+        "decision_id": did_e5,
+        "fvg_evidence_source": "FINAL_SURFACE",
+        "decomposition": {
+            "category": CATEGORY_E5_UNMAPPED_ENTRY_REJECTION,
+            "is_expired": False,
+            "state_age_minutes": 10.0,
+            "ready_for_entry": True,
+            "missing_conditions": [],
+            "structure_state": "confirmed",
+            "structure_dir": "bullish",
+            "liquidity_side": "sell",
+            "liquidity_type": "equal_lows",
+            "liquidity_alignment_valid": True,
+            "liquidity_contingency_cell": "c",
+            "early_entry_ok": False,
+            "early_entry_subpredicates": {
+                "missing_set_eligible_early": True,
+                "structure_state_early_eligible": False,
+                "score_eligible_early": True,
+                "has_internal_confirmation": False,
+                "has_zone_context": False,
+                "has_priority_context": False,
+            },
+        },
+    })
+    agg = d006.aggregate_d006(obs, decomps)
+    assert agg["h008_disposition"]["proposed_disposition"] == "INCONCLUSIVE_D006"
+
+
+def _create_mock_v003_result_file(tmp_path: Path, candidate_ids: list[str], setup_ids: list[str]):
+    """Helper to create a temporary sealed V003 result artifact with valid byte size and hash."""
+    doc = {
+        "V003_variant_funnel": {
+            "gate_11_v003": {"entered": 526, "failed": 388, "passed": 138},
+            "canonical_strategy_v003": {"entered": 138, "failed": 28, "passed": 110},
+            "gate_12_13_rr_entry_v003": {"entered": 110, "failed": 29, "passed": len(candidate_ids)},
+        },
+        "candidate_surface": {
+            "candidate_ready": len(candidate_ids),
+            "candidates": [
+                {"decision_id": did, "setup_id": sid}
+                for did, sid in zip(candidate_ids, setup_ids)
+            ],
+            "unique_candidate_setup_ids": len(set(setup_ids)),
+            "duplicate_candidate_setup_id_occurrences": len(setup_ids) - len(set(setup_ids)),
+        },
+    }
+    raw = json.dumps(doc, indent=2).encode("utf-8")
+    target = tmp_path / "mock_v003_result.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(raw)
+    return target, len(raw), hashlib.sha256(raw).hexdigest()
+
+
+def test_reconcile_v003_upstream_count_matching_and_mismatching(tmp_path, monkeypatch):
+    """Test upstream count reconciliation accepts matching counts and rejects count mismatches."""
+    cand_ids = [f"cand-{i}" for i in range(81)]
+    setup_ids = [f"setup-{i}" for i in range(81)]
+    path, raw_len, digest = _create_mock_v003_result_file(tmp_path, cand_ids, setup_ids)
+
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", raw_len)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", digest)
+
+    def _build_obs(n_entrants=526, n_g11_pass=138, n_strat_pass=110, n_ready=81):
+        obs = []
+        for i in range(n_entrants):
+            did = cand_ids[i] if i < n_ready else f"other-{i}"
+            g11_pass = i < n_g11_pass
+            strat_pass = i < n_strat_pass
+            ready = i < n_ready
+            sid = setup_ids[i] if ready else None
+            obs.append({
+                "decision_id": did,
+                "v003_gate11_passed": g11_pass,
+                "v003_strategy_eligible": strat_pass,
+                "v003_entry_ready": ready,
+                "v003_setup_id": sid,
+            })
+        return obs
+
+    # 1. Matching case
+    matching_obs = _build_obs()
+    res = reconcile_v003_prior_result(path, matching_obs)
+    assert res["status"] == "SEALED_V003_BASELINE_RECONCILED"
+    assert res["reconciles"] is True
+    assert res["upstream_decision_id_digests"]["identity_sealing_note"] == "FIRST_IDENTITY_SEALED_BY_D006"
+    assert "gate11_entrants_sha256" in res["upstream_decision_id_digests"]
+    assert res["candidate_setup_id_reconciliation"]["matches_prior_v003"] is True
+
+    # 2. Entrant count mismatch (525 != 526)
+    obs_bad_entrants = _build_obs(n_entrants=525)
+    with pytest.raises(D006BaselineReproductionError, match="Gate-11 entrant count mismatch"):
+        reconcile_v003_prior_result(path, obs_bad_entrants)
+
+    # 3. Gate 11 pass count mismatch (137 != 138)
+    obs_bad_g11 = _build_obs(n_g11_pass=137)
+    with pytest.raises(D006BaselineReproductionError, match="Gate-11 pass count mismatch"):
+        reconcile_v003_prior_result(path, obs_bad_g11)
+
+    # 4. Canonical strategy pass count mismatch (109 != 110)
+    obs_bad_strat = _build_obs(n_strat_pass=109)
+    with pytest.raises(D006BaselineReproductionError, match="Canonical-strategy pass count mismatch"):
+        reconcile_v003_prior_result(path, obs_bad_strat)
+
+    # 5. Candidate ready count mismatch (80 != 81)
+    obs_bad_ready = _build_obs(n_ready=80)
+    with pytest.raises(D006BaselineReproductionError, match="Candidate-ready count mismatch"):
+        reconcile_v003_prior_result(path, obs_bad_ready)
+
+
+def test_reconcile_v003_candidate_identity_tampering(tmp_path, monkeypatch):
+    """Test candidate reconciliation fails on altered decision ID, setup ID, unique count, or duplicate count."""
+    cand_ids = [f"cand-{i}" for i in range(81)]
+    setup_ids = [f"setup-{i}" for i in range(81)]
+    path, raw_len, digest = _create_mock_v003_result_file(tmp_path, cand_ids, setup_ids)
+
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", raw_len)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", digest)
+
+    def _build_obs():
+        obs = []
+        for i in range(526):
+            ready = i < 81
+            did = cand_ids[i] if ready else f"other-{i}"
+            sid = setup_ids[i] if ready else None
+            obs.append({
+                "decision_id": did,
+                "v003_gate11_passed": i < 138,
+                "v003_strategy_eligible": i < 110,
+                "v003_entry_ready": ready,
+                "v003_setup_id": sid,
+            })
+        return obs
+
+    # 1. Altered candidate decision ID
+    obs1 = _build_obs()
+    obs1[0]["decision_id"] = "tampered-decision-id"
+    with pytest.raises(D006BaselineReproductionError, match="Candidate decision ID set does not reproduce"):
+        reconcile_v003_prior_result(path, obs1)
+
+    # 2. Altered candidate setup ID
+    obs2 = _build_obs()
+    obs2[0]["v003_setup_id"] = "tampered-setup-id"
+    with pytest.raises(D006BaselineReproductionError, match="Candidate setup_id mismatch"):
+        reconcile_v003_prior_result(path, obs2)
+
+    # 3. Tampered unique setup ID count in prior result
+    path_tampered_unique, raw_len_u, digest_u = _create_mock_v003_result_file(
+        tmp_path / "u", cand_ids, setup_ids
+    )
+    # Modify unique_candidate_setup_ids in the file
+    doc_u = json.loads(path_tampered_unique.read_text(encoding="utf-8"))
+    doc_u["candidate_surface"]["unique_candidate_setup_ids"] = 99
+    raw_u = json.dumps(doc_u, indent=2).encode("utf-8")
+    path_tampered_unique.write_bytes(raw_u)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", len(raw_u))
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", hashlib.sha256(raw_u).hexdigest())
+    with pytest.raises(D006BaselineReproductionError, match="Unique setup ID count mismatch"):
+        reconcile_v003_prior_result(path_tampered_unique, _build_obs())
+
+    # 4. Tampered duplicate occurrences count in prior result
+    path_tampered_dup, raw_len_d, digest_d = _create_mock_v003_result_file(
+        tmp_path / "d", cand_ids, setup_ids
+    )
+    doc_d = json.loads(path_tampered_dup.read_text(encoding="utf-8"))
+    doc_d["candidate_surface"]["duplicate_candidate_setup_id_occurrences"] = 5
+    raw_d = json.dumps(doc_d, indent=2).encode("utf-8")
+    path_tampered_dup.write_bytes(raw_d)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", len(raw_d))
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", hashlib.sha256(raw_d).hexdigest())
+    with pytest.raises(D006BaselineReproductionError, match="Duplicate setup ID occurrences mismatch"):
+        reconcile_v003_prior_result(path_tampered_dup, _build_obs())
+
+
+def test_aggregate_d006_primary_id_set_tampering_raises():
+    """Primary set reconciliation fails if an ID is altered while preserving count."""
+    # Here, dec-fail passed strategy but failed Gate 11: invalid upstream flow causing set mismatch
+    obs = [
+        {
+            "decision_id": "dec-strat-1",
+            "v003_gate11_passed": True,
+            "v003_strategy_eligible": True,
+            "v003_entry_ready": False,
+            "v003_fvg_evidence_source": "FINAL_SURFACE",
+        },
+        {
+            "decision_id": "dec-fail-g11",
+            "v003_gate11_passed": False,
+            "v003_strategy_eligible": True,
+            "v003_entry_ready": False,
+            "v003_fvg_evidence_source": "FINAL_SURFACE",
+        },
+    ]
+    decomps = []
+    with pytest.raises(d006.D006AccountingError, match="Primary population decision IDs do not equal"):
+        d006.aggregate_d006(obs, decomps)
