@@ -3210,6 +3210,293 @@
         "tier_b_sealed": true
       },
       "registered_utc": "2026-10-01T18:00:00Z"
+    },
+    {
+      "result_id": "phase8-v2-D006-R001",
+      "record_type": "DIAGNOSTIC_INVESTIGATION_RESULT",
+      "diagnostic_id": "phase8-v2-D006",
+      "hypothesis_id": "phase8-v2-H008",
+      "title": "V003 Post-Confluence Entry-State Attrition Decomposition",
+      "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D006.md",
+      "specification_phase_a_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6",
+      "tc001_specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
+      "tc002_specification_sha256": "4ebe97b997f530e2d60a8b1f3a25f62e5c2e22456c7ccfc375b28b727add42ad",
+      "tooling": "backtests/phase8_v2_diagnostic_d006.py",
+      "tooling_commit": "0ea73bf2e46c5a9957be68af8fbf172e127a4b05",
+      "tooling_git_blob_sha": "eb206bf906243554beb135cfe7fa19b1707af983",
+      "tooling_fingerprint": "a61124b7ee2210800595d75bab55242bc03af080b0d31cf3b2c19d4bd23cfed6",
+      "fingerprint_contract": "canonical_git_blob_v1",
+      "input_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "fold01_boundary": [
+          "2024-04-01T00:00:00+00:00",
+          "2024-06-08T00:00:00+00:00"
+        ],
+        "identity_verified_before_observation": true,
+        "rows_verify_sha256_passed": true,
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767"
+      },
+      "v003_sealed_prior_result": {
+        "path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
+        "sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8",
+        "bytes": 45221
+      },
+      "exposure_window_utc": {
+        "exposure_started": "2026-10-01T18:29:24.670654+00:00",
+        "result_generated": "2026-10-01T18:55:48.771710+00:00"
+      },
+      "v003_baseline_reproduction": {
+        "candidate_ready": 81,
+        "candidate_ready_count": 81,
+        "candidate_reconciliation_contract": "EXACT_DECISION_ID_AND_SETUP_ID_SET_EQUALITY",
+        "candidate_setup_id_reconciliation": {
+          "duplicate_setup_ids": 0,
+          "matches_prior_v003": true,
+          "unique_setup_ids": 81
+        },
+        "canonical_strategy_passers": 110,
+        "canonical_strategy_passers_count": 110,
+        "gate11_entrants": 526,
+        "gate11_entrants_count": 526,
+        "gate11_passers": 138,
+        "gate11_passers_count": 138,
+        "prior_result_bytes": 45221,
+        "prior_result_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
+        "prior_result_sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8",
+        "reconciles": true,
+        "status": "SEALED_V003_BASELINE_RECONCILED",
+        "upstream_decision_id_digests": {
+          "candidate_ready_sha256": "a4f4e885fe0c6be51a4a708c5a8b9b44cf1ed9da2d5aedbd31f13044d1e990d5",
+          "canonical_strategy_passers_sha256": "21d64d470c34f29595c9026df188a8a03f373fd29727225a633e50c69c9b98e8",
+          "gate11_entrants_sha256": "8612bad49dc18c7a41307c14a5c2ae349e3836f27b6bc31b3737dc7f43c78abc",
+          "gate11_passers_sha256": "84f5e6a5e1e38eec686aed9a6121d414ee48125297c0330781d2a57b49b3e1b0",
+          "identity_sealing_note": "FIRST_IDENTITY_SEALED_BY_D006",
+          "p_entry_reject_sha256": "c52009ac64813c009cff1f09917b921d20767d9dfebc5d16b50bc0f0fe541eb1"
+        },
+        "upstream_reconciliation_contract": "EXACT_COUNT_RECONCILED_FIRST_IDENTITY_SEALED_BY_D006"
+      },
+      "entry_stage_populations": {
+        "P_ENTRY_REJECT_count": 29,
+        "R_GATE11_FAIL_count": 388,
+        "R_READY_count": 81,
+        "R_STRATEGY_REJECT_count": 28,
+        "partition_reconciles": true,
+        "stage_definitions": {
+          "P_ENTRY_REJECT": "Canonical-strategy passers with determine_entry returning None",
+          "R_GATE11_FAIL": "Gate-11 entrants failing V003 8/8 score",
+          "R_READY": "Canonical-strategy passers with determine_entry returning valid entry",
+          "R_STRATEGY_REJECT": "Gate-11 passers failing unchanged canonical strategy protections"
+        },
+        "total_gate11_entrants": 526
+      },
+      "primary_population": {
+        "count": 29,
+        "p_entry_reject_sha256": "c52009ac64813c009cff1f09917b921d20767d9dfebc5d16b50bc0f0fe541eb1",
+        "id_reconciliation": {
+          "duplicate_count": 0,
+          "equals_canonical_strategy_pass_minus_candidate_ready": true,
+          "unique_count": 29
+        }
+      },
+      "fvg_source_stratification": {
+        "P_ENTRY_REJECT": {
+          "FINAL_SURFACE": 19,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 10
+        },
+        "R_GATE11_FAIL": {
+          "FINAL_SURFACE": 8,
+          "NONE": 319,
+          "TEMPORAL_MEMORY": 61
+        },
+        "R_READY": {
+          "FINAL_SURFACE": 61,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 20
+        },
+        "R_STRATEGY_REJECT": {
+          "FINAL_SURFACE": 22,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 6
+        }
+      },
+      "entry_rejection_category_distribution": {
+        "LIQUIDITY_ALIGNMENT_MISMATCH": 22,
+        "READINESS_INCOMPLETE": 7,
+        "STATE_EXPIRED": 0,
+        "STRUCTURE_DIRECTION_UNRESOLVED": 0,
+        "UNMAPPED_ENTRY_REJECTION": 0
+      },
+      "entry_rejection_by_source": {
+        "LIQUIDITY_ALIGNMENT_MISMATCH": {
+          "FINAL_SURFACE": 12,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 10
+        },
+        "READINESS_INCOMPLETE": {
+          "FINAL_SURFACE": 7,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 0
+        },
+        "STATE_EXPIRED": {
+          "FINAL_SURFACE": 0,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 0
+        },
+        "STRUCTURE_DIRECTION_UNRESOLVED": {
+          "FINAL_SURFACE": 0,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 0
+        },
+        "UNMAPPED_ENTRY_REJECTION": {
+          "FINAL_SURFACE": 0,
+          "NONE": 0,
+          "TEMPORAL_MEMORY": 0
+        }
+      },
+      "state_expiry_surface": {
+        "age_minutes_summary": {
+          "count": 29,
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "quantiles": {
+            "p25": 0.0,
+            "p50": 0.0,
+            "p75": 0.0
+          }
+        },
+        "counts": {
+          "active": 29,
+          "expired": 0
+        },
+        "frozen_expiry_minutes": 120
+      },
+      "ready_for_entry_surface": {
+        "counts": {
+          "not_ready": 28,
+          "ready": 1
+        },
+        "missing_condition_cooccurrences": {
+          "Confirmed structure": 28,
+          "None": 1
+        },
+        "missing_condition_distribution": {
+          "Confirmed structure": 28,
+          "Daily limit clear": 0,
+          "Displacement / FVG": 0,
+          "Liquidity sweep": 0,
+          "News clear": 0
+        }
+      },
+      "early_entry_surface": {
+        "displacement_relaxation_unreachable": true,
+        "early_entry_predicate_counts": {
+          "early_entry_ok": 21,
+          "has_internal_confirmation": 22,
+          "has_priority_context": 29,
+          "has_zone_context": 29,
+          "missing_set_eligible_early": 29,
+          "score_eligible_early": 29,
+          "structure_state_early_eligible": 28
+        },
+        "entry_mode": "conservative",
+        "score_context": 8
+      },
+      "structure_and_liquidity_surface": {
+        "contingency_table": {
+          "bearish x buy x internal_continuation": 7,
+          "bearish x sell x equal_lows": 1,
+          "bearish x sell x internal_continuation": 6,
+          "bullish x buy x internal_continuation": 1,
+          "bullish x sell x internal_continuation": 14
+        },
+        "liquidity_alignment_counts": {
+          "invalid": 22,
+          "valid": 7
+        },
+        "liquidity_side_distribution": {
+          "buy": 8,
+          "sell": 21
+        },
+        "liquidity_type_distribution": {
+          "equal_lows": 1,
+          "internal_continuation": 28
+        },
+        "structure_direction_distribution": {
+          "bearish": 14,
+          "bullish": 15
+        },
+        "structure_state_distribution": {
+          "confirmed": 1,
+          "transition": 28
+        }
+      },
+      "strategy_rejection_context": {
+        "count": 28,
+        "protected_class_distribution": {
+          "dxy": 3,
+          "regime": 25
+        },
+        "reason_distribution": {
+          "StrategyReason.DXY_DIRECTION_CONFLICT": 3,
+          "StrategyReason.REGIME_DIRECTION_CONFLICT": 2,
+          "StrategyReason.REGIME_HIGH_VOLATILITY": 23
+        },
+        "usage_note": "PROTECTED-POLICY CONTEXT ONLY; never V004 recovery headroom"
+      },
+      "h008_disposition": {
+        "concentration_metrics": {
+          "dominant_category": "LIQUIDITY_ALIGNMENT_MISMATCH",
+          "dominant_count": 22,
+          "dominant_share": 0.7586,
+          "top_two_categories": [
+            "LIQUIDITY_ALIGNMENT_MISMATCH",
+            "READINESS_INCOMPLETE"
+          ],
+          "top_two_count": 29,
+          "top_two_share": 1.0
+        },
+        "decision_rule": "When E5 = 0 and primary_count > 0, proposed_disposition is H008_SUPERVISORY_INTERPRETATION_REQUIRED with descriptive concentration metrics; support or non-support must never be automatically assigned by a numerical percentage. INCONCLUSIVE_D006 if unmapped rejections (E5 > 0) occur, primary population is zero, or baseline fails.",
+        "proposed_disposition": "H008_SUPERVISORY_INTERPRETATION_REQUIRED",
+        "rationale": "All 29 primary entry rejections map to frozen categories (E5 = 0). Dominant category 'LIQUIDITY_ALIGNMENT_MISMATCH' accounts for 22/29 (75.9%); top-two categories account for 29/29 (100.0%). Per preregistration and TC001, scientific evaluation requires supervisory interpretation of structural concentration vs diffuse absence without an arbitrary numerical percentage threshold."
+      },
+      "output": {
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 D006 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_diagnostics/phase8-v2-D006/fold01/phase8-v2-D006_result.json",
+        "absolute_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_diagnostics/phase8-v2-D006/fold01/phase8-v2-D006_result.json",
+        "sha256": "f45b0ca907b30b6c77802155e786ef8b0c92b10f4ca714611c9a1134ded038f8",
+        "bytes": 39018,
+        "read_back_verified": true
+      },
+      "result_document": "docs/PHASE8_V2_DIAGNOSTIC_D006_RESULT.md",
+      "d006_is_read_only": true,
+      "counterfactual_arithmetic_performed": false,
+      "no_rule_relaxation_claimed": true,
+      "no_profitability_metrics": true,
+      "v003_v002_unchanged": true,
+      "reserved_evidence_untouched": {
+        "data_2025_plus_untouched": true,
+        "fold_02_untouched": true,
+        "fold_03_untouched": true,
+        "fold_04_untouched": true,
+        "holdout_untouched": true
+      },
+      "budget_after_result": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_revision_lock": "ACTIVE",
+        "tier_b": "SEALED",
+        "v004": "NOT_CREATED",
+        "note": "D006 empirical execution completed and permanently consumed diagnostic slot 5 / 12; variants remain 3 / 8; numeric trials remain 0 / 4."
+      },
+      "v004_status": "NOT_CREATED \u2014 Tier B remains sealed \u2014 Supervisory H008/D006 interpretation required before any subsequent variant proposal",
+      "registered_utc": "2026-10-01T19:00:00Z"
     }
   ],
   "provenance_corrections": [

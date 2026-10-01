@@ -646,3 +646,27 @@ Copy-paste for a fresh agent session:
 - **Test suite:** 49 D006 tests passed in `tests/test_phase8_v2_diagnostic_d006.py` (including loop contract, state carry, buckets, gate 11 timing, CLI loader order, null-ID checks, pair swap, duplicate count, set digests, and register immutability).
 - **Budget:** Diagnostics remain `4 / 12`, strategy variants `3 / 8`, numeric trials `0 / 4`. Upward revision lock `ACTIVE`. Tier B strictly `SEALED`. Zero empirical Fold-01 store reads or execution.
 - **HARD STOP:** Tooling corrected and frozen; Fold-01 empirical execution awaits supervisory authorization.
+
+## Update — 2026-10-01: D006 R001 — post-confluence entry-state attrition decomposition published — H008_SUPERVISORY_INTERPRETATION_REQUIRED (canonical state for future sessions)
+
+- **D006 empirical execution completed:** Executed committed CLI `python -m backtests.phase8_v2_diagnostic_d006` on authorized Fold-01 store `fold-01-a8b406884ab3525a` (13,269 snapshots). Sealed external result artifact `C:/Users/chips/forex-signal-bot-data/phase8/v2_diagnostics/phase8-v2-D006/fold01/phase8-v2-D006_result.json` (39,018 bytes, SHA-256 `f45b0ca907b30b6c77802155e786ef8b0c92b10f4ca714611c9a1134ded038f8`, read-back verified). Authoritative narrative: `docs/PHASE8_V2_DIAGNOSTIC_D006_RESULT.md`.
+- **Baseline reproduction & identity reconciliation:**
+  - Status: `SEALED_V003_BASELINE_RECONCILED`.
+  - Reconciled exact counts: Gate-11 entrants 526, V003 Gate-11 passers 138, canonical-strategy passers 110, candidate-ready 81.
+  - Candidate identity: exact `(decision_id, setup_id)` multiset equality and 81 unique setup IDs with 0 duplicates verified against sealed V003 R001.
+  - First-sealed decision ID digests (`FIRST_IDENTITY_SEALED_BY_D006`): Gate-11 entrants `8612bad4…`, Gate-11 passers `84f5e6a5…`, canonical-strategy passers `21d64d47…`, candidate-ready `a4f4e885…`, P_ENTRY_REJECT `c52009ac…`.
+- **Gate-11 entrant partition (526 total):**
+  - `R_GATE11_FAIL`: 388 (failing V003 8/8 score)
+  - `R_STRATEGY_REJECT`: 28 (protected-policy context: 23 high volatility, 3 DXY, 2 regime direction)
+  - `R_READY`: 81 (valid entry return)
+  - `P_ENTRY_REJECT`: 29 (primary population: Gate-11 passed and strategy-pass but determine_entry returned None)
+  - Partition reconciles exactly: `388 + 28 + 81 + 29 == 526`.
+- **Attrition decomposition & descriptive concentration:**
+  - Ordered deterministic classifier: E1 `STATE_EXPIRED` = 0; E2 `READINESS_INCOMPLETE` = 7 (24.1%); E3 `STRUCTURE_DIRECTION_UNRESOLVED` = 0; E4 `LIQUIDITY_ALIGNMENT_MISMATCH` = 22 (75.9%); E5 `UNMAPPED_ENTRY_REJECTION` = 0 ($E_5 = 0$).
+  - Dominant category: `LIQUIDITY_ALIGNMENT_MISMATCH` (22/29 = 75.86%), top-two categories: `LIQUIDITY_ALIGNMENT_MISMATCH` + `READINESS_INCOMPLETE` (29/29 = 100.0%).
+  - Detailed surfaces: state expiry completely ruled out (all age = 0.0 min); readiness missing condition is solely `Confirmed structure` (28/29 in transition); 21/28 authorized for early entry under score-8 conservative rules; remaining 7 failed internal confirmation (E2); all 22 reaching liquidity evaluation failed alignment (E4, driven by 14 `bullish x sell x internal_continuation` + 6 `bearish x sell x internal_continuation` + 1 `bearish x sell x equal_lows` + 1 other).
+  - FVG source stratification: P_ENTRY_REJECT includes 19 FINAL_SURFACE + 10 TEMPORAL_MEMORY (both sources experience post-confluence entry-state attrition proportionally).
+- **H008 proposed disposition:** `H008_SUPERVISORY_INTERPRETATION_REQUIRED` (preregistered rule for $E_5 = 0 \land \text{primary} > 0$; no automatic numerical assignment). H008 statement in register remains OPEN pending supervisory review.
+- **Budget transition:** First empirical store observation occurred at `2026-10-01T18:29:24.670654+00:00`. Diagnostic budget permanently **`5 / 12` executed**. Strategy variants remain `3 / 8`, numeric parameter trials `0 / 4`. Upward revision lock ACTIVE.
+- **Sealed evidence & V004 status:** Folds 02–04, holdout, and 2025+ data remain strictly sealed. Tier B remains sealed. V004 is NOT created. D006 does not authorize or define V004.
+- **Next decision point (supervisory):** Supervisory review of D006 empirical findings to determine the scientific disposition of `phase8-v2-H008` and whether to formulate a prospective strategy variant (within remaining budget: 7 diagnostics, 5 variants) or close the research cycle.
