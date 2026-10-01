@@ -38,7 +38,7 @@
         "authoritative_disposition": "INCONCLUSIVE_D001",
         "h002_status": "OPEN",
         "reason": "The preregistered H002 metric surface required canonical lifecycle decomposition from bot/strategy/order_blocks.py::evaluate_order_block including canonical BlockState and failure reasons such as no_confirmed_block, block_expired, close_below_bullish_zone, close_above_bearish_zone, first_post_confirmation_retest, block_already_mitigated, confirmed_unmitigated_block, plus failure-reason co-occurrence counts. The executed D001 tooling instead decomposed the acquisition/reducer ob_result produced upstream and aggregated fields such as ob_mitigated, ob_outside_pd_zone, ob_invalidated, ob_no_displacement and ob_aligned. These observations are useful descriptive evidence but are not the exact preregistered canonical evaluate_order_block lifecycle decomposition, and the preregistered failure-reason co-occurrence counts were not established in the published compact result.",
-        "observed_ob_acquisition_counts_classification": "VALID_UNPLANNED_DESCRIPTIVE_EVIDENCE — NOT THE PREREGISTERED H002 TEST",
+        "observed_ob_acquisition_counts_classification": "VALID_UNPLANNED_DESCRIPTIVE_EVIDENCE \u2014 NOT THE PREREGISTERED H002 TEST",
         "observed_counts_retained_not_discarded": true,
         "no_d001_rerun_to_fix": true
       },
@@ -79,7 +79,7 @@
         "consequence": "A scalar float has no .iloc, so atr_series is always None; every detector iteration skips every candidate window and detect_fvgs returns [] for every frame long enough to enter the loop. Short frames (len(df) < atr_period + 3) also return []. Therefore the current frozen detect_fvgs implementation cannot produce an FVG for any input through this path.",
         "classification": "deterministic implementation/interface defect"
       },
-      "evidence_class": "STATIC_SOURCE_PROOF — NOT EMPIRICAL MARKET EVIDENCE",
+      "evidence_class": "STATIC_SOURCE_PROOF \u2014 NOT EMPIRICAL MARKET EVIDENCE",
       "no_empirical_read": true,
       "no_strategy_execution": true,
       "no_diagnostic_budget_consumption": true,
@@ -95,7 +95,7 @@
       "record_type": "DIAGNOSTIC_DISPOSITION",
       "created_utc": "2026-09-23T11:05:30Z",
       "diagnostic_id": "phase8-v2-D002",
-      "disposition": "BLOCKED_BEFORE_EXECUTION — DETERMINISTIC_FVG_ATR_INTERFACE_DEFECT",
+      "disposition": "BLOCKED_BEFORE_EXECUTION \u2014 DETERMINISTIC_FVG_ATR_INTERFACE_DEFECT",
       "reason": "D002's Stage-B attrition is already deterministically fixed at zero by the source defect recorded in phase8-v2-S001. Executing D002 under unchanged frozen semantics would consume a diagnostic trial without adding meaningful scientific information about downstream Stages C-G.",
       "execution_count_remains_zero": true,
       "consumes_no_diagnostic_budget": true,
@@ -130,7 +130,7 @@
     {
       "record_id": "phase6-development-v2-V001-MR001",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T18:00:57Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -141,7 +141,7 @@
       "exposure_timestamp_utc": "2026-09-23T15:23:28.661013+00:00",
       "blockage_artifact_sha256": "55a382dce5f00752e70ed03cb244db5f1277a471b78b43055819b3f118a03432",
       "defect_description": "Frozen evaluator run_v001_evaluation passed stringified provenance mappings into reject_holdout_path, a filesystem-path scanner; hash-hex fragments of real 64-hex SHA-256 digests (e.g. '4600', '8871' from input_index_sha256 e460066f4...) were misclassified as future-year path components, deterministically refusing every conforming store with BoundaryError '2025+ evidence path refused' before any metric emission.",
-      "defect_class": "MEASUREMENT_TOOLING_CATEGORY_ERROR — NOT A STRATEGY FAILURE",
+      "defect_class": "MEASUREMENT_TOOLING_CATEGORY_ERROR \u2014 NOT A STRATEGY FAILURE",
       "structural_metrics_emitted_before_failure": 0,
       "outcome_classification_at_blockage": "EMPIRICAL_EXECUTION_BLOCKED",
       "h005_disposition_at_blockage": "INCONCLUSIVE_V001",
@@ -168,7 +168,7 @@
     {
       "record_id": "phase6-development-v2-V001-MR002",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T18:53:15Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -200,7 +200,7 @@
         "store_rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22"
       },
       "repair_scope": "State seed/carry only in backtests/phase8_v2_variant_v001_eval.py: canonical seed _seed_state_record() = record_from_state(StrategyState(event_time=datetime(2024,1,1,tzinfo=UTC)), event_at=seed); loop carry now matches D001 exactly (advance only on non-error rows; error rows keep the prior valid record). Metric surface, observer, boundary checks, density target, outcome classifications and H005 rules unchanged.",
-      "blockage_status_language_correction": "The second blockage was never an empirical result; correct historical status is 'V001 EMPIRICAL MEASUREMENT BLOCKED — MR002 TOOLING REPAIR REQUIRED — NO R001 RESULT'. No tracked repository document contained the erroneous success-style footer (verified by scan at MR002 time); the footer appeared only in the assistant's conversational report of the failed attempt, and the sealed external blockage artifact is immutable and preserved unchanged.",
+      "blockage_status_language_correction": "The second blockage was never an empirical result; correct historical status is 'V001 EMPIRICAL MEASUREMENT BLOCKED \u2014 MR002 TOOLING REPAIR REQUIRED \u2014 NO R001 RESULT'. No tracked repository document contained the erroneous success-style footer (verified by scan at MR002 time); the footer appeared only in the assistant's conversational report of the failed attempt, and the sealed external blockage artifact is immutable and preserved unchanged.",
       "additional_diagnostic_budget_consumed": 0,
       "additional_strategy_variant_budget_consumed": 0,
       "additional_numeric_parameter_trials_consumed": 0,
@@ -216,7 +216,7 @@
     {
       "record_id": "phase6-development-v2-V001-MR003",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS",
       "created_utc": "2026-09-23T22:18:47Z",
       "variant_id": "phase6-development-v2-V001",
       "linked_hypothesis": "phase8-v2-H005",
@@ -248,7 +248,7 @@
         "decision_snapshots": 13269,
         "not_opened_during_mr003": true
       },
-      "third_blockage_status_language": "V001 R001 MEASUREMENT BLOCKED — THIRD MEASUREMENT-TOOLING DEFECT — MR003 REQUIRED — NO R001 RESULT",
+      "third_blockage_status_language": "V001 R001 MEASUREMENT BLOCKED \u2014 THIRD MEASUREMENT-TOOLING DEFECT \u2014 MR003 REQUIRED \u2014 NO R001 RESULT",
       "no_new_strategy_exposure": true,
       "additional_diagnostic_budget_consumed": 0,
       "additional_strategy_variant_budget_consumed": 0,
@@ -265,7 +265,7 @@
     {
       "record_id": "phase8-v2-D003-TC001",
       "record_type": "PRE_EMPIRICAL_TOOLING_CORRECTION",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T18:43:06Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -283,14 +283,14 @@
       "d001_unchanged": true,
       "v001_unchanged": true,
       "empirical_store_status": "fold-01-a8b406884ab3525a untouched; Folds 02-04, holdout and 2025+ untouched",
-      "tooling_identity_rule": "the corrected commit is the ONLY tooling identity authorized for future D003 empirical execution; commit 882b4c9 is recorded as PRE_EMPIRICAL_SUPERSEDED_TOOLING — PRIOR_STATE_WIRING_DEFECT and must never be used for empirical D003 execution",
+      "tooling_identity_rule": "the corrected commit is the ONLY tooling identity authorized for future D003 empirical execution; commit 882b4c9 is recorded as PRE_EMPIRICAL_SUPERSEDED_TOOLING \u2014 PRIOR_STATE_WIRING_DEFECT and must never be used for empirical D003 execution",
       "d003_status_after_correction": "REGISTERED_NOT_EXECUTED",
       "scope": "Pre-empirical implementation wiring only. The D003 scientific question, hypotheses, metric surface, population, disposition rules and prohibited outputs are unchanged."
     },
     {
       "record_id": "phase8-v2-D003-TC002",
       "record_type": "PRE_EMPIRICAL_TOOLING_CORRECTION",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T20:39:16Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -301,9 +301,9 @@
       "supersedes_nothing": true,
       "empirical_execution_has_occurred": false,
       "diagnostic_budget_status": "1 / 12 executed; D003 has consumed zero budget",
-      "old_calculation": "sha256(Path(__file__).read_bytes()) — legacy_worktree_bytes_v0 behavior over checkout-materialized bytes, which can differ between LF and CRLF worktrees for an identical commit",
+      "old_calculation": "sha256(Path(__file__).read_bytes()) \u2014 legacy_worktree_bytes_v0 behavior over checkout-materialized bytes, which can differ between LF and CRLF worktrees for an identical commit",
       "declared_contract": "canonical_git_blob_v1",
-      "corrected_calculation": "canonical_file_digest('backtests/phase8_v2_diagnostic_d003.py', commit=tooling_commit, repo=repository root) via bot.scientific.canonical_bytes — SHA-256 of the committed Git blob at the explicitly supplied tooling commit; checkout-independent, commit-content-sensitive, fail-closed on unresolvable identity",
+      "corrected_calculation": "canonical_file_digest('backtests/phase8_v2_diagnostic_d003.py', commit=tooling_commit, repo=repository root) via bot.scientific.canonical_bytes \u2014 SHA-256 of the committed Git blob at the explicitly supplied tooling commit; checkout-independent, commit-content-sensitive, fail-closed on unresolvable identity",
       "regression_proof": "four synthetic regressions in tests/test_phase8_v2_d003_tooling.py (test_tc002_*) pass against the corrected module and fail against the legacy worktree-byte implementation; LF/CRLF independence, commit sensitivity, fail-closed behavior and full-run provenance binding are each proven",
       "strategy_unchanged": true,
       "metric_surface_unchanged": true,
@@ -318,7 +318,7 @@
     {
       "record_id": "phase8-v2-D003-TC003",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE_RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO NEW EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO NEW EMPIRICAL ACCESS",
       "created_utc": "2026-09-24T22:43:46Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -328,9 +328,9 @@
       "degenerate_attempt_output_sha256": "6637338401bd5133a53c4dbed455cff757b6459b85549088e17fe228a00488df",
       "degenerate_attempt_output_bytes": 4735,
       "attempt1_blockage_artifact_sha256": "764de0ea6fba632845b00da8f8c03950e8d0cbc69e5d6864821bafe0765b9a46",
-      "attempt1_output_classification": "VOID_ATTEMPT_OUTPUT — D003 ATTEMPT 1 — OBSERVER_EXTRACTION_DEFECT — NOT R001",
+      "attempt1_output_classification": "VOID_ATTEMPT_OUTPUT \u2014 D003 ATTEMPT 1 \u2014 OBSERVER_EXTRACTION_DEFECT \u2014 NOT R001",
       "exact_defect": "observe_decision read row['gate_context'] (score/ob/fvgs/bias_resolution), a key the frozen D001 adapter row contract never publishes; D001 exposes flattened canonical surfaces directly as row['score'], row['ob'], row['fvg'], row['overlap'], row['direction']; every gate_context-derived surface (B-H) degenerated to constant artifacts while accounting and the gate funnel stayed faithful, producing an internally inconsistent document (Gate-11 passed 1 with zero recorded component passes)",
-      "correction": "all preregistered surfaces are now extracted from the frozen flattened D001 row; fields flattened away by D001 (per-check awarded points, raw first-FVG geometry, ATR) are recovered from the CURRENT decision's persisted render after full §9 reconciliation, with the decision_result_record (current next_record) kept strictly separate from the causal prior_state_record (TC001) that alone drives consumed-id and lifecycle semantics; Gate-11 self-consistency and direction fail-closed invariants added (the attempt-1 degenerate pattern now raises); htf_bias for the canonical lifecycle now comes from row['ob']['direction'] (bullish/bearish only, never FLAT)",
+      "correction": "all preregistered surfaces are now extracted from the frozen flattened D001 row; fields flattened away by D001 (per-check awarded points, raw first-FVG geometry, ATR) are recovered from the CURRENT decision's persisted render after full \u00a79 reconciliation, with the decision_result_record (current next_record) kept strictly separate from the causal prior_state_record (TC001) that alone drives consumed-id and lifecycle semantics; Gate-11 self-consistency and direction fail-closed invariants added (the attempt-1 degenerate pattern now raises); htf_bias for the canonical lifecycle now comes from row['ob']['direction'] (bullish/bearish only, never FLAT)",
       "regression_proof": "seven TC003 regressions exercise the REAL evaluate_orchestration_decision adapter row over synthetic data (gate_context absence, Gate-11 pass surface with frozen weights, Gate-11 fail surface, attempt-1 degeneracy fail-closed, six render-mismatch fail-closed cases, four row-surface-mismatch fail-closed cases, decision-result-record lifecycle separation) and all fail against the attempt-1 tooling",
       "valid_interpretive_metrics_emitted_by_attempt_1": false,
       "h002_disposition_recorded": false,
@@ -356,7 +356,7 @@
     {
       "record_id": "phase8-v2-D003-TC004",
       "record_type": "POST_EXPOSURE_MEASUREMENT_TOOLING_REPAIR",
-      "classification": "GOVERNANCE RECORD — NOT A RESULT RECORD — NO STRUCTURAL METRICS — NO NEW EMPIRICAL ACCESS",
+      "classification": "GOVERNANCE RECORD \u2014 NOT A RESULT RECORD \u2014 NO STRUCTURAL METRICS \u2014 NO NEW EMPIRICAL ACCESS",
       "created_utc": "2026-09-25T00:35:55Z",
       "diagnostic_id": "phase8-v2-D003",
       "linked_hypothesis": "phase8-v2-H002",
@@ -698,7 +698,7 @@
         "no fills, trades or profitability",
         "no unregistered metric"
       ],
-      "h002_boundary": "phase8-v2-H002 remains OPEN — requires separately preregistered canonical OrderBlock lifecycle diagnostic; D003 not registered yet",
+      "h002_boundary": "phase8-v2-H002 remains OPEN \u2014 requires separately preregistered canonical OrderBlock lifecycle diagnostic; D003 not registered yet",
       "budget_consumption_upon_first_empirical_execution": "2 / 12",
       "two_phase_discipline": "Phase A synthetic-only tooling committed and pushed before any Fold-01 access; Phase B only after the remote resolves to the frozen tooling commit"
     },
@@ -710,12 +710,12 @@
       "registered_utc": "2026-09-24T11:45:05Z",
       "linked_hypothesis": "phase8-v2-H002",
       "h002_boundary": "H002 statement remains exactly the registered hypothesis concerning conjunctively restrictive canonical order-block conditions; not rewritten after V001. Disposition rule fixed in the specification BEFORE any empirical execution.",
-      "h001_boundary": "CONTEXTUAL_ONLY — H001 remains INCONCLUSIVE_D001; D003 reproduces OB/FVG pair and overlap counts descriptively and does not resolve H001 (no separately preregistered H001 decision rule precedes execution).",
+      "h001_boundary": "CONTEXTUAL_ONLY \u2014 H001 remains INCONCLUSIVE_D001; D003 reproduces OB/FVG pair and overlap counts descriptively and does not resolve H001 (no separately preregistered H001 decision rule precedes execution).",
       "h003_boundary": "NOT_TESTED_BY_D003",
-      "h005_note": "SUPPORTED_BY_V001 — already disposed; not reopened by D003",
+      "h005_note": "SUPPORTED_BY_V001 \u2014 already disposed; not reopened by D003",
       "scientific_question": "Among decisions that legitimately reach Gate 11, what is the exact frozen-score component composition, and how does the canonical order-block lifecycle (evaluate_order_block) classify the same decisions compared with the persisted legacy/acquisition ob_result.valid surface?",
       "motivation_binding": "V001 R001 (result commit 72bdcb7c9b3a520c501efbc9b2aa2139cc0ba455; outcome FUNCTIONAL_REPAIR_NO_CANDIDATES; H005 SUPPORTED_BY_V001; candidate_ready 0; Gate-10 1489->526, Gate-11 526->1, final canonical 1->0; one persisted OB/FVG pair with canonical overlap true) motivates D003 but is NEVER a test oracle and establishes nothing about which lifecycle state dominates or that any threshold should change.",
-      "primary_population": "Decisions that (1) pass canonical snapshot classification, (2) pass the reference check, (3) evaluate successfully through the canonical orchestration path, (4) pass Gate 10, and (5) enter Gate 11 — derived naturally at execution time; no observed count may be encoded into tooling or tests.",
+      "primary_population": "Decisions that (1) pass canonical snapshot classification, (2) pass the reference check, (3) evaluate successfully through the canonical orchestration path, (4) pass Gate 10, and (5) enter Gate 11 \u2014 derived naturally at execution time; no observed count may be encoded into tooling or tests.",
       "preregistered_metric_surface": {
         "A_accounting": [
           "scheduled_snapshots",
@@ -813,14 +813,14 @@
       "linked_hypothesis": "phase8-v2-H006",
       "contextual_prior": "phase8-v2-H002 = SUPPORTED_BY_D003",
       "h002_boundary": "H002 remains SUPPORTED_BY_D003; D004 must NOT reopen, re-test or re-classify it. The D003 result motivates D004 but is never a test oracle and no observed D003 count may be encoded into tooling or tests.",
-      "h001_boundary": "CONTEXTUAL_ONLY — H001 remains INCONCLUSIVE_D001; final FVG geometry appears as context only and no H001 decision rule is preregistered here.",
-      "h003_boundary": "NOT_TESTED_BY_D004 — absolutely no OB-to-FVG lag, FVG-to-OB lag, temporal windows, or preceding/following bar associations; the temporal_fvg_lag concept is banned output.",
-      "h005_boundary": "SUPPORTED_BY_V001 — already disposed; not reopened by D004.",
+      "h001_boundary": "CONTEXTUAL_ONLY \u2014 H001 remains INCONCLUSIVE_D001; final FVG geometry appears as context only and no H001 decision rule is preregistered here.",
+      "h003_boundary": "NOT_TESTED_BY_D004 \u2014 absolutely no OB-to-FVG lag, FVG-to-OB lag, temporal windows, or preceding/following bar associations; the temporal_fvg_lag concept is banned output.",
+      "h005_boundary": "SUPPORTED_BY_V001 \u2014 already disposed; not reopened by D004.",
       "scientific_question": "Among decisions whose frozen canonical evaluation is BlockState.EXPIRED with a confirmed same-side canonical block, what structural fate do those blocks exhibit at the causal decision timestamp (untouched, touched, invalidated, or first retested exactly on the final available candle), and with what final canonical FVG context?",
       "motivation_binding": "D003 R001 (result commit 5f9b1e9e8dac9775bbf586174e94cfef039c23c0; H002 SUPPORTED_BY_D003; canonical lifecycle ELIGIBLE 87 / EXPIRED 133 / MITIGATED 28 / INVALIDATED 3 / UNAVAILABLE 275 among 526 Gate-11 entrants) motivates D004 but is NEVER a test oracle and establishes nothing about the internal structure of the EXPIRED state. The supervisory V002 deferral (a canonical-OB substitution variant is mathematically incapable of reaching candidate_ready >= 90 because canonical eligible = 87 < 90) motivates measuring the dominant lifecycle restriction first; the 87 and 90 figures are never encoded into tooling or tests.",
       "expiry_short_circuit_semantics": "evaluate_order_block returns BlockState.EXPIRED (reason block_expired) immediately when the count of causally available post-confirmation candles exceeds config.order_block_expiry_bars, BEFORE its mitigation/invalidation loop; consumed-ID and premature checks precede the expiry check. D004 decomposes the population this short-circuit creates; it never modifies the short-circuit.",
       "frozen_configuration": "order_block_expiry_bars = 30 in the exact frozen StrategyConfig; not changed, not tested at any alternative value (31/40/45/60/90/no-expiry/session/day/dynamic-ATR), no grid, no numeric parameter trial.",
-      "primary_population": "Decisions that (1) legitimately reach the same canonical OB lifecycle population used by D003 (D001 classification, reference check, successful orchestration evaluation, Gate-10 pass, Gate-11 entry, D003 observer loop reused verbatim), (2) have a confirmed same-side canonical block, and (3) are classified by the frozen canonical evaluate_order_block as BlockState.EXPIRED (reason block_expired) — derived naturally at execution time; no observed count may be encoded into tooling or tests.",
+      "primary_population": "Decisions that (1) legitimately reach the same canonical OB lifecycle population used by D003 (D001 classification, reference check, successful orchestration evaluation, Gate-10 pass, Gate-11 entry, D003 observer loop reused verbatim), (2) have a confirmed same-side canonical block, and (3) are classified by the frozen canonical evaluate_order_block as BlockState.EXPIRED (reason block_expired) \u2014 derived naturally at execution time; no observed count may be encoded into tooling or tests.",
       "reference_populations": "For structural context only, the same descriptive fate predicates may be reported for decisions classified ELIGIBLE, RETEST_ELIGIBLE, MITIGATED or INVALIDATED; UNAVAILABLE may be counted but has no block geometry; states are never merged.",
       "preregistered_fate_predicates": [
         "block_confirmed_at",
@@ -926,7 +926,7 @@
       "compatibility_check": "H003 genuinely concerns the temporal/sequential relationship between OB and FVG structure (statement: OB and FVG evidence may be causally related across a short temporal sequence rather than being required to appear as a strictly simultaneous state at one decision timestamp; implementation_boundary reserves a later dedicated diagnostic for explicit temporal-distance measurement; metrics_permitted: OB-to-FVG temporal distance distributions (later diagnostic only); data_permitted: TIER_A_FOLD01). D005 is that later diagnostic.",
       "contextual_prior": "H001 = SUPPORTED_BY_D003_D004_SYNTHESIS; H002 = SUPPORTED_BY_D003; H006 = SUPPORTED_BY_D004; H007 represented by phase6-development-v2-V002-R001 (OPPORTUNITY_INSUFFICIENT_TIER_A_FOLD01_OBSERVED). None are reopened by D005.",
       "v002_r001_motivation_binding": "V002 R001 (result commit 6bb5c1ba63e21e66f66b5724011614253deda169; funnel 526 -> 102 -> 80 -> 61; OPPORTUNITY_INSUFFICIENT) motivates D005 through its structural-pair surface (structurally-active 144, same-direction final-FVG-associated 110, active-without-final-FVG 34) but is NEVER a test oracle; no V002 R001 observed count (including 144/110/34/61/90/29) is encoded into tooling or tests.",
-      "tier_b_decision": "NOT AUTHORIZED — candidate_ready 61 < 90; Fold 02 remains sealed.",
+      "tier_b_decision": "NOT AUTHORIZED \u2014 candidate_ready 61 < 90; Fold 02 remains sealed.",
       "downstream_only_futility_bounds": "Supervisory arithmetic, NOT empirical counterfactuals: best-case recovery of all 22 canonical-strategy rejects gives 61+22=83 < 90; best-case recovery of all 19 Gate-12/13 rejects gives 61+19=80 < 90; therefore variants modifying ONLY canonical-strategy protections or ONLY Gate-12/13 semantics are mathematically unable to satisfy the 90-candidate Tier-A target and are NOT created.",
       "scientific_question": "Among decisions whose frozen V002 structural-pair evaluator reports a structurally-active canonical order block WITHOUT an associated same-direction final canonical FVG, what causal temporal relationships exist between that block and canonical FVG structure in the causally available frame, and why is the final FVG surface empty for those decisions?",
       "primary_population": "V002 Gate-11 entrants (\"gate_11_confluence_score\" present in the frozen D001 adapter row's gate results) with frozen V002 structural-pair evaluator reports structurally_active == True AND fvg_associated == False under final-FVG semantics; derived naturally during execution, no expected count encoded.",
@@ -945,17 +945,17 @@
       ],
       "attrition_category_accounting": "The four categories are exhaustive and mutually exclusive under the frozen detector; a decision fitting none is a fail-closed accounting error, not an 'other' bucket; category counts must reconcile to the primary population. For primary-population decisions a same-direction FVG formed at/after the OB is necessarily filled (an unfilled one would be a member of the persisted final surface and contradict primary membership), and same-direction FVGs formed before the OB are necessarily filled as well (no post-confirmation temporal sequence exists); the fill state is descriptive universe metadata (section 8), never part of the H003 ordering rule.",
       "temporal_count_naming_rule": "h003_temporal_association_decisions is a structural count only; it must NEVER be named or treated as candidate_ready, rescued_candidates, candidate_if_temporal or equivalent.",
-      "variant_headroom_rule": "TEMPORAL_VARIANT_HEADROOM_POSSIBLE if h003_temporal_association_decisions >= 29; TEMPORAL_VARIANT_HEADROOM_INSUFFICIENT if < 29; necessary condition only — >= 29 does not prove a variant would reach 90 because affected decisions must still survive V002 score, canonical strategy and Gate 12/13 under whatever semantics a future preregistered variant defines; no automatic V003 follows from either classification; 29 is an arithmetic feasibility bound (90 - 61), NOT an H003 support threshold, NOT a parameter, NOT a tuning objective, NOT a candidate prediction.",
+      "variant_headroom_rule": "TEMPORAL_VARIANT_HEADROOM_POSSIBLE if h003_temporal_association_decisions >= 29; TEMPORAL_VARIANT_HEADROOM_INSUFFICIENT if < 29; necessary condition only \u2014 >= 29 does not prove a variant would reach 90 because affected decisions must still survive V002 score, canonical strategy and Gate 12/13 under whatever semantics a future preregistered variant defines; no automatic V003 follows from either classification; 29 is an arithmetic feasibility bound (90 - 61), NOT an H003 support threshold, NOT a parameter, NOT a tuning objective, NOT a candidate prediction.",
       "h003_disposition_rule": "H003's existing preregistered expected qualitative effect and potential failure mode govern, applied qualitatively: supported if the primary population is not near-zero and qualifying temporal associations exhibit short, structured, non-diffuse offsets; failure mode holds if causal OB/FVG pairs are temporally diffuse or absent; disposition values drawn from the register's existing vocabulary (SUPPORTED_BY_D005 / NOT_SUPPORTED_BY_D005); the 29-count headroom rule is never the scientific support rule.",
       "boundary_section": [
-        "H001 SUPPORTED_BY_D003_D004_SYNTHESIS — not reopened; final-FVG geometry appears only as frozen V002 input context",
-        "H002 SUPPORTED_BY_D003 — not reopened, not re-tested",
-        "H006 SUPPORTED_BY_D004 — not reopened, not re-tested",
-        "H007 represented by V002 R001 OPPORTUNITY_INSUFFICIENT_TIER_A_FOLD01_OBSERVED — not reopened; V002 semantics consumed frozen",
-        "H005 SUPPORTED_BY_V001 — not reopened"
+        "H001 SUPPORTED_BY_D003_D004_SYNTHESIS \u2014 not reopened; final-FVG geometry appears only as frozen V002 input context",
+        "H002 SUPPORTED_BY_D003 \u2014 not reopened, not re-tested",
+        "H006 SUPPORTED_BY_D004 \u2014 not reopened, not re-tested",
+        "H007 represented by V002 R001 OPPORTUNITY_INSUFFICIENT_TIER_A_FOLD01_OBSERVED \u2014 not reopened; V002 semantics consumed frozen",
+        "H005 SUPPORTED_BY_V001 \u2014 not reopened"
       ],
       "prohibited_counterfactuals": "No candidate_ready if temporal association accepted; no Gate-11 pass if historical FVG retained; no candidate count if filled FVG reused; no candidate count without the final-FVG requirement; no alternate score threshold; no alternate age cutoff; no downstream relaxation tested (DXY, regime, bias, news, session, allowlist, Gate-12/13 liquidity alignment, entry readiness, score threshold); no temporal parameter search (1/2/3/5/10 bars, session windows, minute thresholds, ATR-based temporal windows); no numeric trial; no optimizer; no profitability.",
-      "banned_output_guard": "candidate_if_temporal, rescued_candidate, alternate_lag, optimal_lag, temporal_threshold, candidate_without_final_fvg, pnl, profit, win_rate, expectancy, drawdown, sharpe, closed_trades — reject output containing any of these concepts, fail closed.",
+      "banned_output_guard": "candidate_if_temporal, rescued_candidate, alternate_lag, optimal_lag, temporal_threshold, candidate_without_final_fvg, pnl, profit, win_rate, expectancy, drawdown, sharpe, closed_trades \u2014 reject output containing any of these concepts, fail closed.",
       "v002_immutability": "bot/strategy/variant_v002.py, backtests/phase8_v2_variant_v002_eval.py, TC001 and TC002 are NOT modified; V002 strategy module remains byte-identical (Git blob 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4).",
       "empirical_universe": "Tier-A Fold 01 only, future execution only, under separate supervisory authorization",
       "fold_boundary": [
@@ -972,7 +972,7 @@
       "budget_classification": "registration and tooling freeze consume zero diagnostic budget; no strategy-variant budget is consumed by D005 under any outcome",
       "budget_consumption_upon_first_empirical_execution": "4 / 12",
       "two_phase_discipline": "Phase A preregistration precedes tooling freeze; Phase B synthetic-tested tooling is committed and pushed before any Fold-01 access; empirical execution only under separate supervisory authorization after the remote resolves to the frozen tooling commit",
-      "v003_status": "NOT CREATED — no strategy code, no variant registration, no Tier-B release",
+      "v003_status": "NOT CREATED \u2014 no strategy code, no variant registration, no Tier-B release",
       "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D005.md",
       "specification_sha256": "d7f39d31716b34308ad07afff4260312857653605a0df4d6b58d0f87f1e96941"
     },
@@ -1012,8 +1012,8 @@
       "strategy_rejection_context": "R_STRATEGY_REJECT records the exact frozen v003_strategy_reasons distribution and explicitly labels protected classes (regime; bias; DXY; session; news; symbol/allowlist; consumed/lifecycle safety) according to the actual emitted reason strings; no 'candidates if protection removed' computation; never V004 headroom.",
       "no_rr_pullback_rejection_claim": "Verified frozen-code contract: at V003 score 8, once readiness/early-entry permits continuation, structure direction is bullish/bearish and frozen liquidity alignment is valid, determine_entry returns a conservative partial entry unconditionally - no RR, pullback-distance, FVG-distance or limit-distance rejection gate exists on this path; therefore no D006 category may be named RR_TOO_LOW, PULLBACK_TOO_FAR, FVG_DISTANCE_FAIL or LIMIT_DISTANCE_FAIL unless the frozen source changes before execution, in which case the task STOPs due to baseline mismatch.",
       "production_parity_requirement": "Synthetic regressions must prove the diagnostic rejection classifier agrees exactly with frozen determine_entry: for each category an independent copied state is classified and a second independent copy runs the frozen model - E1-E4 imply determine_entry returns None; a valid ready/aligned case returns a non-null entry; no production state mutation leaks into the diagnostic chain.",
-      "h008_disposition_rule": "H008_SUPERVISORY_INTERPRETATION_REQUIRED when E5 = 0 and primary_count > 0, accompanied by descriptive concentration metrics; support or non-support must never be automatically assigned by an arbitrary numerical percentage; INCONCLUSIVE_D006 for unmapped rejections (E5 > 0), zero primary population, or non-reproducing baseline. No V004 follows automatically from any disposition.",
-      "v003_baseline_reproduction_contract": "Future D006 execution must FIRST reproduce V003's frozen surface using the V003 strategy blob, corrected TC001 tooling semantics and the same authorized store; upstream stages (entrants, gate-11 passers, canonical-strategy passers) reconcile by exact count against the prior funnel; candidate stage reconciles by exact count, exact decision ID set, and setup IDs; newly reproduced upstream decision ID sets are hashed and sealed under contract FIRST_IDENTITY_SEALED_BY_D006; baseline reproduction status is reported as SEALED_V003_BASELINE_RECONCILED; any mismatch raises D006 BASELINE REPRODUCTION FAILURE, STOPs and forbids interpretation.",
+      "h008_disposition_rule": "SUPPORTED_BY_D006 only for clear concentration in one or a small number of coherent frozen state/readiness/liquidity mechanisms argued from exact raw counts, concentration, economic/state-machine coherence and the final-vs-temporal source comparison (no numerical cutoff); NOT_SUPPORTED_BY_D006 for diffuse or economically-valid-absence failures; INCONCLUSIVE_D006 for unmapped rejections, non-reproducing baseline, indistinguishable predicates or ambiguous population. No V004 follows automatically from any disposition.",
+      "v003_baseline_reproduction_contract": "Future D006 execution must FIRST reproduce V003's frozen surface using the V003 strategy blob, corrected TC001 tooling semantics and the same authorized store; the runtime MAY load the sealed V003 R001 result and require equality for prior observed surfaces (Gate-11 entrant identity/count; V003 Gate-11 pass set/count; canonical-strategy pass set/count; candidate-ready set/count; setup IDs); no empirical numbers are hardcoded - they are read from the sealed prior result; any mismatch raises D006 BASELINE REPRODUCTION FAILURE, STOPs and forbids interpretation.",
       "primary_id_reconciliation": "The primary D006 population IDs must equal canonical_strategy_pass_set - candidate_ready_set EXACTLY (set equality; count equality alone insufficient; no duplicates; no missing primary member; no extra non-primary member).",
       "prohibited_counterfactuals": "No candidate_ready under any removed/broadened/expanded condition: no state condition removed, no liquidity alignment broadened, no expiry removed, no early-entry expansion, no displacement copied from temporal evidence, no score-10 or alternate-state evaluation; the only permitted candidate count is the already observed frozen V003 result used for provenance/reconciliation; no protected-semantic weakening (DXY, news, session, regime, symbol allowlist, risk, daily limits, cascade controls, score threshold, score weights); no numeric parameter trial (state expiry minutes, liquidity timeout bars, score values, OB expiry, FVG lag, RR, distance thresholds - numeric budget 0 / 4).",
       "banned_output_guard": "Structurally rejected output keys/phrases (semantic variants included): candidate_if, rescued_candidates, would_pass, if_removed, alternate_expiry, alternate_state, alternate_score, score_10_candidate, relaxed_liquidity, pnl, profit, win_rate, expectancy, drawdown, sharpe, returns, closed_trades.",
@@ -1032,8 +1032,7 @@
       "two_phase_discipline": "Phase A (this record + docs/PHASE8_V2_DIAGNOSTIC_D006.md) preregisters the hypothesis, diagnostic and tooling contract; Phase B implements and freeze-commits synthetic-tested tooling (backtests/phase8_v2_diagnostic_d006.py) with a HARD STOP before any real Fold-01 access; the tooling is NOT executed by the freeze task; empirical execution requires separate supervisory authorization.",
       "v004_status": "NOT CREATED - no strategy code, no variant registration, no Tier-B release; any execution-semantic variant requires its own preregistration under the same two-phase discipline.",
       "specification_document": "docs/PHASE8_V2_DIAGNOSTIC_D006.md",
-      "specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
-      "specification_phase_a_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
+      "specification_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
     }
   ],
   "strategy_variants": [
@@ -1119,7 +1118,7 @@
         "phase8-v2-H006 SUPPORTED_BY_D004",
         "phase8-v2-H001 SUPPORTED_BY_D003_D004_SYNTHESIS"
       ],
-      "one_concept_rule": "one conceptual hypothesis: canonical OB/FVG structural-pair semantics — a single coherent OB semantic definition plus the FVG association that references that same block concept. Implementation may touch multiple code locations, but those edits are structurally inseparable: Gate 11 must evaluate one OB semantic definition, the FVG association must reference that same canonical block concept, and the downstream canonical strategy must consume the same OB semantic definition — using different OB definitions before and after Gate 11 would create a contradictory strategy. These consistency edits are ONE hypothesis, not separate strategy hypotheses; no unrelated rule may change.",
+      "one_concept_rule": "one conceptual hypothesis: canonical OB/FVG structural-pair semantics \u2014 a single coherent OB semantic definition plus the FVG association that references that same block concept. Implementation may touch multiple code locations, but those edits are structurally inseparable: Gate 11 must evaluate one OB semantic definition, the FVG association must reference that same canonical block concept, and the downstream canonical strategy must consume the same OB semantic definition \u2014 using different OB definitions before and after Gate 11 would create a contradictory strategy. These consistency edits are ONE hypothesis, not separate strategy hypotheses; no unrelated rule may change.",
       "structural_active_ob_semantics": [
         "canonical same-side confirmed block exists",
         "confirmation is causally available (available_at <= decision_at)",
@@ -1176,14 +1175,14 @@
         "historical canonical evaluator EXPIRED short-circuit for V1/V001"
       ],
       "prohibited_variant_shapes": [
-        "expiry-only variant preserving exact overlap — mathematically futile: candidate_ready <= Gate-11 passes <= 61 < 90",
-        "overlap-only variant retaining the legacy OB predicate — structurally futile: legacy Gate-11 OB validity passes only 4 / 526",
+        "expiry-only variant preserving exact overlap \u2014 mathematically futile: candidate_ready <= Gate-11 passes <= 61 < 90",
+        "overlap-only variant retaining the legacy OB predicate \u2014 structurally futile: legacy Gate-11 OB validity passes only 4 / 526",
         "numeric expiry 45 / 60 / 90 or any numeric extension",
         "any replacement age threshold derived from the D004 age histogram",
         "any weakening of DXY authority to increase candidate count"
       ],
       "success_classification_preregistered": {
-        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 — merits continued research only; establishes neither sample sufficiency nor profitability",
+        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 \u2014 merits continued research only; establishes neither sample sufficiency nor profitability",
         "OPPORTUNITY_INSUFFICIENT": "0 < candidate_ready < 90",
         "NO_CANDIDATES": "candidate_ready == 0",
         "IMPLEMENTATION_FAILED": "only if H007 semantics are not functioning as specified"
@@ -1231,7 +1230,7 @@
         "phase6-development-v2-V002-R001 OPPORTUNITY_INSUFFICIENT"
       ],
       "predecessor_variant": "phase6-development-v2-V002",
-      "one_concept_rule": "one conceptual change: causal temporal FVG evidence memory — broadening the Gate-11 FVG confluence component from 'final unfilled FVG only' to (F_final OR F_temporal), where F_temporal requires a same-direction canonical FVG causally formed at or after the selected structural OB confirmation before the decision timestamp; historical fill status does not erase the occurrence of displacement imbalance evidence. All other components, OB semantics, score architecture (8/8, 2/1/2/1/2), and protected policies remain unchanged.",
+      "one_concept_rule": "one conceptual change: causal temporal FVG evidence memory \u2014 broadening the Gate-11 FVG confluence component from 'final unfilled FVG only' to (F_final OR F_temporal), where F_temporal requires a same-direction canonical FVG causally formed at or after the selected structural OB confirmation before the decision timestamp; historical fill status does not erase the occurrence of displacement imbalance evidence. All other components, OB semantics, score architecture (8/8, 2/1/2/1/2), and protected policies remain unchanged.",
       "v002_baseline_preservation": "V003 is a strict superset of V002: when F_final is True, V003 executes the V002 final-surface branch identically, preserving exact V002 evidence, exact overlap metadata, and live FVG geometry. The temporal branch serves only as fallback when F_final is False.",
       "live_zone_separation_rule": "strict separation of evidence from live entry geometry: historical filled temporal FVGs satisfy the confluence evidence requirement that displacement occurred after the OB, but NEVER populate context['fvg_zone'], strategy_state.fvg_zone, limit/pullback zones, stop loss, take profit, or RR geometry. Live fvg_zone is populated ONLY from the current unfilled final FVG surface (and is None for temporal-only evidence).",
       "state_invariance_rule": "V003 evaluates evidence without mutating frozen strategy state: state.displacement_seen, state.fvg_zone, state.structure_state, state.liquidity_swept and all state fields remain completely unmutated by V003 historical evidence.",
@@ -1277,7 +1276,7 @@
         "strategy_state fields"
       ],
       "success_classification_preregistered": {
-        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 — merits continued research only; establishes neither sample sufficiency nor profitability",
+        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 \u2014 merits continued research only; establishes neither sample sufficiency nor profitability",
         "OPPORTUNITY_INSUFFICIENT": "0 < candidate_ready < 90",
         "NO_CANDIDATES": "candidate_ready == 0",
         "IMPLEMENTATION_FAILED": "only if V003 semantics are not functioning as specified"
@@ -1321,7 +1320,7 @@
       "executed_utc": "2026-09-23T00:13:49Z",
       "tooling_fingerprint_sha256": "5b687b3603698d18684b9d26af2cc5409ab63ac1c8e17ff8757411c1e5c637b0",
       "output": {
-        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/evidence/v2_diagnostics/phase8-v2-D001-R001/phase8-v2-D001_result.json",
         "sha256": "af03bfbe688b010deb70261eabe2240336e16bbff07d519ea20a8ccbc3b99c10",
@@ -1468,7 +1467,7 @@
       "reserved_folds_untouched": true,
       "holdout_untouched": true,
       "unplanned_observations": [
-        "UNPLANNED_OBSERVATION — REQUIRES FUTURE PREREGISTRATION: premium/discount placement failed for 522/526 OB-present decisions (in_pd_zone_true = 4 across the fold), a concentration not named by any preregistered hypothesis. Recorded without analysis into any strategy rule."
+        "UNPLANNED_OBSERVATION \u2014 REQUIRES FUTURE PREREGISTRATION: premium/discount placement failed for 522/526 OB-present decisions (in_pd_zone_true = 4 across the fold), a concentration not named by any preregistered hypothesis. Recorded without analysis into any strategy rule."
       ]
     },
     {
@@ -1604,7 +1603,7 @@
         "research_density_target": 90
       },
       "output": {
-        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V001 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V001 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_variants/phase6-development-v2-V001/fold01/phase6-development-v2-V001_result.json",
         "sha256": "63e3be0a73960a1189670afd17feb67061c5c75e351438dbd1afb7343f0d8d11",
@@ -1661,10 +1660,10 @@
       "void_attempt_history": {
         "attempt1_output_sha256": "6637338401bd5133a53c4dbed455cff757b6459b85549088e17fe228a00488df",
         "attempt1_blockage_sha256": "764de0ea6fba632845b00da8f8c03950e8d0cbc69e5d6864821bafe0765b9a46",
-        "attempt1_classification": "VOID_ATTEMPT_OUTPUT — NOT R001",
+        "attempt1_classification": "VOID_ATTEMPT_OUTPUT \u2014 NOT R001",
         "tc003_rerun1_output_sha256": "5c8c2a8b84ce816f8c34e80a99e89cd03281fbc6c0b655562dc5b9136c215450",
         "tc003_rerun1_blockage_sha256": "e28f976c356ae28b591fca594340faf5dea8491ba9ed2d80f36efb256dd0235a",
-        "tc003_rerun1_classification": "VOID_CORRECTED_RERUN_OUTPUT — NOT R001",
+        "tc003_rerun1_classification": "VOID_CORRECTED_RERUN_OUTPUT \u2014 NOT R001",
         "both_artifact_pairs_preserved_intact": true
       },
       "execution_window_utc": {
@@ -1872,7 +1871,7 @@
         "all_pass": true
       },
       "output": {
-        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_diagnostics/phase8-v2-D003/fold01/tc004-rerun1/phase8-v2-D003_result.json",
         "sha256": "71f85982c3170c689678682184ccc2d3fe291bc74372a47e3dc8aed3a6d1b096",
@@ -1913,7 +1912,7 @@
       "fingerprint_contract": "canonical_git_blob_v1",
       "tooling_fingerprint": "b71c2440c4bd8e7763e7c419d3210852ad473fe3c88d6ec2f65af12c38f82dae",
       "void_attempt_history": {
-        "attempt1_classification": "VOID_ATTEMPT — DRIVER_PREFLIGHT_FAIL_CLOSED — NOT R001 — NO EMPIRICAL OBSERVATION",
+        "attempt1_classification": "VOID_ATTEMPT \u2014 DRIVER_PREFLIGHT_FAIL_CLOSED \u2014 NOT R001 \u2014 NO EMPIRICAL OBSERVATION",
         "attempt1_timestamp_utc": "2026-09-25T13:51:26.755772+00:00",
         "attempt1_blockage_artifact_sha256": "ad789aea9ca06ef8d6beb80dadbf3ca6c5246bee07daa85a3e4405ece4a8dcdd",
         "attempt1_exact_cause": "the untracked execution driver's preflight identity assertion was mis-specified (it required the store identity SHA as a VALUE inside the identity JSON; the canonical identity SHA is the digest OF that JSON); the driver fail-closed before any snapshot was classified, evaluated or observed; the frozen D004 tooling never began executing; zero observations; nothing written",
@@ -2125,7 +2124,7 @@
       },
       "consumption_invariant_note": "The frozen evaluator checks consumed ids BEFORE its expiry short-circuit, so a returned-EXPIRED block cannot be consumed; the invariant is enforced FAIL-CLOSED per observation inside the frozen tooling and the run completed with all 133 EXPIRED blocks successfully decomposed, so violations = 0. The compact result document does not restate a summary flag; this note records the enforced-zero inference explicitly.",
       "output": {
-        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_diagnostics/phase8-v2-D004/fold01/phase8-v2-D004_result.json",
         "sha256": "6563a93d426045df5ab48d0554d96deff1b9b82132071192be815e46cd723c9d",
@@ -2150,7 +2149,7 @@
         "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
         "note": "D004 first empirical execution consumed the third diagnostic permanently; the attempt-1 preflight blockage consumed nothing additional."
       },
-      "v002_status": "NOT CREATED — V002 DECISION REQUIRES SUPERVISORY INTERPRETATION OF D004 R001"
+      "v002_status": "NOT CREATED \u2014 V002 DECISION REQUIRES SUPERVISORY INTERPRETATION OF D004 R001"
     },
     {
       "result_id": "phase8-v2-H001-R001",
@@ -2159,7 +2158,7 @@
       "research_identity": "phase6-development-v2",
       "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
       "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
-      "classification": "DEVELOPMENT_EVIDENCE_SYNTHESIS — D003+D004 R001 — NO NEW EMPIRICAL EXECUTION",
+      "classification": "DEVELOPMENT_EVIDENCE_SYNTHESIS \u2014 D003+D004 R001 \u2014 NO NEW EMPIRICAL EXECUTION",
       "synthesis_timestamp_utc": "2026-09-25T15:29:54Z",
       "synthesis_inputs": [
         "phase8-v2-D003-R001",
@@ -2196,7 +2195,7 @@
         "same_direction_structurally_intact_ob_fvg_pairs": 102,
         "exact_canonical_overlaps": 61,
         "same_direction_non_overlapping_pairs": 41,
-        "count_semantics": "102, 61 and 41 are STRUCTURAL PAIR OBSERVATION COUNTS ONLY — they are NOT candidate counts, NOT eligibility counts, NOT strategy outputs and NOT predictions; no candidate count under any alternate rule was computed"
+        "count_semantics": "102, 61 and 41 are STRUCTURAL PAIR OBSERVATION COUNTS ONLY \u2014 they are NOT candidate counts, NOT eligibility counts, NOT strategy outputs and NOT predictions; no candidate count under any alternate rule was computed"
       },
       "disposition": "SUPPORTED_BY_D003_D004_SYNTHESIS",
       "disposition_basis": "The already-preregistered H001 expected qualitative effect is observed in the sealed evidence: (1) OB/FVG pair availability is not near-zero (60 structurally-intact same-direction pairs in D003's canonical-eligible surface, 42 in D004's EXPIRED_UNTOUCHED-with-final-FVG surface); (2) same-direction OB/FVG coexistence materially exceeds exact-overlap coexistence (102 vs 61); (3) 41 of 102 structurally coherent same-direction pairs fail exact geometric overlap, so exact overlap removes a substantial part of the observed pair surface rather than merely tracking structure absence. The registered H001 potential_failure_mode ('OB and FVG availability themselves are near-zero, or the overlap conjunction is not a material attrition point') does not hold. This is a qualitative application of the criteria registered before D003/D004; no new numeric acceptance threshold is introduced.",
@@ -2229,26 +2228,26 @@
       "variant_id": "phase6-development-v2-V002",
       "defect_class": "V002_PRE_EMPIRICAL_GATE11_PASSER_POPULATION_MISMATCH",
       "defective_tooling_commit": "4890dcbce8579f159224b653d94f634cc9017549",
-      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 4890dcbce8579f159224b653d94f634cc9017549, subject 'fix: observe all V002 Gate-11 entrants'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 4890dcbce8579f159224b653d94f634cc9017549, subject 'fix: observe all V002 Gate-11 entrants'); that commit's SHA is the corrected tooling identity \u2014 resolvable as git rev-parse HEAD of this record's commit",
       "registered_utc": "2026-09-25T17:58:00Z",
       "defect_description": "the frozen V002 Fold-01 measurement loop selected its population with gate11_passed = bool(gate_results['gate_11_confluence_score']) and evaluated V002 only on historical Gate-11 PASSERS, and observe_v002_decision raised on legacy_score_passed == False; because V002 changes the Gate-11 OB/FVG structural semantics, a decision that failed the historical Gate-11 score is precisely one V002 may legitimately classify differently, so the old strategy's Gate-11 boolean acted as an eligibility filter for the new strategy and prevented V002 from measuring its own semantic effect",
       "old_population": "historical Gate-11 passers only (boolean value of the frozen gate_11_confluence_score result)",
-      "corrected_population": "historical Gate-11 ENTRANTS — every decision with 'gate_11_confluence_score' in gate_results, i.e. every decision that legitimately entered frozen Gate 11 after passing the unchanged upstream Gates 8/9/10; the historical Gate-11 BOOLEAN VALUE never decides membership; decisions that never reached Gate 11 remain excluded; the upstream funnel (classification, reference check, Gates 8/9/10, prior-state sequencing, D001 orchestration evaluation) is unchanged and NOT broadened into Gate-10 failures",
+      "corrected_population": "historical Gate-11 ENTRANTS \u2014 every decision with 'gate_11_confluence_score' in gate_results, i.e. every decision that legitimately entered frozen Gate 11 after passing the unchanged upstream Gates 8/9/10; the historical Gate-11 BOOLEAN VALUE never decides membership; decisions that never reached Gate 11 remain excluded; the upstream funnel (classification, reference check, Gates 8/9/10, prior-state sequencing, D001 orchestration evaluation) is unchanged and NOT broadened into Gate-10 failures",
       "legacy_comparison_descriptive_only": "legacy_score_passed and legacy_canonical_fvg_in_ob are retained as descriptive structural-comparison metadata only; neither gates V002 evaluation; a legacy_score_passed=False observation with v002_gate11_score.passes_threshold=True is a legitimate semantic difference and no longer fails closed; descriptive legacy pass/fail counts added to the aggregate surface",
       "reconciliations_added": [
-        "V002_structural_pair_surface.gate11_entrants_observed must equal gate_funnel['gate_11_confluence_score']['entered'] — fail closed (prevents any future silent population truncation)",
-        "candidate_ready <= gate11_v002_score_pass_count <= gate11_entrants_observed — fail closed (downstream protections such as DXY may reject candidates; they can never create them)"
+        "V002_structural_pair_surface.gate11_entrants_observed must equal gate_funnel['gate_11_confluence_score']['entered'] \u2014 fail closed (prevents any future silent population truncation)",
+        "candidate_ready <= gate11_v002_score_pass_count <= gate11_entrants_observed \u2014 fail closed (downstream protections such as DXY may reject candidates; they can never create them)"
       ],
       "regressions_added": [
         "real-adapter legacy-fail regression: a row produced by the REAL frozen evaluate_orchestration_decision that ENTERS Gate 11 with historical Gate-11 FALSE is observed by V002 with legacy_score_passed False and no exception",
-        "V002-rescue regression: synthetic causal fixture where the frozen legacy OB predicate is invalid (the D001-observed dominant failure shape) so historical Gate-11 fails, while V002 structural-active OB is true, same-direction final FVG associated is true, premium/discount true, sweep true, HTF aligned — legacy_score_passed False AND v002_gate11_score passes 8/8 AND v002_strategy_eligible True with unchanged downstream protections clear",
+        "V002-rescue regression: synthetic causal fixture where the frozen legacy OB predicate is invalid (the D001-observed dominant failure shape) so historical Gate-11 fails, while V002 structural-active OB is true, same-direction final FVG associated is true, premium/discount true, sweep true, HTF aligned \u2014 legacy_score_passed False AND v002_gate11_score passes 8/8 AND v002_strategy_eligible True with unchanged downstream protections clear",
         "mixed-population loop regression: non-entrant excluded, historical-fail entrant observed, historical-pass entrant observed; gate11_entrants_observed == 2 == funnel entered; both legacy outcomes present; the fail is not discarded",
         "old-bug reproduction: the legacy-fail entrant regression is proven to FAIL against the defective tooling bytes at 4890dcb (observer rejection arm and run_v002 skip arm both demonstrated) using a byte-identical fixture of the committed blob (SHA-256 fd5629f76a9edcd6564ee05691babd916ff13a0b2855cabd1dec6d13c36a5daa) executed in-process"
       ],
       "strategy_module_unchanged": true,
       "strategy_module_diff": "bot/strategy/variant_v002.py = 0 bytes changed",
       "scientific_semantics_unchanged": "H007 statement, V002 structural-active OB semantics, FVG association, descriptive overlap, 8/8 scorer, downstream V002 semantics, success classification (90 threshold) and the scientific metric surface are all unchanged; spec docs/PHASE8_V2_VARIANT_V002.md remains SHA-256 f53f27c4e7700adf63194392e05f4c523d65312ecde7081dc427ec7347aa8703",
-      "store_compatibility_decision_unchanged": "B — the preserved immutable V001 store remains semantically sufficient; assert_store_semantic_compatibility unmodified; the correction revealed no missing causal input",
+      "store_compatibility_decision_unchanged": "B \u2014 the preserved immutable V001 store remains semantically sufficient; assert_store_semantic_compatibility unmodified; the correction revealed no missing causal input",
       "no_empirical_v002_access": true,
       "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no Tier B; no 2025+; no holdout; all tests synthetic",
       "budget_impact": {
@@ -2272,14 +2271,14 @@
       "variant_id": "phase6-development-v2-V002",
       "defect_class": "V002_PRE_EMPIRICAL_CANDIDATE_READY_STAGE_MISMATCH",
       "defective_tooling_commit": "c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb",
-      "corrected_tooling_commit_reference": "the unique TC002 commit that publishes this record (parent c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb, subject 'fix: measure V002 candidate readiness through entry gates'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "corrected_tooling_commit_reference": "the unique TC002 commit that publishes this record (parent c2e74090e2ac29d54b2a5ed87c2ad28cac045bdb, subject 'fix: measure V002 candidate readiness through entry gates'); that commit's SHA is the corrected tooling identity \u2014 resolvable as git rev-parse HEAD of this record's commit",
       "registered_utc": "2026-09-25T19:20:00Z",
-      "tc001_status": "ACCEPTED — TC001 (phase6-development-v2-V002-TC001) remains published and accepted; the V002 population REMAINS all legitimate historical Gate-11 entrants; TC002 does not reopen it",
-      "defect_description": "the TC001-corrected tooling treated evaluate_v002_strategy(...).entry_eligible as candidate_ready — that is the canonical-strategy-equivalent stage only; frozen V1/V001 semantics additionally require Gates 12-13 through strategies.smc_engine.entry_model.determine_entry before the reducer emits action=candidate_ready, so a setup passing V002 Gate 11 and the V002 canonical-strategy decision but failing Gate-12/13 entry readiness was wrongly counted toward the charter's candidate_ready >= 90 target",
-      "old_candidate_definition": "count(v002_strategy_eligible) — V002 canonical-strategy eligibility",
-      "corrected_candidate_definition": "count(v002_entry_ready) — a setup passes unchanged upstream Gates 8-10, V002 Gate 11 (8/8), the V002 downstream canonical-strategy decision, AND the frozen Gate-12/13 entry model (determine_entry returns an entry); no other definition is permitted; the 90 threshold and the success classification are unchanged",
+      "tc001_status": "ACCEPTED \u2014 TC001 (phase6-development-v2-V002-TC001) remains published and accepted; the V002 population REMAINS all legitimate historical Gate-11 entrants; TC002 does not reopen it",
+      "defect_description": "the TC001-corrected tooling treated evaluate_v002_strategy(...).entry_eligible as candidate_ready \u2014 that is the canonical-strategy-equivalent stage only; frozen V1/V001 semantics additionally require Gates 12-13 through strategies.smc_engine.entry_model.determine_entry before the reducer emits action=candidate_ready, so a setup passing V002 Gate 11 and the V002 canonical-strategy decision but failing Gate-12/13 entry readiness was wrongly counted toward the charter's candidate_ready >= 90 target",
+      "old_candidate_definition": "count(v002_strategy_eligible) \u2014 V002 canonical-strategy eligibility",
+      "corrected_candidate_definition": "count(v002_entry_ready) \u2014 a setup passes unchanged upstream Gates 8-10, V002 Gate 11 (8/8), the V002 downstream canonical-strategy decision, AND the frozen Gate-12/13 entry model (determine_entry returns an entry); no other definition is permitted; the 90 threshold and the success classification are unchanged",
       "v002_variant_funnel": "explicit funnel added: gate_11_v002 (entered = every TC001 Gate-11 entrant; passed = V002 8/8 score pass) -> canonical_strategy_v002 (entered = V002 Gate-11 passers; passed = evaluate_v002_strategy entry_eligible) -> gate_12_13_rr_entry_v002 (entered = V002 canonical-strategy passers; passed = frozen determine_entry returns non-None); candidate_ready MUST equal gate_12_13_rr_entry_v002.passed",
-      "entry_model_reuse": "the frozen strategies.smc_engine.entry_model.determine_entry is reused directly; no new V002 entry model; entry score threshold, early-entry semantics, liquidity alignment, aggressive/conservative selection, setup-candidate registration, session interpretation and internal-structure requirement unchanged; the frozen V002 score result (score_v002_setup, 8/8) is passed as score_result; only the H007 structural context fields differ where structurally inseparable (ob_zone = V002 structural-active canonical block zone, fvg_zone = V002 associated same-direction final canonical FVG geometry, htf_zone_alignment = V002 structural-active OB present) — the preregistered downstream-consistency consequence of H007, not a new hypothesis",
+      "entry_model_reuse": "the frozen strategies.smc_engine.entry_model.determine_entry is reused directly; no new V002 entry model; entry score threshold, early-entry semantics, liquidity alignment, aggressive/conservative selection, setup-candidate registration, session interpretation and internal-structure requirement unchanged; the frozen V002 score result (score_v002_setup, 8/8) is passed as score_result; only the H007 structural context fields differ where structurally inseparable (ob_zone = V002 structural-active canonical block zone, fvg_zone = V002 associated same-direction final canonical FVG geometry, htf_zone_alignment = V002 structural-active OB present) \u2014 the preregistered downstream-consistency consequence of H007, not a new hypothesis",
       "entry_state_reconstruction": "the entry model executes over a PRIVATE deterministic copy of the frozen setup state for the same decision, rebuilt with the existing canonical bot.strategy.setup_state.state_from_record over the decision's own next_record; the main historical D001 state chain is never mutated with V002 candidate output and remains the unchanged upstream reference pipeline; all frozen state fields determine_entry consumes (structure_dir, structure_state, liquidity_swept, liquidity_side, liquidity_type, displacement_seen, fvg_zone, news_status, daily_limits_hit, session, event time) are the canonical reducer-updated values of THIS decision; prior-state consumption for evaluate_v002_structural_pair still derives from prior_state_record ONLY (TC001/H007 causal OB lifecycle semantics unchanged)",
       "setup_id_correction": "candidate_setup_ids now contains the frozen reducer's actual stable setup identity recovered from the decision's canonical persisted result (event-id reconciliation fail-closed; empty/missing setup id fail-closed); decision IDs remain separately descriptive as candidate_decision_ids",
       "duplicate_reconciliation": "candidate_ready counts every entry-ready observation; unique_candidate_setup_ids counts distinct persisted setup identities; duplicate_candidate_setup_id_occurrences = candidate_ready - unique; candidate_ready is never silently deduplicated (frozen V1 setup-reuse/consumption checks remain upstream and unchanged); unique + duplicates == candidate_ready asserted fail-closed",
@@ -2297,7 +2296,7 @@
         "funnel regression: synthetic population entrants 4 -> V002 Gate-11 pass 3 -> strategy pass 2 -> Gate-12/13 pass 1 -> candidate_ready 1, reconciled fail-closed",
         "candidate-ID regression: candidate setup ID is the persisted setup identity (not the decision ID), persisted event identity reconciles, malformed/mismatched persisted results fail closed"
       ],
-      "store_compatibility_decision": "B — preserved V001 store semantically sufficient, REAFFIRMED: the frozen Gate-12/13 causal inputs (entry price from the persisted M5 entry_rows frame, session context, liquidity pools, internal structure, sweep signal) already exist in the persisted snapshot payload and current state reconstruction; REQUIRED_PAYLOAD_FIELDS extended accordingly and asserted per snapshot fail-closed; no missing causal input was found and no fresh rebuild is required",
+      "store_compatibility_decision": "B \u2014 preserved V001 store semantically sufficient, REAFFIRMED: the frozen Gate-12/13 causal inputs (entry price from the persisted M5 entry_rows frame, session context, liquidity pools, internal structure, sweep signal) already exist in the persisted snapshot payload and current state reconstruction; REQUIRED_PAYLOAD_FIELDS extended accordingly and asserted per snapshot fail-closed; no missing causal input was found and no fresh rebuild is required",
       "strategy_module_unchanged": true,
       "strategy_module_diff": "bot/strategy/variant_v002.py = 0 bytes changed (canonical blob SHA 8272c28552c05067b6dc3ba039ee8df2dbbfb8b4 unchanged)",
       "h007_unchanged": "H007 statement, V002 structural-active OB semantics, FVG association, exact-overlap descriptive observer, 8/8 score, DXY authority, the TC001 Gate-11 entrant population and the success classification (90 threshold) are all unchanged; spec docs/PHASE8_V2_VARIANT_V002.md scientific content unchanged (its preregistered surface already required the Gate 8-13 funnel, candidate_ready count and candidate setup IDs; TC002 makes the tooling conform)",
@@ -2326,7 +2325,7 @@
       "research_identity": "phase6-development-v2",
       "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
       "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
-      "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V002 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V002 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
       "lineage": {
         "d004_result_baseline_commit": "cd7526260ac224facb5dbf993f6e98be25cb650d",
         "phase_a_preregistration_commit": "3d910becf95ea3f0e9888241ec6f34af35fcfd42",
@@ -2357,10 +2356,10 @@
         "coverage": "fold-01/full",
         "rows_rehashed_before_observation": "verify_rows=True full row-digest + gate-event-id re-derivation over all 13269 rows",
         "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767",
-        "store_compatibility_decision": "B — preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
+        "store_compatibility_decision": "B \u2014 preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
       },
       "output": {
-        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V002 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V002 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_variants/phase6-development-v2-V002/fold01/phase6-development-v2-V002_result.json",
         "sha256": "5addbb88e7885d8a604766d58e35a830478f519287d8e8a499ac219906b27a71",
@@ -2452,9 +2451,9 @@
       "opportunity_classification": "OPPORTUNITY_INSUFFICIENT",
       "opportunity_classification_basis": "mechanical application of the preregistered rule: 0 < candidate_ready (61) < 90; no ranking above 90 and no optimization toward 90 was performed; 90 remains the frozen Tier-A research target",
       "post_hoc_descriptive_comparisons": {
-        "h001_synthesis_motivation": "the 102/61/41 structural pair observations were motivation only; the empirical V002 Gate-11 pass count (102) and candidate_ready (61) derive independently from the tooling and are coincidentally near those motivation figures — no expectation was encoded anywhere in tooling or tests",
+        "h001_synthesis_motivation": "the 102/61/41 structural pair observations were motivation only; the empirical V002 Gate-11 pass count (102) and candidate_ready (61) derive independently from the tooling and are coincidentally near those motivation figures \u2014 no expectation was encoded anywhere in tooling or tests",
         "historical_funnel_unchanged": "historical Gates 8-11 funnel reproduces D003/D004 exactly (7316 -> 3607 -> 1489 -> 526 -> 1), confirming the unchanged upstream reference pipeline",
-        "exact_overlap_descriptive": "43 of 110 associated same-direction FVG observations (39.1 percent) fail exact geometric overlap among V002-active structural pairs — directionally consistent with the H001 synthesis observation that exact overlap removes a substantial part of the pair surface"
+        "exact_overlap_descriptive": "43 of 110 associated same-direction FVG observations (39.1 percent) fail exact geometric overlap among V002-active structural pairs \u2014 directionally consistent with the H001 synthesis observation that exact overlap removes a substantial part of the pair surface"
       },
       "tc002_candidate_definition_honored": "candidate_ready equals gate_12_13_rr_entry_v002.passed (61), NOT canonical-strategy eligibility (80); the frozen determine_entry gate is inside the measured stage",
       "no_counterfactuals_computed": "no candidate count with exact overlap restored, with expiry restored, without DXY, without Gate 12/13, at alternate thresholds (7/8, 6/8), at alternate age cutoffs, or with proximity/lag variants; no V003 created",
@@ -2709,7 +2708,7 @@
       "research_identity": "phase6-development-v2",
       "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
       "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
-      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 D005 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
       "lineage": {
         "preregistration_commit": "df19e89a8afd72deda2b58c79f38a798daaead76",
         "ordering_only_correction_commit": "c615c3e9ae15f6c47b1b9da27b835d46a431b05c",
@@ -2730,21 +2729,21 @@
       },
       "void_attempt_history": {
         "attempt1": {
-          "classification": "BLOCKAGE_ARTIFACT — EMPIRICAL_EXPOSURE_OCCURRED — FROZEN_TOOLING_FAIL_CLOSED_AT_AGGREGATION — NOT R001 — NO RESULT SEALED",
+          "classification": "BLOCKAGE_ARTIFACT \u2014 EMPIRICAL_EXPOSURE_OCCURRED \u2014 FROZEN_TOOLING_FAIL_CLOSED_AT_AGGREGATION \u2014 NOT R001 \u2014 NO RESULT SEALED",
           "timestamp_utc": "2026-09-26T13:18:42.145570+00:00",
           "blockage_artifact_sha256": "168ea3b27eb5cf536cca338bd87de028e2da2abd055ed112e85c508e1886f6e2",
           "exact_cause": "aggregate_d005 asserted active_count == sum(four_cells) assuming associated was a subset of active; associated is not a subset of active; fail-closed at aggregation",
           "observations_persisted": 0
         },
         "attempt2": {
-          "classification": "BLOCKAGE_ARTIFACT — CORRECTED_RERUN_FAILED_PRE_STORE_ACCESS — ZERO_EMPIRICAL_EXPOSURE — NOT R001 — NO RESULT SEALED",
+          "classification": "BLOCKAGE_ARTIFACT \u2014 CORRECTED_RERUN_FAILED_PRE_STORE_ACCESS \u2014 ZERO_EMPIRICAL_EXPOSURE \u2014 NOT R001 \u2014 NO RESULT SEALED",
           "timestamp_utc": "2026-09-28T20:56:45.660600Z",
           "blockage_artifact_sha256": "5a1c9482c569d0e614ef08f6e3fe9d8323381222de31487d4f608b2d8644f1cf",
           "exact_cause": "CLI called FoldFeatureStore.open(args.store) but canonical infrastructure exposes only load_feature_store; fail-closed before store opened (zero empirical exposure)",
           "observations_persisted": 0
         },
         "attempt3": {
-          "classification": "BLOCKAGE_ARTIFACT — COMPLETION_RERUN_FAILED_ROW_VERIFICATION — ZERO_EMPIRICAL_EXPOSURE — NOT R001 — NO RESULT SEALED",
+          "classification": "BLOCKAGE_ARTIFACT \u2014 COMPLETION_RERUN_FAILED_ROW_VERIFICATION \u2014 ZERO_EMPIRICAL_EXPOSURE \u2014 NOT R001 \u2014 NO RESULT SEALED",
           "timestamp_utc": "2026-09-29T15:18:51.011401+00:00",
           "blockage_artifact_sha256": "20a4dbe152821af1a2c09f42094473351b52399d94e8bd7b661f6a12897be449",
           "exact_cause": "transient zlib decompression error during load_feature_store(verify_rows=True) at row 1572; static S002 audit cleared store as 100% byte-intact",
@@ -2919,7 +2918,7 @@
         }
       },
       "output": {
-        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_DIAGNOSTIC_EVIDENCE \u2014 D005 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_diagnostics/phase8-v2-D005/fold01/phase8-v2-D005_result.json",
         "sha256": "fc852ed282ffe06036ba27b098086444d6eba37c3d7cf275b8f30ebd2d7efebc",
@@ -2947,7 +2946,7 @@
         "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
         "note": "D005 Attempt 4 completes the diagnostic slot permanently consumed at Attempt 1; diagnostics remain 4 / 12 (never incremented to 5 / 12); variants remain 2 / 8; numeric trials remain 0 / 4."
       },
-      "v003_status": "NOT CREATED — Tier B remains sealed — Supervisory H003/V003 Decision Required"
+      "v003_status": "NOT CREATED \u2014 Tier B remains sealed \u2014 Supervisory H003/V003 Decision Required"
     },
     {
       "correction_id": "phase6-development-v2-V003-TC001",
@@ -2955,7 +2954,7 @@
       "variant_id": "phase6-development-v2-V003",
       "defect_class": "V003_PRE_EMPIRICAL_MEASUREMENT_OBSERVER_BASELINE_DRIFT",
       "defective_tooling_commit": "82cf09b92fdcd67af8b560f6d0e296dbc618ebd1",
-      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 82cf09b92fdcd67af8b560f6d0e296dbc618ebd1, subject 'fix: preserve V002 observer semantics in V003 measurement'); that commit's SHA is the corrected tooling identity — resolvable as git rev-parse HEAD of this record's commit",
+      "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent 82cf09b92fdcd67af8b560f6d0e296dbc618ebd1, subject 'fix: preserve V002 observer semantics in V003 measurement'); that commit's SHA is the corrected tooling identity \u2014 resolvable as git rev-parse HEAD of this record's commit",
       "registered_utc": "2026-09-29T17:35:00Z",
       "exact_five_observer_drifts": {
         "bias_fallback": "Defective observer normalized raw_bias with .lower() and defaulted invalid/missing values to 'bullish' (bias = raw_bias if raw_bias in ('bullish', 'bearish') else 'bullish'). V002 fails closed by raising an error on missing/FLAT bias.",
@@ -3007,7 +3006,7 @@
       "research_identity": "phase6-development-v2",
       "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
       "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
-      "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V003 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V003 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
       "lineage": {
         "d005_result_baseline_commit": "4d037f893c9f93dae32e5aa6af6b404fc3445b1f",
         "phase_a_preregistration_commit": "18dc9889cf119623e56026d529e9546808125444",
@@ -3033,10 +3032,10 @@
         "coverage": "fold-01/full",
         "rows_rehashed_before_observation": "verify_rows=True full row-digest + gate-event-id re-derivation over all 13269 rows",
         "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767",
-        "store_compatibility_decision": "B — preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
+        "store_compatibility_decision": "B \u2014 preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
       },
       "output": {
-        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V003 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE \u2014 V003 \u2014 FOLD01 \u2014 NOT PROFITABILITY EVIDENCE",
         "location_kind": "EXTERNAL_GIT_OUTSIDE",
         "path": "phase8_data::/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
         "sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8",
@@ -3145,7 +3144,7 @@
         "defect_a_unpreregistered_percentage_cutoff": "The frozen Phase-B tooling mechanically branched concentration_ratio >= 0.50 into SUPPORTED_BY_D006 or NOT_SUPPORTED_BY_D006. This violated specification Section 16 and Section 1.1 which prohibit arbitrary numeric percentage cutoffs. Corrected by removing the 50% cutoff; when E5 = 0 and primary_count > 0, the tooling emits H008_SUPERVISORY_INTERPRETATION_REQUIRED along with descriptive concentration metrics (dominant category, dominant count, dominant share, top-two categories, top-two count, top-two share, and source breakdowns); when E5 > 0, outputs INCONCLUSIVE_D006.",
         "defect_b_baseline_reproduction_contract": "The frozen Phase-B tooling contract required exact decision ID set equality for upstream stages (Gate-11 entrants, Gate-11 passers, canonical-strategy passers) against the sealed V003 R001 artifact (phase6-development-v2-V003_result.json). However, the sealed V003 result artifact only persists aggregate counts for upstream funnel stages and persists decision IDs only for the candidate stage (candidate_ready: 81). Corrected so upstream stages reconcile by exact count against the prior result funnel, while candidate stage reconciles by exact count (81), exact candidate decision ID set equality, and candidate setup IDs. Newly reproduced upstream decision ID sets are hashed with SHA-256 and sealed under contract FIRST_IDENTITY_SEALED_BY_D006 with status SEALED_V003_BASELINE_RECONCILED. Within D006, primary decision IDs strictly equal canonical_strategy_pass_set - candidate_ready_set as an exact set equality."
       },
-      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D006.md section 24 'TC001 — H008 Disposition and V003 Baseline-Reproduction Contract Correction' appended; historical Phase-A hash preserved as a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6 (18,280 bytes); corrected specification SHA-256 fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb (22,552 bytes) bound in tooling and register",
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D006.md section 24 'TC001 \u2014 H008 Disposition and V003 Baseline-Reproduction Contract Correction' appended; historical Phase-A hash preserved as a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6 (18,280 bytes); corrected specification SHA-256 fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb (22,552 bytes) bound in tooling and register",
       "historical_specification_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6",
       "corrected_specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
       "correction_timing": "pre-empirical: no D006 empirical access occurred before or during this correction; all fixtures synthetic",
@@ -3170,6 +3169,47 @@
         "tier_b_sealed": true
       },
       "registered_utc": "2026-10-01T17:00:00Z"
+    },
+    {
+      "correction_id": "phase8-v2-D006-TC002",
+      "record_type": "PRE_EMPIRICAL_EXECUTION_PLUMBING_AND_GOVERNANCE_CORRECTION",
+      "diagnostic_id": "phase8-v2-D006",
+      "hypothesis_id": "phase8-v2-H008",
+      "defect_class": "D006_PRE_EMPIRICAL_EXECUTION_PLUMBING_AND_APPEND_ONLY_GOVERNANCE_REPAIR",
+      "defective_tooling_commit": "04dad93c5bedff1a4754a700e1f18d246b52aacc",
+      "corrected_tooling_commit_reference": "the unique TC002 commit that publishes this record (parent 04dad93c5bedff1a4754a700e1f18d246b52aacc, subject 'fix: restore D006 V003 replay parity and governance'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit",
+      "defects_addressed": {
+        "defect_c_replay_loop_and_api_mismatch": "The D006 execution harness diverged from canonical V003 replay: passed store.table to _snapshot_rows, seeded state with None instead of canonical StrategyState(event_time=datetime(2024, 1, 1, tzinfo=timezone.utc)), misparsed classify_snapshot tuple, passed row to _reference_check_failed, unpacked 3 returns from evaluate_orchestration_decision, invoked assert_store_semantic_compatibility before the loop on store instead of per snapshot inside gate11_entered, did not pass next_record to observe_v003_decision, and failed to carry state via state_record = next_record. Corrected to exact V003 loop parity.",
+        "defect_d_store_loader_row_verification": "The D006 CLI invoked load_feature_store without verify_rows=True. Corrected to load_feature_store(Path(args.store), verify_rows=True) with strict sequence: parse args -> validate path -> load store -> run d006 -> write result.",
+        "defect_e_strict_candidate_identity_reconciliation": "Candidate setup ID reconciliation was conditional on non-null observed setup IDs, allowing missing identities to pass undetected, and omitted sealing the P_ENTRY_REJECT decision ID digest. Corrected to fail closed on missing or duplicate candidate identities in sealed prior result or observed surface, enforce exact deterministic (decision_id, setup_id) pair multiset equality, independently verify candidate ID set, candidate-ready count, unique setup IDs, duplicate occurrences, and seal SHA-256 decision ID digests for entrants, Gate-11 passers, canonical-strategy passers, candidate-ready, and P_ENTRY_REJECT.",
+        "defect_f_append_only_governance_register_repair": "TC001 modified phase8-v2-D006 in-place within the diagnostics array of baseline/phase8_v2_hypothesis_register.json. Corrected by restoring all historical records from 32a4186917b40fd60cd9a96197c9aae50dcb7782 unchanged (preserving original H008 and D006 registrations) and appending TC001 and TC002 as separate immutable correction records."
+      },
+      "specification_append_only": "docs/PHASE8_V2_DIAGNOSTIC_D006.md section 25 'TC002 \u2014 Exact Frozen V003 Replay Plumbing and Strict Identity Reconciliation' appended; historical Phase-A hash preserved as a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6 (18,280 bytes); TC001 hash preserved as fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb (22,552 bytes); corrected specification SHA-256 4ebe97b997f530e2d60a8b1f3a25f62e5c2e22456c7ccfc375b28b727add42ad (28,558 bytes) bound in tooling and register",
+      "historical_specification_sha256": "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6",
+      "tc001_specification_sha256": "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb",
+      "corrected_specification_sha256": "4ebe97b997f530e2d60a8b1f3a25f62e5c2e22456c7ccfc375b28b727add42ad",
+      "correction_timing": "pre-empirical: no D006 empirical access occurred before or during this correction; all fixtures synthetic",
+      "no_empirical_access": true,
+      "no_fold01_store_opened": "store fold-01-a8b406884ab3525a NOT read; prohibited store fold-01-1d710826193a6767 NOT read; no replay; no empirical D006 run; no Tier B; all fixtures synthetic",
+      "v003_v002_unchanged": "bot/strategy/variant_v003.py, backtests/phase8_v2_variant_v003_eval.py, strategies/smc_engine/entry_model.py, strategies/smc_engine/strategy_state.py, bot/strategy/variant_v002.py, backtests/phase8_v2_variant_v002_eval.py, D005 tooling and all risk/news/DXY/session files are 0-byte diff",
+      "budget_impact": {
+        "diagnostics_executed": "4 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_revision_lock": "ACTIVE",
+        "tier_b": "SEALED",
+        "v004": "NOT_CREATED",
+        "note": "TC002 consumes ZERO diagnostic budget; diagnostics remain 4 / 12; D006 becomes permanently 5 / 12 ONLY when the corrected tooling first observes Fold 01 under separate supervisory authorization"
+      },
+      "reserved_evidence_untouched": {
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "data_2025_plus": true,
+        "tier_b_sealed": true
+      },
+      "registered_utc": "2026-10-01T18:00:00Z"
     }
   ],
   "provenance_corrections": [

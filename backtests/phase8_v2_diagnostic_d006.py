@@ -86,6 +86,7 @@ from backtests.phase8_v2_variant_v001_eval import (  # noqa: E402
     reject_holdout_path,
 )
 from backtests.phase8_v2_variant_v002_eval import (  # noqa: E402
+    _consumed_ids_from_record,
     _entry_frame,
     _gate_funnel,
     _persisted_setup_id,
@@ -121,7 +122,9 @@ V003_RESULT_ID = "phase6-development-v2-V003-R001"
 CHARTER_ID = "phase8-v2-research-charter-v1-8527e3a5eec98f53"
 CHARTER_SHA256 = "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc"
 SPEC_PHASE_A_SHA256 = "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
-SPEC_SHA256 = "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb"
+SPEC_TC001_SHA256 = "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb"
+SPEC_TC002_SHA256 = "4ebe97b997f530e2d60a8b1f3a25f62e5c2e22456c7ccfc375b28b727add42ad"
+SPEC_SHA256 = SPEC_TC002_SHA256
 SPECIFICATION_DOCUMENT = "docs/PHASE8_V2_DIAGNOSTIC_D006.md"
 CLASSIFICATION = (
     "DEVELOPMENT_DIAGNOSTIC_EVIDENCE — D006 — FOLD01 — NOT PROFITABILITY EVIDENCE"
@@ -218,6 +221,8 @@ D006_BANNED_METRIC_SUBSTRINGS = (
 
 def _reject_banned_metrics(node: Any, path: str = "document") -> None:
     """Recursively reject banned profitability and counterfactual keys."""
+    if path == "document.invariance_assertions":
+        return
     if isinstance(node, Mapping):
         for key, value in node.items():
             key_text = str(key).lower()
@@ -596,16 +601,70 @@ def reconcile_v003_prior_result(
     """Validate runtime V003 baseline reproduction against sealed V003 R001.
 
     Loads the sealed external result, validates its SHA-256 and byte size.
-    Per TC001, upstream stages (entrants, gate-11 passers, canonical-strategy passers)
+    Per TC001/TC002, upstream stages (entrants, gate-11 passers, canonical-strategy passers)
     reconcile by exact count against the prior funnel; candidate stage reconciles by
-    exact count, exact decision ID set, and setup IDs. Reproduces and seals upstream
-    decision ID digests under contract FIRST_IDENTITY_SEALED_BY_D006.
+    exact count, exact decision ID set, and strict setup IDs. Reproduces and seals upstream
+    and primary decision ID digests under contract FIRST_IDENTITY_SEALED_BY_D006.
     """
+    obs_entrants = [obs["decision_id"] for obs in observations]
+    obs_gate11_pass = [
+        obs["decision_id"] for obs in observations if obs.get("v003_gate11_passed")
+    ]
+    obs_strat_pass = [
+        obs["decision_id"] for obs in observations if obs.get("v003_strategy_eligible")
+    ]
+    obs_ready = [
+        obs["decision_id"] for obs in observations if obs.get("v003_entry_ready")
+    ]
+    obs_primary = [
+        obs["decision_id"]
+        for obs in observations
+        if obs.get("v003_gate11_passed")
+        and obs.get("v003_strategy_eligible")
+        and not obs.get("v003_entry_ready")
+    ]
+
+    # Check for null decision_ids in observations before hashing
+    for obs in observations:
+        if obs.get("v003_entry_ready"):
+            if not obs.get("decision_id") or not obs.get("v003_setup_id"):
+                raise D006BaselineReproductionError(
+                    "Observed ready candidate missing non-null decision_id or v003_setup_id"
+                )
+        if obs.get("decision_id") is None:
+            raise D006BaselineReproductionError(
+                "Observation missing non-null decision_id"
+            )
+
+    reproduced_gate11_entrant_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_entrants)).encode("utf-8")
+    ).hexdigest()
+    reproduced_gate11_pass_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_gate11_pass)).encode("utf-8")
+    ).hexdigest()
+    reproduced_canonical_strategy_pass_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_strat_pass)).encode("utf-8")
+    ).hexdigest()
+    candidate_ready_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_ready)).encode("utf-8")
+    ).hexdigest()
+    p_entry_reject_ids_digest = hashlib.sha256(
+        "\n".join(sorted(obs_primary)).encode("utf-8")
+    ).hexdigest()
+
     if prior_result_path is None:
         return {
             "status": "SKIPPED_SYNTHETIC",
             "reconciles": True,
             "note": "no prior result path provided; synthetic or offline mode",
+            "upstream_decision_id_digests": {
+                "identity_sealing_note": "FIRST_IDENTITY_SEALED_BY_D006",
+                "gate11_entrants_sha256": reproduced_gate11_entrant_ids_digest,
+                "gate11_passers_sha256": reproduced_gate11_pass_ids_digest,
+                "canonical_strategy_passers_sha256": reproduced_canonical_strategy_pass_ids_digest,
+                "candidate_ready_sha256": candidate_ready_ids_digest,
+                "p_entry_reject_sha256": p_entry_reject_ids_digest,
+            },
         }
 
     p = Path(prior_result_path)
@@ -629,17 +688,6 @@ def reconcile_v003_prior_result(
 
     prior_funnel = prior.get("V003_variant_funnel", {})
     prior_candidate = prior.get("candidate_surface", {})
-
-    obs_entrants = [obs["decision_id"] for obs in observations]
-    obs_gate11_pass = [
-        obs["decision_id"] for obs in observations if obs.get("v003_gate11_passed")
-    ]
-    obs_strat_pass = [
-        obs["decision_id"] for obs in observations if obs.get("v003_strategy_eligible")
-    ]
-    obs_ready = [
-        obs["decision_id"] for obs in observations if obs.get("v003_entry_ready")
-    ]
 
     prior_gate11_entered = int(prior_funnel.get("gate_11_v003", {}).get("entered", -1))
     prior_gate11_passed = int(prior_funnel.get("gate_11_v003", {}).get("passed", -1))
@@ -666,58 +714,92 @@ def reconcile_v003_prior_result(
         )
 
     prior_candidates_list = prior_candidate.get("candidates", [])
-    prior_candidate_ids = [c.get("decision_id") for c in prior_candidates_list]
+    if len(prior_candidates_list) != prior_ready_count:
+        raise D006BaselineReproductionError(
+            f"Prior candidate list count mismatch: {len(prior_candidates_list)} != {prior_ready_count}"
+        )
+
+    # Section 17: Strict prior candidate validation
+    prior_pairs: list[tuple[str, str]] = []
+    prior_cand_did_set = set()
+    for c in prior_candidates_list:
+        c_did = c.get("decision_id")
+        c_sid = c.get("setup_id")
+        if not c_did or not c_sid:
+            raise D006BaselineReproductionError(
+                "Prior candidate record missing non-null decision_id or setup_id"
+            )
+        if c_did in prior_cand_did_set:
+            raise D006BaselineReproductionError(
+                f"Duplicate decision_id in prior candidates: {c_did}"
+            )
+        prior_cand_did_set.add(c_did)
+        prior_pairs.append((str(c_did), str(c_sid)))
+
+    # Section 18: Strict observed candidate validation
+    obs_pairs: list[tuple[str, str]] = []
+    obs_cand_did_set = set()
+    for obs in observations:
+        if obs.get("v003_entry_ready"):
+            o_did = obs.get("decision_id")
+            o_sid = obs.get("v003_setup_id")
+            if not o_did or not o_sid:
+                raise D006BaselineReproductionError(
+                    "Observed ready candidate missing non-null decision_id or v003_setup_id"
+                )
+            if o_did in obs_cand_did_set:
+                raise D006BaselineReproductionError(
+                    f"Duplicate decision_id in observed candidates: {o_did}"
+                )
+            obs_cand_did_set.add(o_did)
+            obs_pairs.append((str(o_did), str(o_sid)))
+
+    # Independent check 1: Exact candidate decision-ID set equality
+    prior_candidate_ids = [c[0] for c in prior_pairs]
     if sorted(obs_ready) != sorted(prior_candidate_ids):
         raise D006BaselineReproductionError(
             "Candidate decision ID set does not reproduce prior V003 result exactly"
         )
 
-    prior_setup_id_by_decision = {
-        c["decision_id"]: c.get("setup_id")
-        for c in prior_candidates_list
-        if "decision_id" in c
-    }
-    ready_setup_ids: list[str] = []
-    for obs in observations:
-        if obs.get("v003_entry_ready"):
-            did = obs["decision_id"]
-            sid = obs.get("v003_setup_id")
-            if sid is not None:
-                ready_setup_ids.append(sid)
-                expected_sid = prior_setup_id_by_decision.get(did)
-                if expected_sid is not None and sid != expected_sid:
-                    raise D006BaselineReproductionError(
-                        f"Candidate setup_id mismatch for decision {did}: {sid} != {expected_sid}"
-                    )
+    # Independent check 2: Per-decision setup_id check
+    prior_setup_id_by_decision = {c[0]: c[1] for c in prior_pairs}
+    for did, sid in obs_pairs:
+        expected_sid = prior_setup_id_by_decision.get(did)
+        if expected_sid is not None and sid != expected_sid:
+            raise D006BaselineReproductionError(
+                f"Candidate setup_id mismatch for decision {did}: {sid} != {expected_sid}"
+            )
 
+    # Section 19: Exact candidate pair multiset reconciliation
+    if sorted(obs_pairs) != sorted(prior_pairs):
+        raise D006BaselineReproductionError(
+            "Exact (decision_id, setup_id) pair multiset does not match prior V003 result"
+        )
+
+    # 2. Exact candidate-ready count
+    if len(obs_pairs) != prior_ready_count:
+        raise D006BaselineReproductionError(
+            f"Observed candidate pair count mismatch: {len(obs_pairs)} != {prior_ready_count}"
+        )
+
+    # 3. Exact unique setup-ID count
     prior_unique_setup_ids = prior_candidate.get("unique_candidate_setup_ids")
+    obs_sids = [p[1] for p in obs_pairs]
+    unique_obs_sids = len(set(obs_sids))
+    if prior_unique_setup_ids is not None and unique_obs_sids != prior_unique_setup_ids:
+        raise D006BaselineReproductionError(
+            f"Unique setup ID count mismatch: {unique_obs_sids} != {prior_unique_setup_ids}"
+        )
+
+    # 4. Exact duplicate setup-ID occurrence count
     prior_dup_setup_ids = prior_candidate.get(
         "duplicate_candidate_setup_id_occurrences"
     )
-    if ready_setup_ids and prior_unique_setup_ids is not None:
-        unique_obs_sids = len(set(ready_setup_ids))
-        dup_obs_sids = len(ready_setup_ids) - unique_obs_sids
-        if unique_obs_sids != prior_unique_setup_ids:
-            raise D006BaselineReproductionError(
-                f"Unique setup ID count mismatch: {unique_obs_sids} != {prior_unique_setup_ids}"
-            )
-        if dup_obs_sids != prior_dup_setup_ids:
-            raise D006BaselineReproductionError(
-                f"Duplicate setup ID occurrences mismatch: {dup_obs_sids} != {prior_dup_setup_ids}"
-            )
-
-    reproduced_gate11_entrant_ids_digest = hashlib.sha256(
-        "\n".join(sorted(obs_entrants)).encode("utf-8")
-    ).hexdigest()
-    reproduced_gate11_pass_ids_digest = hashlib.sha256(
-        "\n".join(sorted(obs_gate11_pass)).encode("utf-8")
-    ).hexdigest()
-    reproduced_canonical_strategy_pass_ids_digest = hashlib.sha256(
-        "\n".join(sorted(obs_strat_pass)).encode("utf-8")
-    ).hexdigest()
-    candidate_ready_ids_digest = hashlib.sha256(
-        "\n".join(sorted(obs_ready)).encode("utf-8")
-    ).hexdigest()
+    dup_obs_sids = len(obs_sids) - unique_obs_sids
+    if prior_dup_setup_ids is not None and dup_obs_sids != prior_dup_setup_ids:
+        raise D006BaselineReproductionError(
+            f"Duplicate setup ID occurrences mismatch: {dup_obs_sids} != {prior_dup_setup_ids}"
+        )
 
     return {
         "status": "SEALED_V003_BASELINE_RECONCILED",
@@ -741,18 +823,11 @@ def reconcile_v003_prior_result(
             "gate11_passers_sha256": reproduced_gate11_pass_ids_digest,
             "canonical_strategy_passers_sha256": reproduced_canonical_strategy_pass_ids_digest,
             "candidate_ready_sha256": candidate_ready_ids_digest,
+            "p_entry_reject_sha256": p_entry_reject_ids_digest,
         },
         "candidate_setup_id_reconciliation": {
-            "unique_setup_ids": (
-                len(set(ready_setup_ids))
-                if ready_setup_ids
-                else prior_unique_setup_ids
-            ),
-            "duplicate_setup_ids": (
-                (len(ready_setup_ids) - len(set(ready_setup_ids)))
-                if ready_setup_ids
-                else prior_dup_setup_ids
-            ),
+            "unique_setup_ids": unique_obs_sids,
+            "duplicate_setup_ids": dup_obs_sids,
             "matches_prior_v003": True,
         },
     }
@@ -1004,6 +1079,9 @@ def aggregate_d006(
         "primary_population": {
             "count": primary_count,
             "decision_ids": sorted(p_entry_reject_ids),
+            "p_entry_reject_sha256": hashlib.sha256(
+                "\n".join(sorted(p_entry_reject_ids)).encode("utf-8")
+            ).hexdigest(),
             "id_reconciliation": {
                 "equals_canonical_strategy_pass_minus_candidate_ready": True,
                 "unique_count": len(set(p_entry_reject_ids)),
@@ -1151,117 +1229,113 @@ def run_d006(
 
     identity = store.identity
     check_store_boundary(dict(identity))
-    assert_store_semantic_compatibility(store)
 
     config = StrategyConfig()
+    seed_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    state_record = record_from_state(
+        StrategyState(event_time=seed_time),
+        event_at=seed_time,
+    )
     buckets = {
-        "reducer_classified": 0,
         "missing_history": 0,
         "unavailable_input": 0,
         "evaluation_error": 0,
     }
 
-    prior_state_record: Any = None
     scheduled = 0
     rows: list[dict[str, Any]] = []
     v003_observations: list[dict[str, Any]] = []
     primary_decompositions: list[dict[str, Any]] = []
 
-    for snapshot in _snapshot_rows(store.table):
+    for snapshot in _snapshot_rows(store):
         scheduled += 1
-        decision_at = datetime.fromtimestamp(
-            int(snapshot.available_at_ms) / 1000, tz=timezone.utc
+        bucket = classify_snapshot(snapshot)
+        if bucket is not None:
+            name, _status = bucket
+            buckets[name] += 1
+            continue
+
+        if _reference_check_failed(snapshot):
+            buckets["evaluation_error"] += 1
+            continue
+
+        prior_state_record = state_record
+        row, next_record = evaluate_orchestration_decision(
+            snapshot,
+            prior_state_record,
         )
-        row = classify_snapshot(snapshot)
-        status = row["status"]
 
-        if status == "missing_history":
-            buckets["missing_history"] += 1
-            continue
-        if status == "unavailable_input":
-            buckets["unavailable_input"] += 1
-            continue
-        if status != "classified":
-            buckets["evaluation_error"] += 1
-            continue
-
-        if _reference_check_failed(row):
-            buckets["evaluation_error"] += 1
-            continue
-
-        try:
-            prior_state_record, err, cell_record = evaluate_orchestration_decision(
-                row,
-                snapshot,
-                prior_state_record,
-                config=config,
-            )
-        except Exception:
-            buckets["evaluation_error"] += 1
-            continue
-
-        if err is not None:
+        if row["action"] == "error":
             buckets["evaluation_error"] += 1
             continue
 
         rows.append(row)
-        decision_result_record = cell_record if cell_record is not None else prior_state_record
 
-        gate_results = row.get("gate_results") or {}
-        if "gate_11_confluence_score" not in gate_results:
-            continue
-
-        v003_obs = observe_v003_decision(
-            row,
-            snapshot,
-            prior_state_record,
-            config=config,
-            decision_result_record=decision_result_record,
+        gate11_entered = (
+            "gate_11_confluence_score" in (row.get("gate_results") or {})
         )
-        v003_observations.append(v003_obs)
-
-        if (
-            v003_obs["v003_gate11_passed"]
-            and v003_obs["v003_strategy_eligible"]
-            and not v003_obs["v003_entry_ready"]
-        ):
-            payload = json.loads(snapshot.gate_payload)
-            frame = _entry_frame(list(payload.get("entry_rows") or []))
-            pair = v003_obs.get("_pair")
-            if pair is None:
-                from bot.strategy.models import StrategySide  # noqa: PLC0415
-                from bot.strategy.variant_v003 import evaluate_v003_structural_pair  # noqa: PLC0415
-
-                htf_bias = str(payload.get("htf_bias") or "")
-                side = {
-                    "bullish": StrategySide.LONG,
-                    "bearish": StrategySide.SHORT,
-                }.get(htf_bias, StrategySide.FLAT)
-                consumed_ids = (
-                    frozenset(prior_state_record.data().get("consumed_block_ids", []))
-                    if prior_state_record
-                    else frozenset()
-                )
-                pair = evaluate_v003_structural_pair(
-                    frame,
-                    side,
-                    decision_at,
-                    config,
-                    fvgs=list(payload.get("fvgs") or []),
-                    consumed_ids=consumed_ids,
-                )
-
-            decomp = decompose_v003_decision(
-                row=row,
-                snapshot=snapshot,
-                decision_result_record=decision_result_record,
-                decision_at=decision_at,
-                frame=frame,
-                pair=pair,
-                score=v003_obs["v003_gate11_score"],
-                payload=payload,
+        if gate11_entered:
+            assert_store_semantic_compatibility(snapshot)
+            v003_obs = observe_v003_decision(
+                row,
+                snapshot,
+                prior_state_record,
+                config=config,
+                decision_result_record=next_record,
             )
-            primary_decompositions.append(decomp)
+            v003_observations.append(v003_obs)
+
+            if (
+                v003_obs["v003_gate11_passed"]
+                and v003_obs["v003_strategy_eligible"]
+                and not v003_obs["v003_entry_ready"]
+            ):
+                payload = json.loads(snapshot.gate_payload)
+                decision_at = datetime.fromtimestamp(
+                    int(snapshot.available_at_ms) / 1000, tz=timezone.utc
+                )
+                frame = _entry_frame(list(payload.get("entry_rows") or []))
+                pair = v003_obs.get("_pair")
+                if pair is None:
+                    from bot.strategy.models import StrategySide  # noqa: PLC0415
+                    from bot.strategy.variant_v003 import evaluate_v003_structural_pair  # noqa: PLC0415
+
+                    htf_bias = str(payload.get("htf_bias") or "")
+                    side = {
+                        "bullish": StrategySide.LONG,
+                        "bearish": StrategySide.SHORT,
+                    }.get(htf_bias, StrategySide.FLAT)
+                    consumed_ids = _consumed_ids_from_record(prior_state_record)
+                    pair = evaluate_v003_structural_pair(
+                        frame,
+                        side,
+                        decision_at,
+                        config,
+                        fvgs=list(payload.get("fvgs") or []),
+                        consumed_ids=consumed_ids,
+                    )
+
+                # Assert synthetic equivalence against v003_obs
+                assert bool(pair.structurally_active) == v003_obs["v003_structurally_active"]
+                assert pair.block_id == v003_obs["v003_block_id"]
+                assert (pair.side.value if hasattr(pair.side, "value") else str(pair.side)) == v003_obs["v003_side"]
+                assert bool(pair.final_fvg_associated) == v003_obs["v003_final_fvg_associated"]
+                assert bool(pair.temporal_fvg_evidence) == v003_obs["v003_temporal_fvg_evidence"]
+                assert pair.fvg_evidence_source == v003_obs["v003_fvg_evidence_source"]
+
+                decomp = decompose_v003_decision(
+                    row=row,
+                    snapshot=snapshot,
+                    decision_result_record=next_record,
+                    decision_at=decision_at,
+                    frame=frame,
+                    pair=pair,
+                    score=v003_obs["v003_gate11_score"],
+                    payload=payload,
+                )
+                primary_decompositions.append(decomp)
+
+        state_record = next_record
 
     reconcile_accounting(
         scheduled=scheduled,
@@ -1377,7 +1451,10 @@ def main(argv: list[str] | None = None) -> int:
     validate_authorized_store_path(args.store)
     from bot.validation.market_feature_store import load_feature_store  # noqa: PLC0415
 
-    store = load_feature_store(args.store)
+    store = load_feature_store(
+        Path(args.store),
+        verify_rows=True,
+    )
     doc, rendered = run_d006(
         store,
         tooling_commit=args.tooling_commit,

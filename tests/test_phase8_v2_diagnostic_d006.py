@@ -110,6 +110,15 @@ def test_d006_spec_sha_matches_committed_file_and_retains_phase_a():
         d006.SPEC_PHASE_A_SHA256
         == "a50b2e0ddfd84ecfa087dc5c347473cad40c58eb4f04c57f4f52038c73aa1ba6"
     )
+    assert (
+        d006.SPEC_TC001_SHA256
+        == "fe29aa848c489b8d3f7a5e937efca20ef93bde9625f88d32ddd8f3ca9ec1a5eb"
+    )
+    assert (
+        d006.SPEC_TC002_SHA256
+        == "4ebe97b997f530e2d60a8b1f3a25f62e5c2e22456c7ccfc375b28b727add42ad"
+    )
+    assert d006.SPEC_SHA256 == d006.SPEC_TC002_SHA256
 
 
 def test_provenance_contains_expected_keys():
@@ -1131,3 +1140,451 @@ def test_aggregate_d006_primary_id_set_tampering_raises():
     decomps = []
     with pytest.raises(d006.D006AccountingError, match="Primary population decision IDs do not equal"):
         d006.aggregate_d006(obs, decomps)
+# ===========================================================================
+# 11. TC002 Replay Loop Parity, Strict Candidate Identity & Governance Tests
+# ===========================================================================
+
+
+class _MockSnapshot:
+    def __init__(self, decision_id: str, available_at_ms: int = 1704110400000, payload_dict: dict | None = None):
+        self.decision_id = decision_id
+        self.available_at_ms = available_at_ms
+        self.gate_payload = json.dumps(payload_dict or {})
+
+
+class _MockStore:
+    def __init__(self, snapshots: list[_MockSnapshot]):
+        self.identity = {
+            "fold_id": "fold-01-a8b406884ab3525a",
+            "coverage": "full",
+        }
+        self.snapshots = snapshots
+        self.table = "MOCK_TABLE_OBJECT"
+
+
+def test_run_d006_run_loop_contract(monkeypatch):
+    """Section 27: Verify exact run_d006 contract parity with frozen V003."""
+    calls = {
+        "snapshot_rows_arg": None,
+        "classify_snapshot_args": [],
+        "reference_check_args": [],
+        "evaluate_decision_args": [],
+        "assert_compatibility_args": [],
+        "observe_v003_args": [],
+    }
+
+    snap = _MockSnapshot("dec-1", payload_dict={"gate_payload_field": "val"})
+    store = _MockStore([snap])
+
+    def mock_snapshot_rows(s):
+        calls["snapshot_rows_arg"] = s
+        return s.snapshots
+
+    def mock_classify(s):
+        calls["classify_snapshot_args"].append(s)
+        return None  # valid reducer path
+
+    def mock_ref_check(s):
+        calls["reference_check_args"].append(s)
+        return False
+
+    mock_next_record = ("NEXT_STATE", "EXTRA_CELL")
+
+    def mock_eval_dec(s, prior_state):
+        calls["evaluate_decision_args"].append((s, prior_state))
+        row = {
+            "decision_id": s.decision_id,
+            "action": "hold",
+            "gate_results": {"gate_11_confluence_score": True},
+        }
+        return row, mock_next_record
+
+    def mock_assert_compat(s):
+        calls["assert_compatibility_args"].append(s)
+
+    def mock_observe_v003(row, s, prior_state, config, decision_result_record):
+        calls["observe_v003_args"].append({
+            "row": row,
+            "snapshot": s,
+            "prior_state": prior_state,
+            "decision_result_record": decision_result_record,
+        })
+        return {
+            "decision_id": row["decision_id"],
+            "v003_gate11_passed": False,
+            "v003_strategy_eligible": False,
+            "v003_entry_ready": False,
+            "v003_fvg_evidence_source": "FINAL_SURFACE",
+        }
+
+    monkeypatch.setattr(d006, "_snapshot_rows", mock_snapshot_rows)
+    monkeypatch.setattr(d006, "classify_snapshot", mock_classify)
+    monkeypatch.setattr(d006, "_reference_check_failed", mock_ref_check)
+    monkeypatch.setattr(d006, "evaluate_orchestration_decision", mock_eval_dec)
+    monkeypatch.setattr(d006, "assert_store_semantic_compatibility", mock_assert_compat)
+    monkeypatch.setattr(d006, "observe_v003_decision", mock_observe_v003)
+
+    doc, _ = d006.run_d006(store, tooling_commit="a" * 40, prior_v003_result_path=None, blob_source=lambda c, r: b"mock")
+
+    # 1. _snapshot_rows receives the STORE object, not store.table
+    assert calls["snapshot_rows_arg"] is store
+    assert calls["snapshot_rows_arg"] is not store.table
+
+    # 2. classify_snapshot receives the snapshot
+    assert len(calls["classify_snapshot_args"]) == 1
+    assert calls["classify_snapshot_args"][0] is snap
+
+    # 3. _reference_check_failed receives the snapshot
+    assert len(calls["reference_check_args"]) == 1
+    assert calls["reference_check_args"][0] is snap
+
+    # 4. evaluate_orchestration_decision receives (snapshot, prior_state_record)
+    assert len(calls["evaluate_decision_args"]) == 1
+    passed_snap, passed_prior = calls["evaluate_decision_args"][0]
+    assert passed_snap is snap
+    assert passed_prior is not None  # Canonical seed record
+
+    # 5. assert_store_semantic_compatibility receives snapshot, not store
+    assert len(calls["assert_compatibility_args"]) == 1
+    assert calls["assert_compatibility_args"][0] is snap
+
+    # 6. observe_v003_decision receives decision_result_record=next_record
+    assert len(calls["observe_v003_args"]) == 1
+    assert calls["observe_v003_args"][0]["decision_result_record"] is mock_next_record
+
+
+def test_multi_snapshot_state_carry(monkeypatch):
+    """Section 28: State carry advances sequentially across decisions without reset."""
+    snap1 = _MockSnapshot("dec-1")
+    snap2 = _MockSnapshot("dec-2")
+    store = _MockStore([snap1, snap2])
+
+    seen_prior_states = []
+    record_1 = ("STATE_1",)
+    record_2 = ("STATE_2",)
+    records = [record_1, record_2]
+
+    def mock_eval_dec(s, prior_state):
+        seen_prior_states.append(prior_state)
+        idx = 0 if s.decision_id == "dec-1" else 1
+        row = {
+            "decision_id": s.decision_id,
+            "action": "hold",
+            "gate_results": {},
+        }
+        return row, records[idx]
+
+    monkeypatch.setattr(d006, "_snapshot_rows", lambda s: s.snapshots)
+    monkeypatch.setattr(d006, "classify_snapshot", lambda s: None)
+    monkeypatch.setattr(d006, "_reference_check_failed", lambda s: False)
+    monkeypatch.setattr(d006, "evaluate_orchestration_decision", mock_eval_dec)
+
+    d006.run_d006(store, tooling_commit="a" * 40, prior_v003_result_path=None, blob_source=lambda c, r: b"mock")
+
+    assert len(seen_prior_states) == 2
+    # First decision receives canonical seed
+    assert seen_prior_states[0] is not None
+    # Second decision receives exactly the first decision's next_record
+    assert seen_prior_states[1] is record_1
+
+
+def test_d006_bucket_accounting(monkeypatch):
+    """Section 29: Synthetic snapshots for all non-reducer and evaluation buckets."""
+    snap_mh = _MockSnapshot("snap-mh")
+    snap_ui = _MockSnapshot("snap-ui")
+    snap_ref_err = _MockSnapshot("snap-ref-err")
+    snap_act_err = _MockSnapshot("snap-act-err")
+    snap_ok = _MockSnapshot("snap-ok")
+    store = _MockStore([snap_mh, snap_ui, snap_ref_err, snap_act_err, snap_ok])
+
+    def mock_classify(s):
+        if s.decision_id == "snap-mh":
+            return ("missing_history", "historical window empty")
+        if s.decision_id == "snap-ui":
+            return ("unavailable_input", "feed gap")
+        return None
+
+    def mock_ref_check(s):
+        return s.decision_id == "snap-ref-err"
+
+    def mock_eval_dec(s, prior_state):
+        if s.decision_id == "snap-act-err":
+            return {"action": "error", "decision_id": s.decision_id}, prior_state
+        return {"action": "hold", "decision_id": s.decision_id, "gate_results": {}}, prior_state
+
+    monkeypatch.setattr(d006, "_snapshot_rows", lambda s: s.snapshots)
+    monkeypatch.setattr(d006, "classify_snapshot", mock_classify)
+    monkeypatch.setattr(d006, "_reference_check_failed", mock_ref_check)
+    monkeypatch.setattr(d006, "evaluate_orchestration_decision", mock_eval_dec)
+
+    doc, _ = d006.run_d006(store, tooling_commit="a" * 40, prior_v003_result_path=None, blob_source=lambda c, r: b"mock")
+    acc = doc["decision_accounting"]
+
+    assert acc["scheduled"] == 5
+    assert acc["missing_history"] == 1
+    assert acc["unavailable_input"] == 1
+    assert acc["evaluation_error"] == 2  # ref check fail + action == "error"
+    assert acc["reducer_classified"] == 1
+    assert acc["reconciles"] is True
+
+
+def test_gate11_semantic_compatibility_call_timing(monkeypatch):
+    """Section 30: assert_store_semantic_compatibility called only on Gate-11 entrants with snapshot."""
+    snap_non_g11 = _MockSnapshot("non-g11")
+    snap_g11 = _MockSnapshot("g11")
+    store = _MockStore([snap_non_g11, snap_g11])
+
+    compat_calls = []
+
+    def mock_eval_dec(s, prior_state):
+        if s.decision_id == "non-g11":
+            return {"decision_id": s.decision_id, "action": "hold", "gate_results": {}}, prior_state
+        return {
+            "decision_id": s.decision_id,
+            "action": "hold",
+            "gate_results": {"gate_11_confluence_score": True},
+        }, prior_state
+
+    def mock_observe_v003(row, s, prior_state, config, decision_result_record):
+        return {
+            "decision_id": row["decision_id"],
+            "v003_gate11_passed": False,
+            "v003_strategy_eligible": False,
+            "v003_entry_ready": False,
+            "v003_fvg_evidence_source": "NONE",
+        }
+
+    monkeypatch.setattr(d006, "_snapshot_rows", lambda s: s.snapshots)
+    monkeypatch.setattr(d006, "classify_snapshot", lambda s: None)
+    monkeypatch.setattr(d006, "_reference_check_failed", lambda s: False)
+    monkeypatch.setattr(d006, "evaluate_orchestration_decision", mock_eval_dec)
+    monkeypatch.setattr(d006, "assert_store_semantic_compatibility", lambda s: compat_calls.append(s))
+    monkeypatch.setattr(d006, "observe_v003_decision", mock_observe_v003)
+
+    d006.run_d006(store, tooling_commit="a" * 40, prior_v003_result_path=None, blob_source=lambda c, r: b"mock")
+
+    assert len(compat_calls) == 1
+    assert compat_calls[0] is snap_g11
+
+
+def test_main_cli_loader_verification_and_order(monkeypatch, tmp_path):
+    """Section 31: CLI execution order parse -> validate -> load(verify_rows=True) -> run -> write."""
+    order = []
+
+    def mock_validate(path):
+        order.append("validate_path")
+
+    def mock_load(path, verify_rows=False):
+        assert isinstance(path, Path)
+        assert verify_rows is True
+        order.append("load_store")
+        return "MOCK_STORE"
+
+    def mock_run(store, tooling_commit, prior_v003_result_path):
+        assert store == "MOCK_STORE"
+        order.append("run_d006")
+        return {"result": "ok"}, b"{}"
+
+    def mock_write(doc, raw, out_dir):
+        order.append("write_result")
+        return out_dir / "out.json", "fake_digest"
+
+    import bot.validation.market_feature_store as mfs
+    monkeypatch.setattr(d006, "validate_authorized_store_path", mock_validate)
+    monkeypatch.setattr(mfs, "load_feature_store", mock_load)
+    monkeypatch.setattr(d006, "run_d006", mock_run)
+    monkeypatch.setattr(d006, "write_result", mock_write)
+
+    argv = [
+        "--store", "C:/Users/chips/forex-signal-bot-data/phase8/feature_store/fold-01-a8b406884ab3525a",
+        "--tooling-commit", "b" * 40,
+        "--output-dir", str(tmp_path),
+    ]
+    exit_code = d006.main(argv)
+    assert exit_code == 0
+    assert order == ["validate_path", "load_store", "run_d006", "write_result"]
+
+
+def test_candidate_null_id_fail_closed(tmp_path, monkeypatch):
+    """Section 32: Missing candidate decision_id or setup_id in prior or observed fails closed."""
+    cand_ids = [f"cand-{i}" for i in range(81)]
+    setup_ids = [f"setup-{i}" for i in range(81)]
+
+    def _build_obs():
+        obs = []
+        for i in range(526):
+            ready = i < 81
+            obs.append({
+                "decision_id": cand_ids[i] if ready else f"other-{i}",
+                "v003_gate11_passed": i < 138,
+                "v003_strategy_eligible": i < 110,
+                "v003_entry_ready": ready,
+                "v003_setup_id": setup_ids[i] if ready else None,
+            })
+        return obs
+
+    # 1. Prior candidate missing decision_id
+    cand_ids_missing_did = list(cand_ids)
+    cand_ids_missing_did[0] = None
+    p1, rlen1, dig1 = _create_mock_v003_result_file(tmp_path / "p1", cand_ids_missing_did, setup_ids)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", rlen1)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", dig1)
+    with pytest.raises(D006BaselineReproductionError, match="Prior candidate record missing non-null decision_id or setup_id"):
+        reconcile_v003_prior_result(p1, _build_obs())
+
+    # 2. Prior candidate missing setup_id
+    setup_ids_missing_sid = list(setup_ids)
+    setup_ids_missing_sid[0] = None
+    p2, rlen2, dig2 = _create_mock_v003_result_file(tmp_path / "p2", cand_ids, setup_ids_missing_sid)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", rlen2)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", dig2)
+    with pytest.raises(D006BaselineReproductionError, match="Prior candidate record missing non-null decision_id or setup_id"):
+        reconcile_v003_prior_result(p2, _build_obs())
+
+    # Good prior file for tests 3 and 4
+    p_good, rlen_g, dig_g = _create_mock_v003_result_file(tmp_path / "good", cand_ids, setup_ids)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", rlen_g)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", dig_g)
+
+    # 3. Observed candidate missing decision_id
+    obs_missing_did = _build_obs()
+    obs_missing_did[0]["decision_id"] = None
+    with pytest.raises(D006BaselineReproductionError, match="Observed ready candidate missing non-null decision_id or v003_setup_id"):
+        reconcile_v003_prior_result(p_good, obs_missing_did)
+
+    # 4. Observed candidate missing v003_setup_id
+    obs_missing_sid = _build_obs()
+    obs_missing_sid[0]["v003_setup_id"] = None
+    with pytest.raises(D006BaselineReproductionError, match="Observed ready candidate missing non-null decision_id or v003_setup_id"):
+        reconcile_v003_prior_result(p_good, obs_missing_sid)
+
+
+def test_candidate_pair_swap_fails_reconciliation(tmp_path, monkeypatch):
+    """Section 33: Swapping two setup IDs between candidate decisions fails exact pair multiset equality."""
+    cand_ids = [f"cand-{i}" for i in range(81)]
+    setup_ids = [f"setup-{i}" for i in range(81)]
+    path, raw_len, digest = _create_mock_v003_result_file(tmp_path, cand_ids, setup_ids)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", raw_len)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", digest)
+
+    obs = []
+    for i in range(526):
+        ready = i < 81
+        sid = setup_ids[i] if ready else None
+        obs.append({
+            "decision_id": cand_ids[i] if ready else f"other-{i}",
+            "v003_gate11_passed": i < 138,
+            "v003_strategy_eligible": i < 110,
+            "v003_entry_ready": ready,
+            "v003_setup_id": sid,
+        })
+
+    # Swap setup IDs between index 0 and 1
+    obs[0]["v003_setup_id"], obs[1]["v003_setup_id"] = obs[1]["v003_setup_id"], obs[0]["v003_setup_id"]
+
+    with pytest.raises(D006BaselineReproductionError, match=r"Candidate setup_id mismatch|Exact \(decision_id, setup_id\) pair multiset does not match"):
+        reconcile_v003_prior_result(path, obs)
+
+
+def test_candidate_duplicate_setup_ids_reconciliation(tmp_path, monkeypatch):
+    """Section 34: Duplicate setup IDs are reconciled against prior metadata without deduplication."""
+    cand_ids = [f"cand-{i}" for i in range(81)]
+    # Duplicate setup-0 on index 1
+    setup_ids = [f"setup-{i}" for i in range(81)]
+    setup_ids[1] = setup_ids[0]  # Duplicate!
+
+    path, raw_len, digest = _create_mock_v003_result_file(tmp_path, cand_ids, setup_ids)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_BYTES", raw_len)
+    monkeypatch.setattr(d006, "V003_SEALED_RESULT_SHA256", digest)
+
+    obs = []
+    for i in range(526):
+        ready = i < 81
+        obs.append({
+            "decision_id": cand_ids[i] if ready else f"other-{i}",
+            "v003_gate11_passed": i < 138,
+            "v003_strategy_eligible": i < 110,
+            "v003_entry_ready": ready,
+            "v003_setup_id": setup_ids[i] if ready else None,
+        })
+
+    res = reconcile_v003_prior_result(path, obs)
+    assert res["reconciles"] is True
+    assert res["candidate_setup_id_reconciliation"]["unique_setup_ids"] == 80
+    assert res["candidate_setup_id_reconciliation"]["duplicate_setup_ids"] == 1
+
+
+def test_set_digests_deterministic_and_tamper_detection():
+    """Section 35: Deterministic decision ID SHA-256 digests and tamper detection."""
+    obs = [
+        {"decision_id": "d1", "v003_gate11_passed": True, "v003_strategy_eligible": True, "v003_entry_ready": True, "v003_setup_id": "s1"},
+        {"decision_id": "d2", "v003_gate11_passed": True, "v003_strategy_eligible": True, "v003_entry_ready": False, "v003_fvg_evidence_source": "FINAL_SURFACE"},
+        {"decision_id": "d3", "v003_gate11_passed": True, "v003_strategy_eligible": False, "v003_entry_ready": False, "v003_fvg_evidence_source": "TEMPORAL_MEMORY"},
+        {"decision_id": "d4", "v003_gate11_passed": False, "v003_strategy_eligible": False, "v003_entry_ready": False, "v003_fvg_evidence_source": "NONE"},
+    ]
+
+    res = reconcile_v003_prior_result(None, obs)
+    digests = res["upstream_decision_id_digests"]
+
+    assert digests["gate11_entrants_sha256"] == hashlib.sha256(b"d1\nd2\nd3\nd4").hexdigest()
+    assert digests["gate11_passers_sha256"] == hashlib.sha256(b"d1\nd2\nd3").hexdigest()
+    assert digests["canonical_strategy_passers_sha256"] == hashlib.sha256(b"d1\nd2").hexdigest()
+    assert digests["candidate_ready_sha256"] == hashlib.sha256(b"d1").hexdigest()
+    assert digests["p_entry_reject_sha256"] == hashlib.sha256(b"d2").hexdigest()
+
+    # Changing one ID alters digest
+    obs_tampered = list(obs)
+    obs_tampered[0] = dict(obs[0])
+    obs_tampered[0]["decision_id"] = "d9"
+    res_t = reconcile_v003_prior_result(None, obs_tampered)
+    dig_t = res_t["upstream_decision_id_digests"]
+    assert dig_t["gate11_entrants_sha256"] != digests["gate11_entrants_sha256"]
+    assert dig_t["candidate_ready_sha256"] != digests["candidate_ready_sha256"]
+
+
+def test_historical_register_immutability():
+    """Section 36: Verify historical register content preserved unchanged from parent 32a41869."""
+    import zlib
+    blob_sha = "25321789d9bbdd5e73b6fe47f1335493dadde36f"
+    obj_path = d006.REPO_ROOT / ".git" / "objects" / blob_sha[:2] / blob_sha[2:]
+    if obj_path.exists():
+        raw_obj = zlib.decompress(obj_path.read_bytes())
+        _hdr, content_bytes = raw_obj.split(b"\x00", 1)
+        data_base = json.loads(content_bytes.decode("utf-8"))
+    else:
+        from tests.conftest import REAL_POPEN
+        import subprocess
+        proc = REAL_POPEN(
+            ["git", "show", "32a4186917b40fd60cd9a96197c9aae50dcb7782:baseline/phase8_v2_hypothesis_register.json"],
+            cwd=str(d006.REPO_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, _ = proc.communicate()
+        data_base = json.loads(stdout.decode("utf-8"))
+
+    reg_path = d006.REPO_ROOT / "baseline/phase8_v2_hypothesis_register.json"
+    data_curr = json.loads(reg_path.read_text(encoding="utf-8"))
+
+    # Top-level keys identical except result_records
+    for k in data_base:
+        if k != "result_records":
+            assert data_base[k] == data_curr[k], f"Mismatch in top-level key {k}"
+
+    # Historical result_records unchanged
+    assert len(data_curr["result_records"]) == len(data_base["result_records"]) + 2
+    for i, r in enumerate(data_base["result_records"]):
+        assert r == data_curr["result_records"][i], f"Mismatch in historical result_records[{i}]"
+
+    # Appended records
+    assert data_curr["result_records"][-2]["correction_id"] == "phase8-v2-D006-TC001"
+    assert data_curr["result_records"][-1]["correction_id"] == "phase8-v2-D006-TC002"
+
+    # Specifically verify original H008 and D006 unchanged
+    h008_base = [h for h in data_base["hypotheses"] if h["hypothesis_id"] == "phase8-v2-H008"][0]
+    h008_curr = [h for h in data_curr["hypotheses"] if h["hypothesis_id"] == "phase8-v2-H008"][0]
+    assert h008_base == h008_curr, "H008 registration changed!"
+
+    d006_base = [d for d in data_base["diagnostics"] if d["diagnostic_id"] == "phase8-v2-D006"][0]
+    d006_curr = [d for d in data_curr["diagnostics"] if d["diagnostic_id"] == "phase8-v2-D006"][0]
+    assert d006_base == d006_curr, "D006 diagnostic registration changed!"

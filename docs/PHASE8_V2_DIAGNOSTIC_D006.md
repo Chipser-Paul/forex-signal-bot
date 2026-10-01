@@ -173,3 +173,67 @@ Pre-empirical tooling correction addressing two defects identified during superv
 * **Zero Empirical Exposure**: The authorized Fold-01 snapshot store `fold-01-a8b406884ab3525a` is NOT accessed or opened during TC001. All test fixtures are synthetic.
 * **Tier B & V004 Sealed**: Folds 02–04, holdout, and 2025+ remain sealed. V004 is NOT created.
 * **Production Invariance**: Strategy modules and prior diagnostics remain byte-identical.
+## 25. TC002 — Exact Frozen V003 Replay Plumbing and Strict Identity Reconciliation
+
+Pre-empirical tooling and governance correction addressing four defects identified during supervisory review of TC001 commit `04dad93c5bedff1a4754a700e1f18d246b52aacc`, committed and pushed before any Fold-01 empirical execution:
+
+### 25.1 Defect C: Exact Frozen V003 Replay Loop Discipline
+
+* **Defect**: The D006 execution loop in `backtests/phase8_v2_diagnostic_d006.py` diverged from the canonical V003/D001 replay contract:
+  1. Passed `store.table` instead of `store` to `_snapshot_rows`.
+  2. Initialized state with `prior_state_record = None` rather than the canonical seed `StrategyState(event_time=datetime(2024, 1, 1, tzinfo=timezone.utc))`.
+  3. Mismatched `classify_snapshot` return contract by treating its result as a row dictionary.
+  4. Passed `row` instead of `snapshot` to `_reference_check_failed`.
+  5. Called `evaluate_orchestration_decision` with defective signature and unpacked 3 return values instead of canonical `(row, next_record)`.
+  6. Incorrectly invoked `assert_store_semantic_compatibility(store)` prior to the replay loop instead of verifying `snapshot` inside `gate11_entered`.
+  7. Did not pass `next_record` as `decision_result_record` to `observe_v003_decision`.
+  8. Failed to carry forward state sequentially via `state_record = next_record`.
+* **Correction**:
+  1. `run_d006` exactly mirrors `run_v003`: iterates `_snapshot_rows(store)`.
+  2. Seeds state using `record_from_state(StrategyState(event_time=datetime(2024, 1, 1, tzinfo=timezone.utc)), event_at=seed_time)`.
+  3. Handles `classify_snapshot(snapshot)` returning `None` for reducer path or `(name, reason)` for non-reducer buckets.
+  4. Calls `_reference_check_failed(snapshot)`.
+  5. Evaluates decision via `row, next_record = evaluate_orchestration_decision(snapshot, prior_state_record)`.
+  6. Restricts `assert_store_semantic_compatibility(snapshot)` to Gate-11 entrants only (`gate_11_confluence_score` present in `row.get("gate_results")`).
+  7. Passes `decision_result_record=next_record` to `observe_v003_decision`.
+  8. Advances causal state sequentially via `state_record = next_record`.
+  9. Structural pair reconstruction for primary rejection decomposition uses `_consumed_ids_from_record(prior_state_record)` and proves synthetic equivalence against observed V003 fields.
+
+### 25.2 Defect D: Feature Store Loader Verification
+
+* **Defect**: CLI entry point invoked `load_feature_store(args.store)` without `verify_rows=True`.
+* **Correction**:
+  1. Corrected to `load_feature_store(Path(args.store), verify_rows=True)`.
+  2. Enforces strict CLI sequence: 1) parse args; 2) `validate_authorized_store_path`; 3) `load_feature_store(Path(args.store), verify_rows=True)`; 4) `run_d006`; 5) `write_result`.
+
+### 25.3 Defect E: Strict Candidate Identity Reconciliation and Digests
+
+* **Defect**: Candidate setup ID reconciliation checked setup IDs only when non-null (`sid is not None`), permitting missing identities to escape validation, and omitted sealing the `P_ENTRY_REJECT` decision ID digest.
+* **Correction**:
+  1. Strict prior candidate validation: every record in sealed V003 R001 candidate list must possess non-null `decision_id` and non-null `setup_id`; candidate count must equal `candidate_ready`; duplicate decision IDs fail closed.
+  2. Strict observed candidate validation: every reproduced observation with `v003_entry_ready == True` must possess non-null `decision_id` and non-null `v003_setup_id`; missing either raises `D006BaselineReproductionError`.
+  3. Strict multiset reconciliation: deterministic `(decision_id, setup_id)` pairs between sealed V003 R001 and reproduced observations must match under exact multiset equality (`sorted(obs_pairs) == sorted(prior_pairs)`).
+  4. Independent validations: exact candidate decision ID set equality, exact candidate ready count, exact unique setup ID count, and exact duplicate setup ID occurrences.
+  5. Sealed decision ID digests: SHA-256 over newline-separated sorted decision IDs are computed and sealed for:
+     - `gate11_entrants_sha256` (`FIRST_IDENTITY_SEALED_BY_D006`)
+     - `gate11_passers_sha256` (`FIRST_IDENTITY_SEALED_BY_D006`)
+     - `canonical_strategy_passers_sha256` (`FIRST_IDENTITY_SEALED_BY_D006`)
+     - `candidate_ready_sha256`
+     - `p_entry_reject_sha256`
+  6. Primary set identity: `P_ENTRY_REJECT IDs == canonical_strategy_pass_set - candidate_ready_set` enforced as exact set equality.
+
+### 25.4 Defect F: Append-Only Governance Register Preservation
+
+* **Defect**: TC001 modified `phase8-v2-D006` in-place within the `diagnostics` array of `baseline/phase8_v2_hypothesis_register.json`, violating the immutable historical preservation requirement.
+* **Correction**:
+  1. Historical register content at `32a4186917b40fd60cd9a96197c9aae50dcb7782` is restored for all pre-existing records, including `phase8-v2-H008` and the original `phase8-v2-D006` registration.
+  2. TC001 and TC002 corrections are recorded strictly as separate append-only entries in `result_records`:
+     - `phase8-v2-D006-TC001`: recording removal of 50% cutoff, supervisory interpretation contract, and upstream count vs candidate identity baseline contract.
+     - `phase8-v2-D006-TC002`: recording replay loop parity, loader row verification, strict candidate identity multiset checks, P_ENTRY_REJECT digest, and governance register repair.
+
+### 25.5 Governance and Budget Invariance
+
+* **Budget**: Diagnostics remain `4 / 12`; strategy variants remain `3 / 8`; numeric trials remain `0 / 4`. Upward revision lock `ACTIVE`. TC002 consumes ZERO budget.
+* **Zero Empirical Exposure**: The authorized Fold-01 snapshot store `fold-01-a8b406884ab3525a` is NOT accessed or opened during TC002. All test fixtures are synthetic.
+* **Tier B & V004 Sealed**: Folds 02–04, holdout, and 2025+ remain sealed. V004 is NOT created.
+* **Production Invariance**: Strategy modules, state, entry models, and prior diagnostics remain byte-identical.
