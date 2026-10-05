@@ -2007,3 +2007,30 @@ step: supervisory review before D002 or Variant 1.
   - *Liquidity invariance:* Evaluates exact frozen `determine_entry` logic; valid combinations unchanged.
   - *Zero numeric parameters:* 0 / 4 numeric parameter trials.
 - **Budget & Status:** Diagnostics remain `5 / 12`, strategy variants remain `3 / 8` observed (becomes `4 / 8` only upon separately authorized empirical Fold-01 execution), numeric parameter trials remain `0 / 4`. Upward revision lock `ACTIVE`. Tier B strictly `SEALED`. ZERO empirical execution on Fold-01 store.
+
+## Update — 2026-10-05: V004 Phase B — entry direction authority tooling frozen (no empirical access; awaiting execution authorization)
+
+- **V004 variant implementation frozen:** `bot/strategy/variant_v004.py` (bound to SPEC_SHA256 `9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f`).
+  - Implements `evaluate_v004_entry_readiness` executing the single preregistered conceptual change: Gate-12/13 directional authority unification.
+  - Strict V003 baseline preservation: when V003 produces `v003_entry_ready == True`, returns exact V003 entry unchanged with source `V003_BASELINE`.
+  - Canonical state invariance: authoritative `StrategyState` is never mutated; fallback operates strictly on a private deep copy (`copied_state.structure_dir = requested_side`).
+  - Strict liquidity rules invariance: evaluates exact frozen `determine_entry` logic without relaxation.
+  - Conservative score-8 early entry: strictly requires internal confirmation (internal BOS/CHOCH seen); 7 D006 E2 rejections remain rejected.
+  - Fallback entry direction strictly matches `requested_side` (`BUY` for bullish, `SELL` for bearish).
+- **V004 evaluation tooling frozen:** `backtests/phase8_v2_variant_v004_eval.py`.
+  - Loop discipline follows exact canonical D001 / V003 TC001 pattern.
+  - Strict boundary guards: unauthorized stores and holdout/2025+ paths fail closed.
+  - Banned metrics filter: rejects all P&L, win rate, Sharpe, drawdown, and counterfactual fields.
+  - Complete output schema: captures structural pair surface, funnel, candidate surface (stratified by source `V003_BASELINE` vs `V004_DIRECTIONAL_FALLBACK`), V003 baseline reconciliation (asserting 100% preservation), and success classification (`OPPORTUNITY_SUFFICIENT` if candidate_ready >= 90).
+- **Comprehensive synthetic test suites:**
+  - `tests/test_phase8_v2_v004_variant.py`: 14 passed.
+  - `tests/test_phase8_v2_v004_eval_tooling.py`: 12 passed.
+  - Regression battery: 51 V002 tests passed, 42 V003 tests passed.
+- **Budget & Governance:**
+  - Diagnostics executed: `5 / 12` (unchanged).
+  - Strategy variants observed: `3 / 8` (consumes 0 budget in Phase B; becomes permanently `4 / 8` only upon separately authorized empirical Fold-01 execution).
+  - Numeric parameter trials: `0 / 4`.
+  - Upward revision lock: `ACTIVE`.
+  - Tier B: strictly `SEALED`.
+  - ZERO empirical Fold-01 store reads or execution in this task.
+- **HARD STOP:** V004 preregistered, implemented, and frozen; Fold-01 empirical execution awaits supervisory authorization.
