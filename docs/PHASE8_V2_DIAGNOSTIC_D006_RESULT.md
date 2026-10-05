@@ -299,3 +299,44 @@ Under the preregistered TC001/TC002 contract, because $E_5 = 0$ and primary coun
 * **Upward Revision Lock**: `ACTIVE`.
 * **Tier B**: `SEALED`.
 * **V004 Status**: `NOT_CREATED` — Tier B remains sealed. Supervisory H008/D006 interpretation required before any subsequent variant proposal.
+
+---
+
+## 19. D006-RC001 Supervisory Correction: Row-Level Contingency Table Alignment Labels
+
+* **Correction Record**: `phase8-v2-D006-RC001`
+* **Record Type**: `POST_RESULT_DOCUMENTATION_INTERPRETATION_CORRECTION`
+* **Correction Scope**: Human-readable contingency table narration in Section 12 only.
+* **Artifact & Tooling Invariance**:
+  * External result JSON (`phase8-v2-D006_result.json`, SHA-256 `f45b0ca907b30b6c77802155e786ef8b0c92b10f4ca714611c9a1134ded038f8`) is 100% UNCHANGED.
+  * D006 tooling (`backtests/phase8_v2_diagnostic_d006.py`) is 100% UNCHANGED.
+  * Empirical categories and counts are 100% UNCHANGED: E4 = 22, E2 = 7, E1 = 0, E3 = 0, E5 = 0; invalid alignment = 22, valid alignment = 7.
+  * No new empirical execution occurred; diagnostic budget remains `5 / 12`.
+  * The historical Section 12 table is retained above as originally published.
+
+### Frozen Entry-Model Validity Contract
+Under `strategies/smc_engine/entry_model.py::is_valid_liquidity_alignment`:
+* **Bullish Structure Direction**:
+  * `SELL + equal_lows` (external sweep), OR
+  * `BUY + internal_continuation` (internal continuation)
+* **Bearish Structure Direction**:
+  * `BUY + equal_highs` (external sweep), OR
+  * `SELL + internal_continuation` (internal continuation)
+
+### Exact Corrected Contingency Mapping
+
+| structure_dir | liquidity_side | liquidity_type | count | correct alignment | correct D006 outcome |
+|---|---|---|---:|---|---|
+| bullish | sell | internal_continuation | 14 | INVALID | E4 |
+| bearish | buy | internal_continuation | 7 | INVALID | E4 |
+| bearish | sell | internal_continuation | 6 | VALID | E2 |
+| bearish | sell | equal_lows | 1 | INVALID | E4 |
+| bullish | buy | internal_continuation | 1 | VALID | E2 |
+
+### Reconciled Totals
+* **Total INVALID Alignment**: `14 + 7 + 1 = 22` $\rightarrow$ Rejection Category **E4 (`LIQUIDITY_ALIGNMENT_MISMATCH`)**: **22**
+* **Total VALID Alignment**: `6 + 1 = 7` $\rightarrow$ Rejection Category **E2 (`READINESS_INCOMPLETE`)**: **7**
+* **Total Primary Population**: `22 + 7 = 29`
+
+### Why the Sealed Result Artifact Remains Valid
+The D006 execution tooling and classifier evaluated the exact frozen code `is_valid_liquidity_alignment` directly during the empirical run. The sealed external result JSON already correctly records `liquidity_alignment_counts.invalid = 22`, `liquidity_alignment_counts.valid = 7`, `E4 = 22`, and `E2 = 7`. The published narrative table in Section 12 inadvertently swapped the alignment status labels for the `bearish x buy` and `bearish x sell` internal continuation rows. D006-RC001 corrects that descriptive text error without touching the empirical artifact, tooling, or budget.

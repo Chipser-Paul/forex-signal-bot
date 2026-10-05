@@ -640,6 +640,37 @@
       "data_permitted": "TIER_A_FOLD01 - the existing authorized Fold-01 snapshot store fold-01-a8b406884ab3525a during later, separately authorized execution; all reconstructed state must be causally available at decision_at; no Fold 02-04, holdout, 2025+ or Tier B.",
       "metrics_permitted": "Entry-stage rejection-category distributions, ready_for_entry subpredicate distributions and co-occurrences, early-entry predicate decomposition, structure/liquidity distribution and contingency surfaces, state-expiry descriptive distribution, FVG-evidence source stratification (FINAL_SURFACE vs TEMPORAL_MEMORY), protected strategy-reason context distribution, and the sealed V003 R001 provenance reconciliation. No profitability metric, no counterfactual candidate count, no numeric parameter trial.",
       "implementation_required": false,
+      "status": "RESOLVED",
+      "result": {
+        "disposition_record_id": "phase8-v2-H008-R001",
+        "disposition": "SUPPORTED_BY_D006",
+        "empirical_evidence": "phase8-v2-D006-R001",
+        "summary": "Supported by D006 Fold-01 empirical observation: zero unmapped failures (E5 = 0), zero state expirations (E1 = 0), and 100% concentration in frozen state-machine predicates (E4 LIQUIDITY_ALIGNMENT_MISMATCH = 22/29, E2 READINESS_INCOMPLETE = 7/29). Rejections reflect internal directional authority divergence between Gate-11 input liquidity detection and Gate-12/13 entry routing rather than diffuse context absence."
+      },
+      "disposition": "SUPPORTED_BY_D006"
+    },
+    {
+      "hypothesis_id": "phase8-v2-H009",
+      "registered_utc": "2026-10-05T12:00:00Z",
+      "formulation_type": "POST_EVIDENCE_FORMULATION",
+      "post_evidence_disclosure": "Explicit disclosure: Formulated following supervisory review of empirical diagnostic phase8-v2-D006-R001 and disposition phase8-v2-H008-R001 (SUPPORTED_BY_D006).",
+      "title": "Entry Direction Authority Coherence",
+      "statement": "When a setup satisfies V003 structural confluence (8/8) and passes canonical strategy protections, evaluating Gate-12/13 entry execution and liquidity alignment under the authoritative requested trade direction (htf_bias) rather than a diverging persisted state structure direction recovers valid candidate setups without relaxing frozen liquidity rules or mutating canonical state.",
+      "economic_rationale": "Gate 11 identifies a valid institutional setup relative to the higher-timeframe bias (htf_bias). In the current pipeline, detect_liquidity_sweep detects liquidity relative to htf_bias, while the entry engine validates liquidity against state.structure_dir. When these diverge, valid continuation setups are rejected due to an internal authority conflict rather than invalid market structure. Unifying directional authority at Gate 12/13 aligns the entry engine with the structural bias that qualified the setup.",
+      "hypothesis_class": "HYPOTHESIS_NOT_CONCLUSION",
+      "implementation_boundary": "Preregistered in Phase A and implemented/frozen in Phase B (phase6-development-v2-V004). Must preserve all 81 V003 candidates unchanged. Zero relaxation of liquidity alignment rules. Private deep copy of state only; canonical strategy state is never mutated. No numeric parameters (0 / 4). Zero empirical execution authorized during preregistration or tooling freeze.",
+      "code_components": [
+        "bot/strategy/variant_v004.py",
+        "backtests/phase8_v2_variant_v004_eval.py",
+        "strategies/smc_engine/entry_model.py (determine_entry called on deep-copied state with structure_dir = requested_side)",
+        "strategies/smc_engine/strategy_state.py"
+      ],
+      "expected_qualitative_effect": "Recovers entry readiness for setups failing solely due to directional authority mismatch between htf_bias and state.structure_dir, while preserving all existing V003 candidate setups, conservative score-8 early-entry requirements, and frozen liquidity rules.",
+      "expected_frequency_effect": "Increases candidate-ready decisions above the V003 baseline of 81 toward the Tier-A adequacy target of >= 90. No exact count is predicted or encoded.",
+      "potential_failure_mode": "If directional divergence is not the sole barrier, or if recovering entries leads to invalid risk geometry or downstream execution failures, the hypothesis will fail during sequential validation.",
+      "data_permitted": "TIER_A_FOLD01 - fold-01-a8b406884ab3525a for subsequent authorized empirical evaluation; Folds 02-04, holdout, and 2025+ data remain strictly sealed.",
+      "metrics_permitted": "Structural funnel metrics, candidate-ready count, long/short distribution, setup ID uniqueness, candidate source attribution (V003_BASELINE vs V004_DIRECTIONAL_FALLBACK). Zero profitability metrics.",
+      "implementation_required": true,
       "status": "REGISTERED",
       "result": null,
       "disposition": null
@@ -1307,6 +1338,95 @@
       "interpretation_rule": "possible outcomes: OPPORTUNITY_SUFFICIENT / OPPORTUNITY_INSUFFICIENT / NO_CANDIDATES / IMPLEMENTATION_FAILED; candidate_ready >= 90 means the variant merits continued research only and establishes neither sample sufficiency nor profitability; no ranking above 90; no optimization toward 90; selection requires supervisory review",
       "budget_consumption_upon_first_empirical_result": "strategy variants becomes permanently 3 / 8 observed at the instant first Fold-01 V003 strategy behavior is empirically observed",
       "budget_lock_triggered_upon_first_empirical_result": "UPWARD STRATEGY-VARIANT / PARAMETER-TRIAL BUDGET REVISION PROHIBITED",
+      "numeric_parameter_trials_consumed": 0
+    },
+    {
+      "variant_id": "phase6-development-v2-V004",
+      "title": "Unified Requested-Side Entry Direction Authority",
+      "status": "REGISTERED_NOT_OBSERVED",
+      "registered_utc": "2026-10-05T12:00:00Z",
+      "budget_classification": "STRATEGY_VARIANT",
+      "specification_document": "docs/PHASE8_V2_VARIANT_V004.md",
+      "specification_sha256": "9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f",
+      "specification_sha256_note": "SHA-256 of the frozen spec document at preregistration",
+      "linked_hypothesis": "phase8-v2-H009",
+      "supporting_evidence": [
+        "phase8-v2-D006-R001 SUPPORTED_BY_D006",
+        "phase8-v2-H008-R001 SUPPORTED_BY_D006",
+        "phase6-development-v2-V003-R001 OPPORTUNITY_INSUFFICIENT"
+      ],
+      "predecessor_variant": "phase6-development-v2-V003",
+      "one_concept_rule": "Gate-12/13 directional authority unification: For setups passing V003 Gate-11 confluence (8/8) and canonical strategy protections, route entry and validate liquidity alignment against requested trade side (htf_bias) via deep-copied state without mutating authoritative state or relaxing frozen liquidity rules.",
+      "v003_baseline_preservation": "All 81 candidate-ready decisions from V003 remain candidates under V004 with exact geometry and setup ID preserved.",
+      "state_invariance_rule": "Authoritative strategy state is never mutated; fallback entry uses a private deep copy with copied_state.structure_dir = requested_side.",
+      "liquidity_rules_invariance": "Evaluates exact frozen determine_entry logic; valid combinations remain strictly (bullish: sell+equal_lows or buy+internal_continuation; bearish: buy+equal_highs or sell+internal_continuation).",
+      "readiness_invariance": "Score-8 conservative early entry strictly requires internal confirmation (internal_bos_seen or choch_seen); 7 D006 E2 rejections remain rejected under V004.",
+      "fallback_entry_trade_direction": "Entry signal direction strictly matches requested_side (BUY for bullish, SELL for bearish).",
+      "no_numeric_parameters": "Zero numerical thresholds or timer parameters introduced; numeric parameter trials remain 0 / 4.",
+      "confluence_architecture_preserved": {
+        "weights": {
+          "HTF bias alignment": 2,
+          "premium/discount": 1,
+          "OB structure": 2,
+          "FVG structural relationship": 1,
+          "liquidity sweep": 2
+        },
+        "maximum": 8,
+        "threshold": "8/8 unchanged"
+      },
+      "protected_unchanged": [
+        "causal candle availability",
+        "active-bar exclusion",
+        "HTF bias",
+        "liquidity sweep",
+        "displacement detector",
+        "FVG detector thresholds",
+        "temporal FVG evidence memory",
+        "internal structure Gate 10",
+        "premium/discount",
+        "session",
+        "news",
+        "DXY authority",
+        "regime",
+        "risk engine",
+        "broker safeguards",
+        "entry idempotency",
+        "consumption invariants",
+        "execution lifecycle",
+        "symbol allowlist",
+        "entry_model.determine_entry",
+        "strategy_state fields"
+      ],
+      "success_classification_preregistered": {
+        "OPPORTUNITY_SUFFICIENT": "candidate_ready >= 90 \u2014 merits continued research only; establishes neither sample sufficiency nor profitability",
+        "OPPORTUNITY_INSUFFICIENT": "0 < candidate_ready < 90",
+        "NO_CANDIDATES": "candidate_ready == 0",
+        "IMPLEMENTATION_FAILED": "only if V004 semantics fail contract verification"
+      },
+      "no_candidate_target_encoding": "No specific candidate count is predicted or encoded as an oracle; test suites use synthetic fixtures only; empirical result must derive naturally during authorized execution.",
+      "two_phase_discipline": "Phase A preregistration committed and pushed before implementation; Phase B implementation and tooling frozen before empirical execution; zero empirical execution in this task.",
+      "fold_boundary": "[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)",
+      "target_domain": "TIER_A_FOLD01",
+      "reserved_evidence": "Folds 02-04, 2025+ data, and holdout remain strictly sealed.",
+      "allowed_metric_surface": "Structural metrics only: scheduled decisions, accounting buckets, Gate 8-13 funnel, candidate_ready count, candidate rate, candidate setup IDs, long/short distribution, weekly/time distribution, session distribution, V003 baseline candidates count (81), V004 fallback candidates count, total V004 candidate count; zero performance/profitability metrics.",
+      "prohibitions": [
+        "P&L",
+        "wins/losses",
+        "profit factor",
+        "expectancy",
+        "drawdown",
+        "Sharpe",
+        "trade-return distribution",
+        "account balance/equity outcome",
+        "Fold 02-04 access",
+        "2025+ data access",
+        "holdout access",
+        "Tier B access before candidate_ready >= 90 on Fold 01",
+        "candidate-count optimization toward 90",
+        "DXY weakening",
+        "numeric parameter trials"
+      ],
+      "budget_consumption_upon_first_empirical_result": "strategy variants becomes permanently 4 / 8 observed at the instant first Fold-01 V004 strategy behavior is empirically observed",
       "numeric_parameter_trials_consumed": 0
     }
   ],
@@ -3497,6 +3617,72 @@
       },
       "v004_status": "NOT_CREATED \u2014 Tier B remains sealed \u2014 Supervisory H008/D006 interpretation required before any subsequent variant proposal",
       "registered_utc": "2026-10-01T19:00:00Z"
+    },
+    {
+      "correction_id": "phase8-v2-D006-RC001",
+      "record_type": "POST_RESULT_DOCUMENTATION_INTERPRETATION_CORRECTION",
+      "diagnostic_id": "phase8-v2-D006",
+      "hypothesis_id": "phase8-v2-H008",
+      "target_result_record": "phase8-v2-D006-R001",
+      "target_document": "docs/PHASE8_V2_DIAGNOSTIC_D006_RESULT.md",
+      "classification": "GOVERNANCE_RECORD \u2014 NOT A RESULT RECORD \u2014 NO EMPIRICAL RETEST",
+      "created_utc": "2026-10-05T12:00:00Z",
+      "defect_class": "POST_RESULT_NARRATIVE_TABLE_ALIGNMENT_LABEL_INVERSION",
+      "correction_scope": "Section 12 human-readable contingency table narration in docs/PHASE8_V2_DIAGNOSTIC_D006_RESULT.md only. Section 19 appended to document correction.",
+      "exact_defect": "In docs/PHASE8_V2_DIAGNOSTIC_D006_RESULT.md Section 12, narrative table rows for bearish x buy and bearish x sell internal_continuation had their alignment status labels inverted in prose (bearish x buy labeled VALID, bearish x sell labeled INVALID). Under frozen determine_entry logic, bearish x buy is INVALID (E4) and bearish x sell is VALID (E2).",
+      "tooling_invariance": "Tooling backtests/phase8_v2_diagnostic_d006.py was NOT modified; the execution code correctly called is_valid_liquidity_alignment and classified E4=22 and E2=7 directly.",
+      "artifact_invariance": {
+        "external_artifact_path": "phase8_data::/v2_diagnostics/phase8-v2-D006/fold01/phase8-v2-D006_result.json",
+        "external_artifact_sha256": "f45b0ca907b30b6c77802155e786ef8b0c92b10f4ca714611c9a1134ded038f8",
+        "external_artifact_bytes": 39018,
+        "artifact_unchanged": true,
+        "empirical_execution_unchanged": true
+      },
+      "counts_verified": {
+        "E1_STATE_EXPIRED": 0,
+        "E2_READINESS_INCOMPLETE": 7,
+        "E3_STRUCTURE_DIRECTION_UNRESOLVED": 0,
+        "E4_LIQUIDITY_ALIGNMENT_MISMATCH": 22,
+        "E5_UNMAPPED_ENTRY_REJECTION": 0,
+        "total_primary": 29,
+        "invalid_alignment_count": 22,
+        "valid_alignment_count": 7
+      },
+      "additional_diagnostic_budget_consumed": 0,
+      "additional_strategy_variant_budget_consumed": 0,
+      "additional_numeric_parameter_trials_consumed": 0,
+      "budget_after_correction": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_revision_lock": "ACTIVE",
+        "tier_b": "SEALED"
+      }
+    },
+    {
+      "result_id": "phase8-v2-H008-R001",
+      "record_type": "HYPOTHESIS_DISPOSITION_RECORD",
+      "hypothesis_id": "phase8-v2-H008",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_EVIDENCE_DISPOSITION \u2014 D006 R001 \u2014 NO NEW EMPIRICAL EXECUTION",
+      "disposition_timestamp_utc": "2026-10-05T12:00:00Z",
+      "disposition": "SUPPORTED_BY_D006",
+      "basis_record": "phase8-v2-D006-R001",
+      "basis_artifact_sha256": "f45b0ca907b30b6c77802155e786ef8b0c92b10f4ca714611c9a1134ded038f8",
+      "correction_record": "phase8-v2-D006-RC001",
+      "supervisory_disposition_basis": "Empirical observation from D006 R001 on Fold 01 demonstrates that post-confluence entry-stage candidate attrition is heavily concentrated and state-machine coherent: (1) Zero unmapped rejections (E5 = 0); (2) Zero state expirations (E1 = 0); (3) Zero unresolved structure directions (E3 = 0); (4) 100% of rejections concentrate in frozen state-machine predicates (E4 LIQUIDITY_ALIGNMENT_MISMATCH = 22/29 [75.86%] and E2 READINESS_INCOMPLETE = 7/29 [24.14%]); (5) Architectural analysis confirms that the E4 rejections stem from an internal authority divergence between Gate-11 input liquidity detection (conditioned on htf_bias) and Gate-12/13 entry model routing and alignment (conditioned on state.structure_dir). Candidate attrition is therefore NOT diffuse absence of market context. This fully satisfies the qualitative support criteria preregistered for H008.",
+      "scientific_outcome": "H008 is RESOLVED as SUPPORTED_BY_D006. Authorizes the preregistration and development of strategy variant V004 (Unified Requested-Side Entry Direction Authority) under linked hypothesis H009.",
+      "no_new_empirical_execution": true,
+      "budget_consumed": 0,
+      "budget_after_disposition": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "3 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_revision_lock": "ACTIVE",
+        "tier_b": "SEALED"
+      }
     }
   ],
   "provenance_corrections": [
