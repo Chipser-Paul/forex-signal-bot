@@ -10,6 +10,10 @@ Governing variant boundary (``docs/PHASE8_V2_VARIANT_V004.md``; register
   strategy protections.
 * Strict V003 baseline preservation: every V003 candidate decision is guaranteed
   to remain a candidate decision under V004 with exact geometry and setup ID preserved.
+* Sealed V003 baseline reconciliation: reconciles against external sealed V003 R001
+  artifact (SHA-256 50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8,
+  45,221 bytes) across upstream counts, candidate pair multiset equality, and exact
+  deterministic canonical JSON entry equality.
 * Canonical state invariance: authoritative strategy state is never mutated;
   fallback evaluation operates strictly on a private deep copy.
 * Strict liquidity rule invariance: evaluates the exact frozen determine_entry logic.
@@ -23,6 +27,7 @@ from __future__ import annotations
 import argparse
 import copy
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path, PureWindowsPath
 import re
@@ -66,6 +71,7 @@ from bot.strategy.variant_v003 import (
     V003_OB_LABEL,
 )
 from bot.strategy.variant_v004 import (
+    SPEC_PHASE_A_SHA256,
     SPEC_SHA256 as V004_SPEC_SHA256,
     V004_ID,
     H009_ID,
@@ -96,6 +102,14 @@ AUTHORIZED_FOLD01_STORE_BASENAME = "fold-01-a8b406884ab3525a"
 FOLD01_START_MS = int(datetime.fromisoformat(FOLD01_START).timestamp() * 1000)
 FOLD01_END_MS = int(datetime.fromisoformat(FOLD01_END).timestamp() * 1000)
 
+SEALED_V003_RESULT_SHA256 = "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8"
+SEALED_V003_RESULT_BYTES = 45221
+SEALED_V003_ENTRANTS_TARGET = 526
+SEALED_V003_GATE11_PASS_TARGET = 138
+SEALED_V003_CANONICAL_STRATEGY_PASS_TARGET = 110
+SEALED_V003_CANDIDATE_READY_TARGET = 81
+STATUS_SEALED_V003_RECONCILED = "SEALED_V003_BASELINE_RECONCILED_EXACT_CANDIDATES_AND_ENTRIES"
+
 _PROVENANCE = {
     "research_identity": "phase6-development-v2",
     "variant_id": V004_ID,
@@ -124,6 +138,14 @@ class BoundaryError(V004EvalError):
 
 class StoreCompatibilityError(V004EvalError):
     """Store is not semantically sufficient for V004 causal reconstruction."""
+
+
+class V004BaselineReproductionError(V004EvalError):
+    """Raised when sealed V003 baseline reproduction fails."""
+
+
+class V004ResultAlreadyExistsError(V004EvalError):
+    """Raised when target output result or temp file already exists."""
 
 
 def validate_authorized_store_path(path: str | Path) -> None:
@@ -158,11 +180,239 @@ def validate_authorized_store_path(path: str | Path) -> None:
             except ValueError:
                 pass
     basename = pure.name
-    if _FOLD_STORE_PART.match(basename) and basename != AUTHORIZED_FOLD01_STORE_BASENAME:
+    if basename != AUTHORIZED_FOLD01_STORE_BASENAME:
         raise BoundaryError(
-            f"unauthorized fold store refused: {basename!r}; only "
+            f"unauthorized store basename refused: {basename!r}; only "
             f"{AUTHORIZED_FOLD01_STORE_BASENAME!r} is permitted for V004"
         )
+
+
+def load_and_verify_sealed_v003_result(
+    path: str | Path,
+    *,
+    expected_sha256: str | None = None,
+    expected_bytes: int | None = None,
+) -> tuple[dict[str, Any], int, str]:
+    """Load and cryptographically verify the external sealed V003 R001 result artifact.
+
+    Returns (parsed_doc, byte_count, sha256_hex).
+    Fails closed on missing file, byte count mismatch, SHA mismatch, or malformed JSON.
+    """
+    target_path = Path(path).resolve()
+    if not target_path.is_file():
+        raise V004BaselineReproductionError(
+            f"sealed V003 result artifact not found at {str(target_path)!r}"
+        )
+    raw_bytes = target_path.read_bytes()
+    byte_count = len(raw_bytes)
+    actual_sha = hashlib.sha256(raw_bytes).hexdigest()
+
+    req_bytes = expected_bytes if expected_bytes is not None else SEALED_V003_RESULT_BYTES
+    if byte_count != req_bytes:
+        raise V004BaselineReproductionError(
+            f"sealed V003 result byte count mismatch: expected {req_bytes}, got {byte_count}"
+        )
+
+    req_sha = expected_sha256 if expected_sha256 is not None else SEALED_V003_RESULT_SHA256
+    if actual_sha != req_sha:
+        raise V004BaselineReproductionError(
+            f"sealed V003 result SHA-256 mismatch: expected {req_sha!r}, got {actual_sha!r}"
+        )
+
+    try:
+        parsed = json.loads(raw_bytes.decode("utf-8"))
+    except Exception as error:
+        raise V004BaselineReproductionError(
+            f"sealed V003 result artifact is malformed JSON: {error}"
+        ) from error
+
+    return parsed, byte_count, actual_sha
+
+
+def reconcile_sealed_v003_baseline(
+    sealed_v003_doc: Mapping[str, Any],
+    observations: Iterable[Mapping[str, Any]],
+    *,
+    sealed_artifact_path: str = "",
+    sealed_sha256: str = "",
+    sealed_byte_count: int = 0,
+) -> dict[str, Any]:
+    """Reconcile reproduced V003 baseline inside V004 against external sealed V003 R001 evidence.
+
+    Requires:
+    1. Upstream count equality (entrants: 526, gate11_pass: 138, canonical_strategy_pass: 110, candidate_ready: 81).
+    2. Exact candidate identity multiset equality: (decision_id, setup_id).
+    3. Exact canonicalized JSON string equality of every candidate entry object:
+       json.dumps(entry, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+    Raises V004BaselineReproductionError on any mismatch.
+    """
+    obs_list = list(observations)
+
+    # 1. Sealed V003 upstream counts
+    sealed_funnel = sealed_v003_doc.get("V003_variant_funnel") or {}
+    sealed_g11 = sealed_funnel.get("gate_11_v003") or {}
+    s_entrants = sealed_g11.get("entered")
+    s_g11_pass = sealed_g11.get("passed")
+    s_strat_pass = (sealed_funnel.get("canonical_strategy_v003") or {}).get("passed")
+    sealed_cand_surface = sealed_v003_doc.get("candidate_surface") or {}
+    s_cand_ready = sealed_cand_surface.get("candidate_ready")
+
+    if (
+        s_entrants != SEALED_V003_ENTRANTS_TARGET
+        or s_g11_pass != SEALED_V003_GATE11_PASS_TARGET
+        or s_strat_pass != SEALED_V003_CANONICAL_STRATEGY_PASS_TARGET
+        or s_cand_ready != SEALED_V003_CANDIDATE_READY_TARGET
+    ):
+        raise V004BaselineReproductionError(
+            f"Sealed V003 upstream counts invalid: expected "
+            f"{SEALED_V003_ENTRANTS_TARGET}/{SEALED_V003_GATE11_PASS_TARGET}/"
+            f"{SEALED_V003_CANONICAL_STRATEGY_PASS_TARGET}/{SEALED_V003_CANDIDATE_READY_TARGET}, "
+            f"got {s_entrants}/{s_g11_pass}/{s_strat_pass}/{s_cand_ready}"
+        )
+
+    # 2. Extract sealed candidates and entries
+    sealed_candidates = sealed_cand_surface.get("candidates") or []
+    if len(sealed_candidates) != SEALED_V003_CANDIDATE_READY_TARGET:
+        raise V004BaselineReproductionError(
+            f"Sealed V003 candidate count mismatch: expected {SEALED_V003_CANDIDATE_READY_TARGET}, "
+            f"got {len(sealed_candidates)}"
+        )
+
+    sealed_pairs: list[tuple[str, str]] = []
+    sealed_setup_ids: set[str] = set()
+    sealed_entries_map: dict[tuple[str, str], str] = {}
+    for c in sealed_candidates:
+        d_id = str(c.get("decision_id") or "")
+        s_id = str(c.get("setup_id") or "")
+        entry = c.get("entry")
+        if not d_id or not s_id:
+            raise V004BaselineReproductionError(
+                f"Sealed candidate missing decision_id or setup_id: {c}"
+            )
+        if s_id in sealed_setup_ids:
+            raise V004BaselineReproductionError(
+                f"Duplicate setup_id {s_id!r} in sealed V003 candidate surface"
+            )
+        sealed_setup_ids.add(s_id)
+        pair_key = (d_id, s_id)
+        sealed_pairs.append(pair_key)
+        sealed_entries_map[pair_key] = json.dumps(
+            entry, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+
+    # 3. Reproduced V003 counts from observations
+    rep_entrants = len(obs_list)
+    rep_g11_pass = sum(1 for o in obs_list if o.get("v004_gate11_passed"))
+    rep_strat_pass = sum(1 for o in obs_list if o.get("v004_strategy_eligible"))
+    rep_v003_candidates = [o for o in obs_list if o.get("v003_entry_ready")]
+    rep_cand_ready = len(rep_v003_candidates)
+
+    if (
+        rep_entrants != s_entrants
+        or rep_g11_pass != s_g11_pass
+        or rep_strat_pass != s_strat_pass
+        or rep_cand_ready != s_cand_ready
+    ):
+        raise V004BaselineReproductionError(
+            f"Reproduced V003 counts mismatch against sealed baseline: "
+            f"entrants {rep_entrants} vs {s_entrants}, "
+            f"gate11 {rep_g11_pass} vs {s_g11_pass}, "
+            f"strat {rep_strat_pass} vs {s_strat_pass}, "
+            f"candidates {rep_cand_ready} vs {s_cand_ready}"
+        )
+
+    # 4. Reproduced candidate pairs and entries
+    rep_pairs: list[tuple[str, str]] = []
+    rep_setup_ids: set[str] = set()
+    rep_entries_map: dict[tuple[str, str], str] = {}
+    for o in rep_v003_candidates:
+        d_id = str(o.get("decision_id") or "")
+        s_id = str(o.get("v003_setup_id") or "")
+        entry = o.get("v003_entry")
+        if not d_id or not s_id:
+            raise V004BaselineReproductionError(
+                f"Reproduced candidate missing decision_id or setup_id: {o}"
+            )
+        if s_id in rep_setup_ids:
+            raise V004BaselineReproductionError(
+                f"Duplicate setup_id {s_id!r} in reproduced V003 baseline"
+            )
+        rep_setup_ids.add(s_id)
+        pair_key = (d_id, s_id)
+        rep_pairs.append(pair_key)
+        rep_entries_map[pair_key] = json.dumps(
+            entry, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+
+    # 5. Exact multiset equality
+    if sorted(rep_pairs) != sorted(sealed_pairs):
+        missing_in_rep = set(sealed_pairs) - set(rep_pairs)
+        extra_in_rep = set(rep_pairs) - set(sealed_pairs)
+        raise V004BaselineReproductionError(
+            f"Reproduced V003 candidate multiset mismatch against sealed V003: "
+            f"missing in reproduced: {missing_in_rep}, extra in reproduced: {extra_in_rep}"
+        )
+
+    # 6. Exact entry-object deterministic JSON equality
+    for pair_key in sealed_pairs:
+        sealed_entry_json = sealed_entries_map[pair_key]
+        rep_entry_json = rep_entries_map.get(pair_key)
+        if sealed_entry_json != rep_entry_json:
+            raise V004BaselineReproductionError(
+                f"V004 baseline entry-object mismatch for candidate {pair_key}: "
+                f"reproduced entry does not match sealed V003 entry JSON"
+            )
+
+    return {
+        "status": STATUS_SEALED_V003_RECONCILED,
+        "sealed_v003_artifact": {
+            "path": str(sealed_artifact_path),
+            "sha256": sealed_sha256,
+            "byte_count": sealed_byte_count,
+            "reconciled": True,
+        },
+        "upstream_count_reconciliation": {
+            "gate11_entrants": {
+                "sealed": s_entrants,
+                "reproduced": rep_entrants,
+                "reconciled": rep_entrants == s_entrants,
+            },
+            "gate11_passed": {
+                "sealed": s_g11_pass,
+                "reproduced": rep_g11_pass,
+                "reconciled": rep_g11_pass == s_g11_pass,
+            },
+            "canonical_strategy_passed": {
+                "sealed": s_strat_pass,
+                "reproduced": rep_strat_pass,
+                "reconciled": rep_strat_pass == s_strat_pass,
+            },
+            "candidate_ready": {
+                "sealed": s_cand_ready,
+                "reproduced": rep_cand_ready,
+                "reconciled": rep_cand_ready == s_cand_ready,
+            },
+            "all_counts_reconciled": True,
+        },
+        "candidate_identity_reconciliation": {
+            "sealed_candidate_count": len(sealed_pairs),
+            "reproduced_candidate_count": len(rep_pairs),
+            "unique_setup_ids": len(rep_setup_ids),
+            "duplicate_occurrences": len(rep_pairs) - len(rep_setup_ids),
+            "multiset_identity_equal": True,
+        },
+        "candidate_entry_object_reconciliation": {
+            "canonical_entries_evaluated": len(rep_pairs),
+            "canonical_entries_matched": len(rep_pairs),
+            "all_entry_objects_identical": True,
+        },
+        "v003_baseline_candidate_count": rep_cand_ready,
+        "all_v003_candidates_preserved": True,
+        "v003_fallback_recovery_count": sum(
+            1 for o in obs_list if o.get("v004_entry_source") == V004_SOURCE_DIRECTIONAL_FALLBACK
+        ),
+    }
 
 
 def provenance(
@@ -400,7 +650,14 @@ def observe_v004_decision(
     }
 
 
-def aggregate_v004(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def aggregate_v004(
+    observations: Iterable[Mapping[str, Any]],
+    *,
+    sealed_v003_doc: Mapping[str, Any] | None = None,
+    sealed_artifact_path: str = "",
+    sealed_sha256: str = "",
+    sealed_byte_count: int = 0,
+) -> dict[str, Any]:
     """Aggregate V004 observations across all Gate-11 entrants."""
     observations = list(observations)
 
@@ -455,6 +712,12 @@ def aggregate_v004(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
                     f"V003 baseline candidate {item['decision_id']} has source "
                     f"{item['v004_entry_source']!r}, expected {V004_SOURCE_V003_BASELINE!r}"
                 )
+            v004_can = json.dumps(item["v004_entry"], sort_keys=True, separators=(",", ":"), allow_nan=False)
+            v003_can = json.dumps(item["v003_entry"], sort_keys=True, separators=(",", ":"), allow_nan=False)
+            if v004_can != v003_can:
+                raise V004EvalError(
+                    f"V004 entry modified V003 baseline entry for candidate {item['decision_id']}"
+                )
 
         if item["v004_entry_ready"]:
             v004_entry_pass += 1
@@ -500,6 +763,21 @@ def aggregate_v004(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         classification = "OPPORTUNITY_INSUFFICIENT"
     else:
         classification = "NO_CANDIDATES"
+
+    if sealed_v003_doc is not None:
+        baseline_rec = reconcile_sealed_v003_baseline(
+            sealed_v003_doc,
+            observations,
+            sealed_artifact_path=sealed_artifact_path,
+            sealed_sha256=sealed_sha256,
+            sealed_byte_count=sealed_byte_count,
+        )
+    else:
+        baseline_rec = {
+            "v003_baseline_candidate_count": v003_entry_pass,
+            "all_v003_candidates_preserved": bool(v003_entry_pass == v003_source_count),
+            "v003_fallback_recovery_count": fallback_source_count,
+        }
 
     return {
         "V004_structural_pair_surface": {
@@ -562,11 +840,7 @@ def aggregate_v004(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             },
             "candidates": candidates,
         },
-        "v003_baseline_reconciliation": {
-            "v003_baseline_candidate_count": v003_entry_pass,
-            "all_v003_candidates_preserved": bool(v003_entry_pass == v003_source_count),
-            "v003_fallback_recovery_count": fallback_source_count,
-        },
+        "v003_baseline_reconciliation": baseline_rec,
         "success_classification": {
             "classification": classification,
             "candidate_ready": candidate_ready,
@@ -641,6 +915,9 @@ def run_v004(
     *,
     implementation_commit: str,
     tooling_commit: str,
+    v003_result_path: str | Path,
+    expected_v003_sha256: str | None = None,
+    expected_v003_bytes: int | None = None,
     blob_source=None,
 ) -> tuple[dict[str, Any], bytes]:
     """Execute preregistered V004 measurement over a Fold-01 feature store.
@@ -653,6 +930,13 @@ def run_v004(
     from bot.strategy.setup_state import (  # noqa: PLC0415
         StrategyState,
         record_from_state,
+    )
+
+    # 1. Verify sealed V003 result artifact
+    sealed_doc, sealed_len, sealed_sha = load_and_verify_sealed_v003_result(
+        v003_result_path,
+        expected_sha256=expected_v003_sha256,
+        expected_bytes=expected_v003_bytes,
     )
 
     identity = store.identity
@@ -707,7 +991,13 @@ def run_v004(
         evaluation_error=buckets["evaluation_error"],
     )
     funnel = _gate_funnel(rows)
-    aggregated = aggregate_v004(v004_observations)
+    aggregated = aggregate_v004(
+        v004_observations,
+        sealed_v003_doc=sealed_doc,
+        sealed_artifact_path=str(v003_result_path),
+        sealed_sha256=sealed_sha,
+        sealed_byte_count=sealed_len,
+    )
 
     doc: dict[str, Any] = {
         "variant_id": V004_ID,
@@ -765,7 +1055,7 @@ def run_v004(
 
 def main(argv: list[str] | None = None) -> int:
     """CLI driver for V004 measurement over an authorized feature store."""
-    from bot.market_data import load_feature_store  # noqa: PLC0415
+    from bot.validation.market_feature_store import load_feature_store  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(
         description="Execute V004 entry direction authority measurement on a feature store."
@@ -779,6 +1069,11 @@ def main(argv: list[str] | None = None) -> int:
         "--output",
         required=True,
         help="Path where the sealed V004 result JSON should be written.",
+    )
+    parser.add_argument(
+        "--v003-result",
+        required=True,
+        help="Path to the sealed V003 R001 result JSON artifact.",
     )
     parser.add_argument(
         "--implementation-commit",
@@ -798,26 +1093,43 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    store_path = Path(args.store).resolve()
+    # 1. Output freshness check: refuse to overwrite existing target or stale temp file
     output_path = Path(args.output).resolve()
+    temp_path = output_path.with_suffix(".tmp")
+    if output_path.exists():
+        raise V004ResultAlreadyExistsError(
+            f"Output target already exists at {str(output_path)!r}; overwrite prohibited."
+        )
+    if temp_path.exists():
+        raise V004ResultAlreadyExistsError(
+            f"Stale temporary target already exists at {str(temp_path)!r}; overwrite prohibited."
+        )
 
-    # Fail closed on unauthorized store paths or names
+    # 2. Strict store path validation
+    store_path = Path(args.store).resolve()
     validate_authorized_store_path(store_path)
 
+    # 3. Sealed V003 result artifact verification (verifies file exists, length, SHA-256, JSON decode)
+    v003_result_path = Path(args.v003_result).resolve()
+    _sealed_doc, _sealed_len, _sealed_sha = load_and_verify_sealed_v003_result(v003_result_path)
+
+    # 4. Load authorized store
     store = load_feature_store(store_path, verify_rows=args.verify_store_rows)
+
+    # 5. Run V004
     _doc, raw_bytes = run_v004(
         store,
         implementation_commit=args.implementation_commit,
         tooling_commit=args.tooling_commit,
+        v003_result_path=v003_result_path,
     )
 
+    # 6. Atomically write result
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = output_path.with_suffix(".tmp")
     with open(temp_path, "wb") as f:
         f.write(raw_bytes)
     temp_path.replace(output_path)
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

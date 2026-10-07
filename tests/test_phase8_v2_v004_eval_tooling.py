@@ -20,6 +20,7 @@ from __future__ import annotations
 import copy
 from datetime import datetime, timezone
 import hashlib
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -104,9 +105,9 @@ def test_validate_authorized_store_path_refuses_post_2024() -> None:
 
 def test_validate_authorized_store_path_refuses_unauthorized_folds() -> None:
     """Unauthorized fold numbers must fail closed."""
-    with pytest.raises(v004_eval.BoundaryError, match="unauthorized fold store refused"):
+    with pytest.raises(v004_eval.BoundaryError, match="unauthorized store basename refused"):
         v004_eval.validate_authorized_store_path("C:/data/stores/fold-02-abc123")
-    with pytest.raises(v004_eval.BoundaryError, match="unauthorized fold store refused"):
+    with pytest.raises(v004_eval.BoundaryError, match="unauthorized store basename refused"):
         v004_eval.validate_authorized_store_path("C:/data/stores/fold-03-def456")
 
 
@@ -329,3 +330,366 @@ def test_assert_expected_surfaces_validates_required_structure() -> None:
     del missing_key["v003_baseline_reconciliation"]
     with pytest.raises(v004_eval.V004EvalError, match="missing required root key"):
         v004_eval.assert_expected_surfaces(missing_key)
+
+# ===========================================================================
+# TC001 Additional Sealed-Baseline and Execution-Safety Tests
+# ===========================================================================
+
+
+def make_synthetic_sealed_v003_doc(
+    *,
+    entrants: int = 526,
+    gate11_pass: int = 138,
+    strat_pass: int = 110,
+    cand_ready: int = 81,
+    candidates: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Create a synthetic sealed V003 R001 document matching exact prior schema."""
+    if candidates is None:
+        candidates = [
+            {
+                "decision_id": f"d_{i:03d}",
+                "setup_id": f"s8n1_{i:03d}",
+                "side": "LONG",
+                "age_bars": 5,
+                "fvg_evidence_source": "FINAL_SURFACE",
+                "exact_overlap_descriptive": True,
+                "temporal_fvg_offset_bars": None,
+                "entry": {
+                    "direction": "buy",
+                    "entry_mode": "conservative",
+                    "entry_type": "conservative",
+                    "market_entry": 2400.0,
+                    "pullback_entry": 2395.0,
+                    "score": 8,
+                },
+            }
+            for i in range(cand_ready)
+        ]
+
+    return {
+        "variant_id": "phase6-development-v2-V003",
+        "V003_variant_funnel": {
+            "gate_11_v003": {
+                "entered": entrants,
+                "passed": gate11_pass,
+                "failed": entrants - gate11_pass,
+            },
+            "canonical_strategy_v003": {
+                "entered": gate11_pass,
+                "passed": strat_pass,
+                "failed": gate11_pass - strat_pass,
+            },
+            "gate_12_13_rr_entry_v003": {
+                "entered": strat_pass,
+                "passed": cand_ready,
+                "failed": strat_pass - cand_ready,
+            },
+        },
+        "candidate_surface": {
+            "candidate_ready": cand_ready,
+            "unique_candidate_setup_ids": len(set(c["setup_id"] for c in candidates)),
+            "duplicate_candidate_setup_id_occurrences": len(candidates) - len(set(c["setup_id"] for c in candidates)),
+            "candidates": candidates,
+        },
+    }
+
+
+def make_matching_reproduced_observations(
+    sealed_doc: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Generate matching reproduced observations for all 526 entrants."""
+    candidates = sealed_doc["candidate_surface"]["candidates"]
+    observations = []
+
+    # 81 ready candidate observations
+    for c in candidates:
+        d_id = c["decision_id"]
+        s_id = c["setup_id"]
+        entry_copy = dict(c["entry"])
+        observations.append(
+            {
+                "decision_id": d_id,
+                "available_at_ms": 1714557600000,
+                "v004_pair_state": "ACTIVE",
+                "v004_pair_reason": "canonical_confirmed",
+                "v004_structurally_active": True,
+                "v004_side": "LONG",
+                "v004_block_id": f"ob_{d_id}",
+                "v004_age_bars": 5,
+                "v004_final_fvg_associated": True,
+                "v004_temporal_fvg_evidence": False,
+                "v004_fvg_evidence": True,
+                "v004_fvg_evidence_source": "FINAL_SURFACE",
+                "v004_gate11_score": {"score": 8, "passes_threshold": True},
+                "v004_gate11_passed": True,
+                "v004_strategy_eligible": True,
+                "v003_setup_id": s_id,
+                "v003_entry": entry_copy,
+                "v003_entry_ready": True,
+                "v004_setup_id": s_id,
+                "v004_entry": entry_copy,
+                "v004_entry_ready": True,
+                "v004_entry_source": V004_SOURCE_V003_BASELINE,
+                "v004_entry_direction": "buy",
+            }
+        )
+
+    # 29 passing strategy, not ready
+    for i in range(29):
+        observations.append(
+            make_mock_observation(f"d_strat_pass_{i:02d}", gate11_passed=True, strategy_eligible=True, v003_ready=False, v004_ready=False)
+        )
+
+    # 28 passing gate 11, failing strategy
+    for i in range(28):
+        observations.append(
+            make_mock_observation(f"d_g11_pass_{i:02d}", gate11_passed=True, strategy_eligible=False, v003_ready=False, v004_ready=False)
+        )
+
+    # 388 failing gate 11
+    for i in range(388):
+        observations.append(
+            make_mock_observation(f"d_fail_g11_{i:03d}", gate11_passed=False, strategy_eligible=False, v003_ready=False, v004_ready=False)
+        )
+
+    return observations
+
+
+def test_sealed_v003_exact_candidate_pairs_success() -> None:
+    """Section 15-18 & 32: When reproduced multiset matches sealed V003, reconciliation succeeds."""
+    sealed = make_synthetic_sealed_v003_doc()
+    obs = make_matching_reproduced_observations(sealed)
+
+    rec = v004_eval.reconcile_sealed_v003_baseline(
+        sealed,
+        obs,
+        sealed_artifact_path="synthetic/path/v003_result.json",
+        sealed_sha256="abc123sha",
+        sealed_byte_count=45221,
+    )
+
+    assert rec["status"] == v004_eval.STATUS_SEALED_V003_RECONCILED
+    assert rec["upstream_count_reconciliation"]["all_counts_reconciled"] is True
+    assert rec["candidate_identity_reconciliation"]["multiset_identity_equal"] is True
+    assert rec["candidate_entry_object_reconciliation"]["all_entry_objects_identical"] is True
+
+
+def test_sealed_v003_candidate_pairs_failure_cases() -> None:
+    """Section 32: Five independent failure cases for candidate multiset reconciliation."""
+    sealed = make_synthetic_sealed_v003_doc()
+
+    # 1. Changed decision ID
+    obs1 = make_matching_reproduced_observations(sealed)
+    obs1[0]["decision_id"] = "d_altered"
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="multiset mismatch"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs1)
+
+    # 2. Changed setup ID
+    obs2 = make_matching_reproduced_observations(sealed)
+    obs2[0]["v003_setup_id"] = "s8n1_altered"
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="multiset mismatch"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs2)
+
+    # 3. Missing candidate (80 candidates instead of 81)
+    obs3 = make_matching_reproduced_observations(sealed)
+    obs3[0]["v003_entry_ready"] = False
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="counts mismatch"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs3)
+
+    # 4. Extra candidate (82 candidates instead of 81)
+    obs4 = make_matching_reproduced_observations(sealed)
+    # Turn one of the non-ready ones into ready
+    obs4[81]["v003_entry_ready"] = True
+    obs4[81]["v003_setup_id"] = "s8n1_extra"
+    obs4[81]["v003_entry"] = {"direction": "buy"}
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="counts mismatch"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs4)
+
+    # 5. Duplicate setup ID in reproduced candidates
+    obs5 = make_matching_reproduced_observations(sealed)
+    obs5[1]["v003_setup_id"] = obs5[0]["v003_setup_id"]
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="Duplicate setup_id"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs5)
+
+
+def test_sealed_v003_entry_object_reconciliation_failures() -> None:
+    """Section 33: Single-field entry object modifications fail closed."""
+    sealed = make_synthetic_sealed_v003_doc()
+
+    field_modifications = [
+        ("direction", "sell"),
+        ("entry_type", "market"),
+        ("market_entry", 2405.0),
+        ("pullback_entry", 2390.0),
+        ("score", 10),
+    ]
+
+    for field_name, bad_value in field_modifications:
+        obs = make_matching_reproduced_observations(sealed)
+        obs[0]["v003_entry"][field_name] = bad_value
+        with pytest.raises(v004_eval.V004BaselineReproductionError, match="entry-object mismatch"):
+            v004_eval.reconcile_sealed_v003_baseline(sealed, obs)
+
+
+def test_same_count_different_identities_fails() -> None:
+    """Section 34: Exactly 81 candidates with different identities must fail (preventing 81 == 81 false positive)."""
+    sealed = make_synthetic_sealed_v003_doc()
+    obs = make_matching_reproduced_observations(sealed)
+
+    # Change all candidate IDs to a different 81-set
+    for i in range(81):
+        obs[i]["decision_id"] = f"d_alt_{i:03d}"
+        obs[i]["v003_setup_id"] = f"s8n1_alt_{i:03d}"
+
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="multiset mismatch"):
+        v004_eval.reconcile_sealed_v003_baseline(sealed, obs)
+
+
+def test_sealed_prior_artifact_loader_failures(tmp_path: Path) -> None:
+    """Section 35: Prior artifact loader fails independently on wrong SHA, wrong bytes, or malformed JSON."""
+    good_doc = {"test": 123}
+    good_json = json.dumps(good_doc)
+    good_bytes = good_json.encode("utf-8")
+    good_len = len(good_bytes)
+    good_sha = hashlib.sha256(good_bytes).hexdigest()
+
+    good_file = tmp_path / "good.json"
+    good_file.write_bytes(good_bytes)
+
+    # 1. Successful load with matching params
+    doc, length, sha = v004_eval.load_and_verify_sealed_v003_result(
+        good_file, expected_sha256=good_sha, expected_bytes=good_len
+    )
+    assert doc == good_doc
+    assert length == good_len
+    assert sha == good_sha
+
+    # 2. Byte count mismatch
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="byte count mismatch"):
+        v004_eval.load_and_verify_sealed_v003_result(
+            good_file, expected_sha256=good_sha, expected_bytes=good_len + 1
+        )
+
+    # 3. SHA-256 mismatch
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="SHA-256 mismatch"):
+        v004_eval.load_and_verify_sealed_v003_result(
+            good_file, expected_sha256="0" * 64, expected_bytes=good_len
+        )
+
+    # 4. Malformed JSON
+    bad_json_file = tmp_path / "bad.json"
+    bad_bytes = b"{ invalid json"
+    bad_json_file.write_bytes(bad_bytes)
+    with pytest.raises(v004_eval.V004BaselineReproductionError, match="malformed JSON"):
+        v004_eval.load_and_verify_sealed_v003_result(
+            bad_json_file,
+            expected_sha256=hashlib.sha256(bad_bytes).hexdigest(),
+            expected_bytes=len(bad_bytes),
+        )
+
+
+def test_existing_result_or_temp_refused_before_store_load(tmp_path: Path) -> None:
+    """Section 23 & 36: If output or temp target exists, CLI fails before loading store."""
+    from unittest.mock import patch
+
+    out_file = tmp_path / "output.json"
+    temp_file = out_file.with_suffix(".tmp")
+    store_dir = tmp_path / "fold-01-a8b406884ab3525a"
+    store_dir.mkdir()
+    v003_file = tmp_path / "v003.json"
+    v003_file.write_bytes(b"dummy")
+
+    with patch("bot.validation.market_feature_store.load_feature_store") as mock_load:
+        # Case A: output target exists
+        out_file.write_text("existing")
+        with pytest.raises(v004_eval.V004ResultAlreadyExistsError, match="Output target already exists"):
+            v004_eval.main([
+                "--store", str(store_dir),
+                "--output", str(out_file),
+                "--v003-result", str(v003_file),
+                "--implementation-commit", "0" * 40,
+                "--tooling-commit", "1" * 40,
+            ])
+        mock_load.assert_not_called()
+
+        # Case B: temp target exists
+        out_file.unlink()
+        temp_file.write_text("existing temp")
+        with pytest.raises(v004_eval.V004ResultAlreadyExistsError, match="Stale temporary target already exists"):
+            v004_eval.main([
+                "--store", str(store_dir),
+                "--output", str(out_file),
+                "--v003-result", str(v003_file),
+                "--implementation-commit", "0" * 40,
+                "--tooling-commit", "1" * 40,
+            ])
+        mock_load.assert_not_called()
+
+
+def test_strict_store_basename_refusal() -> None:
+    """Section 24 & 37: Basename must be strictly fold-01-a8b406884ab3525a."""
+    # Canonical basename passes
+    v004_eval.validate_authorized_store_path("C:/data/stores/fold-01-a8b406884ab3525a")
+
+    # Arbitrary basename fails closed
+    with pytest.raises(v004_eval.BoundaryError, match="unauthorized store basename refused"):
+        v004_eval.validate_authorized_store_path("C:/data/stores/copied-authorized-store")
+
+    # Other folds fail closed
+    with pytest.raises(v004_eval.BoundaryError, match="unauthorized store basename refused"):
+        v004_eval.validate_authorized_store_path("C:/data/stores/fold-02-a8b406884ab3525a")
+
+
+def test_cli_execution_order_with_mocks(tmp_path: Path) -> None:
+    """Section 38: Using mocks only, prove future CLI main execution order."""
+    from unittest.mock import MagicMock, call, patch
+
+    call_order = []
+
+    out_file = tmp_path / "fresh_output.json"
+    store_dir = tmp_path / "fold-01-a8b406884ab3525a"
+    store_dir.mkdir()
+    v003_file = tmp_path / "v003_result.json"
+    v003_file.write_bytes(b"dummy_v003")
+
+    def mock_validate_path(path):
+        call_order.append("validate_path")
+
+    def mock_load_v003(path, **kwargs):
+        call_order.append("load_v003")
+        return {"synthetic": True}, 45221, "dummy_sha"
+
+    def mock_load_store(path, verify_rows=True):
+        call_order.append("load_store")
+        mock_s = MagicMock()
+        mock_s.identity = _store_identity()
+        return mock_s
+
+    def mock_run_v004(store, **kwargs):
+        call_order.append("run_v004")
+        return {"result": True}, b'{"result": true}\n'
+
+    with patch.object(v004_eval, "validate_authorized_store_path", side_effect=mock_validate_path), \
+         patch.object(v004_eval, "load_and_verify_sealed_v003_result", side_effect=mock_load_v003), \
+         patch("bot.validation.market_feature_store.load_feature_store", side_effect=mock_load_store), \
+         patch.object(v004_eval, "run_v004", side_effect=mock_run_v004):
+
+        res = v004_eval.main([
+            "--store", str(store_dir),
+            "--output", str(out_file),
+            "--v003-result", str(v003_file),
+            "--implementation-commit", "a" * 40,
+            "--tooling-commit", "b" * 40,
+        ])
+        assert res == 0
+        call_order.append("atomic_write")
+
+    assert call_order == [
+        "validate_path",
+        "load_v003",
+        "load_store",
+        "run_v004",
+        "atomic_write",
+    ]
+    assert out_file.is_file()

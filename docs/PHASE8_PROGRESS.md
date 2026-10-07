@@ -2034,3 +2034,33 @@ step: supervisory review before D002 or Variant 1.
   - Tier B: strictly `SEALED`.
   - ZERO empirical Fold-01 store reads or execution in this task.
 - **HARD STOP:** V004 preregistered, implemented, and frozen; Fold-01 empirical execution awaits supervisory authorization.
+
+## Update — 2026-10-07: V004 TC001 — specification aligned, append-only governance restored, sealed V003 baseline reconciliation added, execution hardened (no empirical access; awaiting execution authorization)
+
+- **V004 TC001 specification alignment:** Section 15 appended to `docs/PHASE8_V2_VARIANT_V004.md` documenting the exact frozen contract of `_can_use_early_entry` from `strategies/smc_engine/entry_model.py`. Corrects historical Section 7 narrative: missing conditions at score 8 are strictly `{'Confirmed structure'}`; eligible `structure_state` values are `{'transition', 'range'}` or `None`; internal confirmation requires `internal_bos_seen or choch_seen or sweep_rejected`; context conjunction requires internal confirmation `AND` (`zone_context` `OR` `priority_context`). Historical Phase-A specification SHA-256 preserved as `9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f` (12,523 bytes); corrected full-specification SHA-256 `fe226ca5f2bb8e3336ad0ce5d6430f57eb88bc9427f343d1716fd161352fd801` (19,201 bytes) bound in implementation, tooling, and governance register.
+- **Append-only governance restoration:**
+  - Original `phase8-v2-H008` record in `hypotheses` array of `baseline/phase8_v2_hypothesis_register.json` restored to its exact preregistration content at parent `f45a22f2` (`status: "REGISTERED"`, `result: null`, `disposition: null`).
+  - Authoritative supervisory disposition record `phase8-v2-H008-R001` preserved in `result_records` (`disposition: "SUPPORTED_BY_D006"`).
+  - Historical `phase8-v2-H009` record preserved in `hypotheses` without erasure; append-only record `phase8-v2-H009-TC001` registered with effective hypothesis wording eliminating unobserved recovery assertions prior to empirical observation.
+  - Correction record `phase6-development-v2-V004-TC001` appended to `result_records`.
+- **Exact sealed V003 baseline reconciliation:**
+  - Evaluator `backtests/phase8_v2_variant_v004_eval.py` requires `--v003-result` CLI flag pointing to sealed external V003 R001 artifact (`phase6-development-v2-V003_result.json`, SHA-256 `50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8`, 45,221 bytes).
+  - Enforces exact upstream count reproduction: Gate-11 entrants (526), Gate-11 passers (138), canonical-strategy passers (110), candidate-ready (81).
+  - Enforces exact candidate multiset identity equality `(decision_id, setup_id)` and exact deterministic canonical JSON equality of entry objects. Emits baseline status `SEALED_V003_BASELINE_RECONCILED_EXACT_CANDIDATES_AND_ENTRIES`.
+- **Directional fail-closed invariant:**
+  - `bot/strategy/variant_v004.py` enforces executable pair-side consistency: `requested_side == "bullish"` requires `pair.side == StrategySide.LONG`; `requested_side == "bearish"` requires `pair.side == StrategySide.SHORT`. Mismatch raises `V004VariantError` without evaluating fallback.
+- **Execution hardening:**
+  - Result overwrite protection: fails closed with `V004ResultAlreadyExistsError` before opening the store if output path or temporary file exists.
+  - Strict store basename enforcement: `Path(args.store).name == "fold-01-a8b406884ab3525a"` enforced directly in `validate_authorized_store_path`.
+- **Synthetic test suites & regression battery:**
+  - `tests/test_phase8_v2_v004_variant.py`: 18 passed (early-entry parity, pair-side mismatch fail-closed, spec SHA preservation).
+  - `tests/test_phase8_v2_v004_eval_tooling.py`: 20 passed (exact candidate pair reconciliation, single-field entry object modifications, artifact loader validation, output overwrite refusal, strict store basename, CLI execution order).
+  - Regression battery: 38 V004 tests, 34 V003 tests, 43 V002 tests, 53 D005 tests, 155 D004/D003/D001 tests, 48 D006 tests passed cleanly.
+- **Budget & Governance:**
+  - Diagnostics executed: `5 / 12` (unchanged).
+  - Strategy variants observed: `3 / 8` (TC001 consumes 0 budget; becomes `4 / 8` only upon separately authorized empirical Fold-01 execution).
+  - Numeric parameter trials: `0 / 4`.
+  - Upward revision lock: `ACTIVE`.
+  - Tier B: strictly `SEALED` (Folds 02–04, holdout, 2025+ data untouched).
+  - ZERO empirical Fold-01 store reads or execution in this task.
+- **HARD STOP:** V004 TC001 committed, pushed, and remotely verified; Fold-01 empirical execution awaits supervisory authorization.

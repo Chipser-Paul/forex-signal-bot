@@ -61,8 +61,11 @@ from strategies.smc_engine.entry_model import (
 )
 from strategies.smc_engine.strategy_state import StrategyState
 
-#: Phase-A preregistration specification SHA-256 bound into tooling
-SPEC_SHA256 = "9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f"
+#: Phase-A preregistration specification SHA-256 preserved historically
+SPEC_PHASE_A_SHA256 = "9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f"
+
+#: Corrected TC001 full specification SHA-256 bound into tooling
+SPEC_SHA256 = "fe226ca5f2bb8e3336ad0ce5d6430f57eb88bc9427f343d1716fd161352fd801"
 
 V004_ID = "phase6-development-v2-V004"
 H009_ID = "phase8-v2-H009"
@@ -150,6 +153,18 @@ def evaluate_v004_entry_readiness(
           - "V004_DIRECTIONAL_FALLBACK"
           - "NONE"
     """
+    # Directional consistency check: requested_side must match structural pair side
+    req_side = str(requested_side).lower() if requested_side is not None else ""
+    if req_side in ("bullish", "bearish") and pair is not None and hasattr(pair, "side"):
+        pair_side_val = getattr(pair.side, "value", pair.side)
+        pair_side_str = str(pair_side_val).upper()
+        expected_pair_side = "LONG" if req_side == "bullish" else "SHORT"
+        if pair_side_str != expected_pair_side:
+            raise V004VariantError(
+                f"V004 directional consistency violation: requested_side {req_side!r} "
+                f"contradicts structural pair side {pair.side!r} (expected {expected_pair_side!r})"
+            )
+
     # 1. Primary path: strict V003 baseline preservation
     if v003_entry_ready and v003_entry is not None:
         return v003_entry, True, V004_SOURCE_V003_BASELINE
@@ -158,7 +173,6 @@ def evaluate_v004_entry_readiness(
     if not (v003_gate11_passed and v003_strategy_eligible):
         return None, False, V004_SOURCE_NONE
 
-    req_side = str(requested_side).lower() if requested_side is not None else ""
     if req_side not in ("bullish", "bearish"):
         return None, False, V004_SOURCE_NONE
 

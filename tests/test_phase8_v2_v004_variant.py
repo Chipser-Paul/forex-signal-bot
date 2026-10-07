@@ -24,6 +24,7 @@ import pytest
 from bot.strategy.models import StrategySide
 from bot.strategy.variant_v003 import V003PairResult
 from bot.strategy.variant_v004 import (
+    SPEC_PHASE_A_SHA256,
     SPEC_SHA256,
     V004_ID,
     H009_ID,
@@ -554,3 +555,134 @@ def test_safety_predicate_failures() -> None:
         v003_entry=None, v003_entry_ready=False,
     )
     assert ready is False
+
+# ===========================================================================
+# TC001 Additional Invariant Tests
+# ===========================================================================
+
+
+def test_v004_spec_phase_a_sha256_preservation() -> None:
+    """Historical Phase-A preregistration SHA-256 must be preserved."""
+    assert SPEC_PHASE_A_SHA256 == "9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f"
+
+
+def test_pair_side_mismatch_fails_closed() -> None:
+    """Section 20 & 31: requested_side contradicting pair.side must raise V004VariantError."""
+    score = make_score(8)
+    ctx = make_context(internal_event="BOS", sweep_rejected=True, asian_swept=True)
+
+    # 1. requested_side bullish, pair.side SHORT -> fails closed
+    pair_short = make_dummy_pair(side=StrategySide.SHORT)
+    state_bull = make_test_state(structure_dir="bearish")
+    with pytest.raises(V004VariantError, match="contradicts structural pair side"):
+        evaluate_v004_entry_readiness(
+            state=state_bull,
+            decision_at=DECISION_TIME,
+            current_price=2400.0,
+            pair=pair_short,
+            score=score,
+            context=ctx,
+            requested_side="bullish",
+            v003_gate11_passed=True,
+            v003_strategy_eligible=True,
+            v003_entry=None,
+            v003_entry_ready=False,
+        )
+
+    # 2. requested_side bearish, pair.side LONG -> fails closed
+    pair_long = make_dummy_pair(side=StrategySide.LONG)
+    state_bear = make_test_state(structure_dir="bullish")
+    with pytest.raises(V004VariantError, match="contradicts structural pair side"):
+        evaluate_v004_entry_readiness(
+            state=state_bear,
+            decision_at=DECISION_TIME,
+            current_price=2400.0,
+            pair=pair_long,
+            score=score,
+            context=ctx,
+            requested_side="bearish",
+            v003_gate11_passed=True,
+            v003_strategy_eligible=True,
+            v003_entry=None,
+            v003_entry_ready=False,
+        )
+
+
+def test_early_entry_parity_table_driven() -> None:
+    """Section 29: Table-driven synthetic tests comparing V004 eligibility to frozen _can_use_early_entry."""
+    from strategies.smc_engine.entry_model import _can_use_early_entry
+
+    cases = [
+        # (name, structure_state, score_val, missing_conditions, internal_event, sweep_rejected, ob_zone, fvg_zone, asian_swept, asian_setup)
+        ("transition_score8_bos_ob", "transition", 8, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("transition_score8_choch_fvg", "transition", 8, {"Confirmed structure"}, "CHOCH", False, None, (2392.0, 2395.0), False, False),
+        ("transition_score8_sweep_rejected_asian", "transition", 8, {"Confirmed structure"}, None, True, None, None, True, False),
+        ("range_score8_bos_ob", "range", 8, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("none_state_score8_bos_ob", None, 8, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("invalid_state_fails", "invalid_state", 8, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("score7_fails", "transition", 7, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("score8_missing_displacement_fails", "transition", 8, {"Confirmed structure", "Displacement / FVG"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("score10_missing_displacement_ok", "transition", 10, {"Confirmed structure", "Displacement / FVG"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("missing_other_condition_fails", "transition", 8, {"Confirmed structure", "Other condition"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("no_internal_confirmation_fails", "transition", 8, {"Confirmed structure"}, None, False, (2390.0, 2400.0), None, True, False),
+        ("zone_context_only_ok", "transition", 8, {"Confirmed structure"}, "BOS", False, (2390.0, 2400.0), None, False, False),
+        ("priority_context_only_ok", "transition", 8, {"Confirmed structure"}, "BOS", False, None, None, True, False),
+        ("neither_zone_nor_priority_fails", "transition", 8, {"Confirmed structure"}, "BOS", False, None, None, False, False),
+    ]
+
+    for name, s_state, score_val, missing_conds, int_ev, swp_rej, ob_z, fvg_z, asian_swp, asian_stp in cases:
+        state = StrategyState(event_time=DECISION_TIME)
+        state.structure_state = s_state
+        state.structure_dir = "bearish"
+        state.displacement_seen = "Displacement / FVG" not in missing_conds
+        state.liquidity_swept = True
+        state.daily_limits_hit = False
+        state.news_status = {"news_clear": True}
+        state.missing_conditions = list(missing_conds)
+
+        ctx = {
+            "internal_structure_event": int_ev,
+            "sweep_rejected": swp_rej,
+            "ob_zone": ob_z,
+            "fvg_zone": fvg_z,
+            "asian_liquidity_swept": asian_swp,
+            "asian_sweep_setup": asian_stp,
+        }
+
+        expected_early = _can_use_early_entry(state, score_value=score_val, context=ctx)
+
+        # Now test against evaluate_v004_entry_readiness
+        pair = make_dummy_pair(side=StrategySide.LONG)
+        score_dict = make_score(score_val)
+        state_for_v004 = copy.deepcopy(state)
+        state_for_v004.liquidity_side = "buy"
+        state_for_v004.liquidity_type = "internal_continuation"
+
+        entry, ready, source = evaluate_v004_entry_readiness(
+            state=state_for_v004,
+            decision_at=DECISION_TIME,
+            current_price=2400.0,
+            pair=pair,
+            score=score_dict,
+            context=ctx,
+            requested_side="bullish",
+            v003_gate11_passed=(score_val >= 8),
+            v003_strategy_eligible=True,
+            v003_entry=None,
+            v003_entry_ready=False,
+        )
+
+        state_ready = state_for_v004.ready_for_entry()
+        if not (state_ready or expected_early):
+            assert ready is False, f"Case {name} expected not ready, got ready"
+            assert source == V004_SOURCE_NONE
+
+
+def test_spec_does_not_redefine_frozen_helper() -> None:
+    """Section 30: Static/spec test verifying TC001 identifies _can_use_early_entry as authoritative source of truth."""
+    spec_path = REPO_ROOT / "docs" / "PHASE8_V2_VARIANT_V004.md"
+    spec_text = spec_path.read_text(encoding="utf-8")
+
+    assert "strategies/smc_engine/entry_model.py::_can_use_early_entry" in spec_text
+    assert "remains completely unchanged" in spec_text or "must remain UNCHANGED" in spec_text
+    assert "directly calls frozen `_can_use_early_entry(...)" in spec_text

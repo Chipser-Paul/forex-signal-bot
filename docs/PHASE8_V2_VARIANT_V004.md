@@ -188,3 +188,88 @@ D006 identified a coherent mechanism; it did not simulate candidate creation. No
   * Phase-A and Phase-B freeze consume **zero** strategy variant budget.
   * Strategy variants observed remain **`3 / 8`**.
   * Variants become permanently **`4 / 8`** only upon the first real Fold-01 observation under separate supervisory authorization.
+---
+
+## 15. TC001 — Exact Frozen Early-Entry Semantics and Baseline-Reconciliation Contract
+
+### 15.1 Scope and Pre-Empirical Correction Mandate
+Following supervisory review of the Phase-B tooling freeze, this section provides append-only corrections to resolve pre-empirical descriptive, governance, baseline-reconciliation, and execution-safety defects:
+* Historical Phase-A prose and preregistration SHA-256 (`9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f`, 12,523 bytes) are preserved historically.
+* This section explicitly supersedes descriptive inaccuracies in Section 7 while leaving the core one-concept scientific formulation, Gate-11 confluence, risk rules, and production entry models unmodified.
+* Zero empirical execution on the authorized Fold-01 store (`fold-01-a8b406884ab3525a`) has occurred or is authorized in this correction.
+* Strategy variants observed remain invariant at `3 / 8`; numeric parameter trials remain `0 / 4`. Tier B remains strictly sealed.
+
+### 15.2 Defect A: Exact Frozen Early-Entry Semantics
+Section 7 of the historical specification contained descriptive inaccuracies regarding the early-entry predicate. The frozen source of truth is:
+`strategies/smc_engine/entry_model.py::_can_use_early_entry`
+which remains completely unchanged. At score 8, its exact behavior is:
+1. `state.ready_for_entry()` is invoked;
+2. `missing = set(state.missing_conditions)` is computed;
+3. At score 8, allowed missing conditions are strictly `{"Confirmed structure"}` (`Displacement / FVG` is relaxable only when score >= 10);
+4. State is early-entry eligible when:
+   `state.structure_state in {"transition", "range"}` OR `state.structure_state is None`;
+   (Superseding the inaccurate descriptive wording `structure_state in {"transition", "choch"}`);
+5. Confluence score must be `>= 8`;
+6. Internal confirmation is satisfied when:
+   `internal_structure_event in {"BOS", "CHOCH"}` OR `bool(sweep_rejected)`;
+   (Superseding definitions restricting internal confirmation solely to named BOS/CHOCH flags);
+7. Context requirement is satisfied when:
+   `has_internal_confirmation AND (has_zone_context OR has_priority_context)`;
+   (Superseding the inaccurate conjunction requiring both zone context AND priority context).
+
+The V004 implementation directly calls frozen `_can_use_early_entry(...)` from `strategies/smc_engine/entry_model.py`. It does not independently reimplement decision logic or alter production `entry_model.py`.
+
+### 15.3 Private-State Mutation Clarification
+Authoritative strategy state is never mutated:
+* Authoritative `StrategyState` instances are never modified during V004 evaluation.
+* The directional-fallback evaluation operates strictly on a private deep copy (`copied_state = copy.deepcopy(state)`).
+* Calling frozen `ready_for_entry()` and `_can_use_early_entry()` on `copied_state` may update `copied_state.missing_conditions`, which is existing frozen helper behavior.
+* V004's only intentional semantic override is `copied_state.structure_dir = requested_side`.
+
+### 15.4 Defect E: Directional Consistency and Pair-Side Fail-Closed Invariant
+To make directional consistency executable and fail-closed:
+* `requested_side == "bullish"` strictly requires V003 structural pair side `pair.side == StrategySide.LONG`.
+* `requested_side == "bearish"` strictly requires V003 structural pair side `pair.side == StrategySide.SHORT`.
+* If `pair.side` contradicts `requested_side`, evaluation immediately raises `V004VariantError`. Under no circumstances is fallback silently evaluated under contradictory pair sides.
+* Canonical strategy side consistency: Canonical strategy evaluation is invoked with `side=htf_bias` and `htf_bias=htf_bias`. Contradictory side indications fail closed.
+
+### 15.5 Defect D: Exact Sealed V003 Baseline Reconciliation
+V004 tooling must reconcile against the external sealed V003 R001 artifact before V004 results can be accepted:
+* **Required CLI Argument**: `--v003-result` (no default, no path guessing, no implicit discovery).
+* **Sealed Artifact Identity**:
+  * Location: `C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json`
+  * SHA-256: `50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8`
+  * Size: `45221` bytes
+* **Upstream Count Reconciliation**:
+  * Gate-11 entrants: `526`
+  * V003 Gate-11 pass: `138`
+  * Canonical-strategy pass: `110`
+  * Candidate-ready: `81`
+* **Exact Candidate Identity Reconciliation**:
+  * Derive `(decision_id, setup_id)` multiset from both sealed V003 R001 and freshly reproduced V003.
+  * Require exact multiset equality: 81 candidate records, 81 unique setup IDs, 0 duplicate occurrences.
+  * Any discrepancy raises `V004BaselineReproductionError`.
+* **Exact V003 Entry-Object Reconciliation**:
+  * For every candidate `(decision_id, setup_id)`, serialize the entry object using deterministic canonical JSON:
+    `json.dumps(entry, sort_keys=True, separators=(",", ":"), allow_nan=False)`
+  * Require exact string equality between reproduced and sealed entry objects across direction, entry_type, entry_mode, market_entry, pullback_entry, limit_entry, reason, score, grade, and asian_sweep_setup.
+  * Any discrepancy raises `V004BaselineReproductionError`.
+* **Baseline Status Emitted**:
+  `SEALED_V003_BASELINE_RECONCILED_EXACT_CANDIDATES_AND_ENTRIES`.
+* **V003 Baseline Preservation Under V004**:
+  * All 81 V003 candidates must be preserved under V004 with `v004_entry_source == "V003_BASELINE"` and `v004_entry == v003_entry` exactly.
+
+### 15.6 Defect F: Result Overwrite Refusal and Strict Authorized Store Basename
+* **Result Overwrite Refusal**:
+  Before opening the empirical store, the evaluator verifies that `output_path.exists() == False` and that no stale temporary file exists at `output_path.with_suffix(".tmp")`. If either exists, `V004ResultAlreadyExistsError` is raised and execution terminates before any store access.
+* **Strict Store Basename**:
+  Before opening the empirical store, the evaluator enforces `Path(args.store).name == "fold-01-a8b406884ab3525a"`. Any other basename (including arbitrary copies or unauthorized folds) raises `BoundaryError`.
+
+### 15.7 Specification Lineage and Invariant Summary
+* Historical Phase-A commit: `9b9bb04157b2260aeafba5a6e672e91de0ad2acf`
+* Historical Phase-B commit: `c604a7763c09a960d676fa8f152ac249cd041eed`
+* Historical Phase-A specification SHA-256: `9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f` (12,523 bytes)
+* Strategy variants observed: `3 / 8`
+* Diagnostic budget consumed: `5 / 12`
+* Numeric parameter trials: `0 / 4`
+* Tier B status: Strictly SEALED.
