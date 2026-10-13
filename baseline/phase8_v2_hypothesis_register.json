@@ -3755,6 +3755,91 @@
       "corrected_tooling_blob": "fda5f879bd199ea974d0ec27a544fe202307b3cb",
       "corrected_tooling_fingerprint": "66912f82e29cca4dcc9a3bacda131359c941b9cd49ac47cd7bc2432f119e53f3",
       "corrected_tooling_commit_reference": "the unique TC001 commit that publishes this record (parent c604a7763c09a960d676fa8f152ac249cd041eed, subject 'fix: align V004 specification and sealed baseline contract'); that commit's SHA is the corrected tooling identity - resolvable as git rev-parse HEAD of this record's commit"
+    },
+    {
+      "record_id": "phase6-development-v2-V004-ATTEMPT1",
+      "record_type": "VARIANT_ATTEMPT_BLOCKAGE_RECORD",
+      "variant_id": "phase6-development-v2-V004",
+      "linked_hypothesis": "phase8-v2-H009-TC001",
+      "historical_hypothesis": "phase8-v2-H009",
+      "classification": "DEVELOPMENT_VARIANT_ATTEMPT_BLOCKAGE — V004 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "formal_disposition": "IMPLEMENTATION_BLOCKED_POST_EXPOSURE",
+      "exposure_timestamp_utc": "2026-10-13T12:22:49Z",
+      "execution_start_utc": "2026-10-13T12:22:10Z",
+      "active_baseline_commit": "5ffa8608370e19d5049e96da50dafa9d3d7aef54",
+      "active_implementation_commit": "5ffa8608370e19d5049e96da50dafa9d3d7aef54",
+      "implementation_module": "bot/strategy/variant_v004.py",
+      "implementation_git_blob_sha": "a6aa1d9e68dd5d9d29cb6cc5399dc3a773fbfd47",
+      "implementation_fingerprint": "650c84b6ead13b33476888047e6e24673392f65e61fd175a0270bd6ac86b60a3",
+      "active_tooling_commit": "5ffa8608370e19d5049e96da50dafa9d3d7aef54",
+      "tooling_module": "backtests/phase8_v2_variant_v004_eval.py",
+      "tooling_git_blob_sha": "fda5f879bd199ea974d0ec27a544fe202307b3cb",
+      "tooling_fingerprint": "66912f82e29cca4dcc9a3bacda131359c941b9cd49ac47cd7bc2432f119e53f3",
+      "specification_document": "docs/PHASE8_V2_VARIANT_V004.md",
+      "specification_sha256": "fe226ca5f2bb8e3336ad0ce5d6430f57eb88bc9427f343d1716fd161352fd801",
+      "specification_bytes": 19201,
+      "historical_phase_a_specification_sha256": "9ad9b5660bcb2d6d209c430958c3d88e47b83122c6c9816b6f5ee40d61b11b7f",
+      "historical_phase_a_specification_bytes": 12523,
+      "fingerprint_contract": "canonical_git_blob_v1",
+      "store_identity": {
+        "decision_snapshots": 13269,
+        "identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "name": "fold-01-a8b406884ab3525a",
+        "path": "C:/Users/chips/forex-signal-bot-data/phase8/evidence/market-feature-store/fold-01-a8b406884ab3525a",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "verify_rows_result": "PASS"
+      },
+      "sealed_v003_identity": {
+        "bytes": 45221,
+        "integrity_verified": true,
+        "path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
+        "sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8"
+      },
+      "exact_failure": {
+        "call_site": "backtests/phase8_v2_variant_v004_eval.py:606 in observe_v004_decision",
+        "error_verbatim": "bot.strategy.variant_v004.V004VariantError: V004 directional consistency violation: requested_side 'bullish' contradicts structural pair side <StrategySide.FLAT: 'FLAT'> (expected 'LONG')",
+        "exception_type": "bot.strategy.variant_v004.V004VariantError",
+        "failure_location": "bot/strategy/variant_v004.py:163 in evaluate_v004_entry_readiness",
+        "root_cause": "The TC001 pair-side consistency check was executed unconditionally before determining whether V004 fallback eligibility criteria were met (v003_gate11_passed and v003_strategy_eligible) and before checking if V003 baseline passed. For Gate-11 entrants where no active OB/FVG pair has formed, pair.side is StrategySide.FLAT. Treating StrategySide.FLAT as a directional contradiction caused V004 to fail closed on the first Gate-11 entrant decision."
+      },
+      "blockage_artifact": {
+        "bytes": 6129,
+        "path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V004/fold01/phase6-development-v2-V004_ATTEMPT1_BLOCKAGE.json",
+        "sha256": "2900dac5d095322839ba28d3b2c2e09bdce28d83bb1c7934bf6d81d8a03ba5f1"
+      },
+      "execution_log": {
+        "bytes": 1314,
+        "original_task_log": "C:/Users/chips/.gemini/antigravity/brain/442206b3-c423-4cbc-933b-393dc75eb00d/.system_generated/tasks/task-4409.log",
+        "path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V004/fold01/phase6-development-v2-V004_attempt1.log",
+        "sha256": "32a12357e3cc24285201744d1b369297bfe5ee44e7c7ef31795eed432d8d0a44"
+      },
+      "post_failure_forensics": {
+        "classification": "TECHNICAL_POST_FAILURE_FORENSICS_ONLY",
+        "note": "A technical script read the already-contaminated Fold-01 store to recover snapshot metadata after execution failure. Did NOT execute strategy behavior, did NOT consume a variant slot, is NOT a preregistered diagnostic (NOT D007), and consumed 0 additional budget."
+      },
+      "scientific_outcome": {
+        "gate11_v004_observations_completed": 0,
+        "h009_status": "UNRESOLVED; remains REGISTERED with result null and disposition null; V004 provided no empirical opportunity-density evidence",
+        "sealed_v003_baseline_reconciliation_completed": false,
+        "v004_r001_exists": false,
+        "v004_status": "CLOSED — IMPLEMENTATION_BLOCKED_POST_EXPOSURE — NOT TO BE RERUN"
+      },
+      "budget_after_attempt": {
+        "diagnostics_executed": "5 / 12",
+        "numeric_parameter_trials": "0 / 4",
+        "strategy_variants_observed": "4 / 8",
+        "tier_b": "SEALED",
+        "upward_revision_lock": "ACTIVE",
+        "note": "Variant slot 4 is permanently consumed at exposure timestamp 2026-10-13T12:22:49Z per §11 and §38 and is not refunded."
+      },
+      "reserved_evidence_status": {
+        "data_2025_plus_untouched": true,
+        "fold_02_untouched": true,
+        "fold_03_untouched": true,
+        "fold_04_untouched": true,
+        "holdout_untouched": true,
+        "tier_b_sealed": true
+      }
     }
   ],
   "provenance_corrections": [
