@@ -754,3 +754,41 @@ Copy-paste for a fresh agent session:
   - Artifact: `C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V004/fold01/phase6-development-v2-V004_ATTEMPT1_BLOCKAGE.json` (SHA-256 `2900dac5d095322839ba28d3b2c2e09bdce28d83bb1c7934bf6d81d8a03ba5f1`, 6,129 bytes).
   - Execution log: `C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V004/fold01/phase6-development-v2-V004_attempt1.log` (SHA-256 `32a12357e3cc24285201744d1b369297bfe5ee44e7c7ef31795eed432d8d0a44`, 1,314 bytes).
 - **Governance decision:** V004 is CLOSED without patch or rerun. Preregistration of a new strategy variant, V005 (`phase6-development-v2-V005`, *Eligibility-Scoped Requested-Side Entry Direction Authority*), is authorized to test the same unresolved H009 mechanism with correctly scoped implementation semantics.
+
+## Update — 2026-10-13: V005 preregistered and frozen — eligibility-scoped requested-side entry direction authority (no empirical access; awaiting execution authorization)
+
+- **V005 Phase A preregistered:** Strategy variant `phase6-development-v2-V005` registered in `strategy_variants` of `baseline/phase8_v2_hypothesis_register.json` (commit `252af6a`). Specification: `docs/PHASE8_V2_VARIANT_V005.md` (SHA-256 `7f4972f36bd99f550c142741c1c3065db6ca1fc6d1f041858cf141ebd9477e35`, 12,301 bytes, Git blob `d127d3b45b54135038698b1cebe540a0f43a0c20`). Linked effective hypothesis: `phase8-v2-H009-TC001`.
+- **V005 Phase B implementation & tooling frozen:** Commit `2fd3460` froze implementation `bot/strategy/variant_v005.py` (blob `3820c6c6`, fingerprint `717dc07a`) and evaluator `backtests/phase8_v2_variant_v005_eval.py` (blob `6291999b`, fingerprint `dd4d864e`).
+  - *Scoped guard architecture:* Evaluates baseline preservation first; non-eligible entrants exit cleanly without exceptions on unformed `StrategySide.FLAT` pairs; pair-side consistency enforced strictly at the fallback surface.
+  - *Private state invariance:* Deep-copies `StrategyState` for fallback; authoritative state never mutated.
+  - *Sealed V003 baseline reconciliation:* Enforces exact upstream count, multiset identity, and entry JSON equality against sealed V003 R001.
+  - Comprehensive synthetic tests passed: 18 variant tests, 20 evaluator tooling tests, full historical regression battery clean.
+
+## Update — 2026-10-13: V005 Fold-01 empirical result — OPPORTUNITY_SUFFICIENT (102 candidates >= 90; sealed V003 baseline 100% preserved; variants 5 / 8 permanent; Tier B sealed)
+
+- **V005 empirical execution completed:** Executed frozen CLI evaluator `backtests.phase8_v2_variant_v005_eval` on authorized Fold-01 store `fold-01-a8b406884ab3525a` (13,269 snapshots). Sealed external result artifact `C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V005/fold01/phase6-development-v2-V005_result.json` (80,554 bytes, SHA-256 `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, read-back verified). Authoritative narrative: `docs/PHASE8_V2_VARIANT_V005_RESULT.md`.
+- **Permanent budget transition:** Variant slot 5 permanently consumed at first real observation timestamp `2026-10-13T14:35:22.294978+00:00`. Strategy variants observed permanently **`5 / 8`** (`V001`, `V002`, `V003`, `V004` [consumed/blocked], `V005` [observed]). Diagnostics remain `5 / 12`, numeric parameter trials remain `0 / 4`. Upward revision lock `ACTIVE`.
+- **Sealed V003 baseline reconciliation:**
+  - Status: `SEALED_V003_BASELINE_RECONCILED_EXACT_CANDIDATES_AND_ENTRIES`.
+  - Upstream counts verified exact: Gate-11 entrants 526, Gate-11 passers 138, canonical-strategy passers 110, baseline candidates 81.
+  - Candidate identity: exact `(decision_id, setup_id)` multiset equality across all 81 candidates.
+  - Entry object parity: all 81 deterministic JSON entry objects matched byte-for-byte with sealed V003 R001.
+  - Baseline preservation: 100% (81 / 81) preserved under source `V003_BASELINE`.
+- **V005 structural funnel:**
+  - `gate_11_v005`: entered 526, passed 138, failed 388 (26.24%).
+  - `canonical_strategy_v005`: entered 138, passed 110, failed 28 (79.71%).
+  - `gate_12_13_rr_entry_v005`: entered 110, passed 102, failed 8 (92.73%).
+  - Chain reconciles fail-closed: `102 <= 110 <= 138 <= 526`. The 8 entry rejections consist of 7 D006 E2 readiness failures lacking internal confirmation (correctly rejected under frozen score-8 conservative early entry) + 1 RR/entry geometry failure.
+- **Candidate surface & opportunity classification:**
+  - Raw `candidate_ready`: **`102`** (candidate rate `0.193916` = 102 / 526).
+  - Classification: **`OPPORTUNITY_SUFFICIENT`** (mechanical application of preregistered rule: raw candidate_ready 102 >= 90).
+  - Source decomposition: `V003_BASELINE` = 81 (79.41%), `V005_DIRECTIONAL_FALLBACK` = 21 (20.59%), reconciling exact (`81 + 21 == 102`).
+  - Setup ID stability: 102 unique setup IDs, 0 duplicate occurrences (`102 + 0 == 102`).
+  - Directional distribution: total 55 LONG / 47 SHORT. Fallback-only: 7 BUY / 14 SELL (100% directional agreement with `requested_side`).
+- **Hypothesis status:** `phase8-v2-H009-TC001` remains `REGISTERED` with disposition **`PENDING_SUPERVISORY_INTERPRETATION`**. Not automatically mutated.
+- **Boundaries & Governance:** Zero profitability metrics; zero counterfactual simulations; state invariance preserved (authoritative state untouched); liquidity rules invariance preserved; Tier B strictly SEALED (Folds 02–04, holdout, 2025+ data untouched).
+- **Next supervisory decision points:**
+  1. Supervisory review and formal disposition of `phase8-v2-H009-TC001`.
+  2. Formal candidate selection (§14) based on empirical Fold-01 candidate sets.
+  3. Explicit candidate-freeze authorization (§17) for `phase6-frozen-v2` before any Tier-B (Folds 02–04, holdout) consideration.
+

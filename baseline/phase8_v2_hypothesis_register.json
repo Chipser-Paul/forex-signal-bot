@@ -3934,6 +3934,168 @@
         "holdout_untouched": true,
         "tier_b_sealed": true
       }
+    },
+    {
+      "result_id": "phase6-development-v2-V005-R001",
+      "record_type": "STRATEGY_VARIANT_RESULT",
+      "variant_id": "phase6-development-v2-V005",
+      "hypothesis_id": "phase8-v2-H009-TC001",
+      "predecessor_variant_id": "phase6-development-v2-V003",
+      "blocked_predecessor_variant_id": "phase6-development-v2-V004",
+      "blocked_predecessor_lineage": {
+        "v004_attempt1_blockage_record": "phase6-development-v2-V004-ATTEMPT1",
+        "v004_status": "CLOSED — IMPLEMENTATION_BLOCKED_POST_EXPOSURE — NOT TO BE RERUN",
+        "v004_blockage_artifact_sha256": "2900dac5d095322839ba28d3b2c2e09bdce28d83bb1c7934bf6d81d8a03ba5f1",
+        "v004_blockage_artifact_bytes": 6129
+      },
+      "supporting_diagnostic_id": "phase8-v2-diagnostic-d006",
+      "research_identity": "phase6-development-v2",
+      "charter_id": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "charter_sha256": "8527e3a5eec98f53795f396ad7cb5baf80aa549144ebaf580f3afe972cf204bc",
+      "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+      "lineage": {
+        "phase_a_preregistration_commit": "252af6a9434e155e70ce37e07893f1a8a06a600a",
+        "implementation_freeze_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "tooling_freeze_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "specification_document": "docs/PHASE8_V2_VARIANT_V005.md",
+        "specification_sha256": "7f4972f36bd99f550c142741c1c3065db6ca1fc6d1f041858cf141ebd9477e35",
+        "specification_git_blob_sha": "d127d3b45b54135038698b1cebe540a0f43a0c20",
+        "specification_bytes": 12301,
+        "implementation_module": "bot/strategy/variant_v005.py",
+        "implementation_git_blob_sha": "3820c6c66f96c91d98b47feda0e4f5f88aa5c70a",
+        "implementation_fingerprint_sha256": "717dc07aff63d0150fbd47de036e81bd12e270c4a5de31f78f5fc48dc998fd2f",
+        "tooling": "backtests/phase8_v2_variant_v005_eval.py",
+        "tooling_git_blob_sha": "6291999b059facadf6ea40482f8413872cf4cd23",
+        "tooling_fingerprint_sha256": "dd4d864e6caf3413447121bac9bc412c1db7a8df6243422840e0e5d59ca26683",
+        "fingerprint_contract": "canonical_git_blob_v1"
+      },
+      "executed": true,
+      "empirical_exposure_utc": "2026-10-13T14:35:22.294978+00:00",
+      "store_provenance": {
+        "fold_store": "fold-01-a8b406884ab3525a",
+        "store_identity_sha256": "a8b406884ab3525ab8750958d700db32fddaa444d5beac0fc64de395505d8fe4",
+        "rows_content_sha256": "96c522e062087cb452e1667dc4f50b5b2e81c876265d1bce159cff5a866e5e22",
+        "decision_snapshots": 13269,
+        "coverage": "fold-01/full",
+        "rows_rehashed_before_observation": "verify_rows=True full row-digest + gate-event-id re-derivation over all 13269 rows",
+        "prohibited_historical_store_not_opened": "fold-01-1d710826193a6767",
+        "store_compatibility_decision": "B — preserved V001 store semantically sufficient; per-snapshot required causal fields asserted fail-closed during the run (zero violations raised)"
+      },
+      "sealed_v003_reconciliation": {
+        "sealed_artifact_path": "C:/Users/chips/forex-signal-bot-data/phase8/v2_variants/phase6-development-v2-V003/fold01/phase6-development-v2-V003_result.json",
+        "sealed_sha256": "50117c399481a2e31b8da6260da4e05c8719a522efb524f80bb2063319c41ff8",
+        "sealed_byte_count": 45221,
+        "status": "SEALED_V003_BASELINE_RECONCILED_EXACT_CANDIDATES_AND_ENTRIES",
+        "all_counts_reconciled": true,
+        "gate11_entrants_reconciled": 526,
+        "gate11_passed_reconciled": 138,
+        "canonical_strategy_passed_reconciled": 110,
+        "candidate_ready_reconciled": 81,
+        "multiset_identity_equal": true,
+        "all_entry_objects_identical": true,
+        "all_v003_candidates_preserved": true,
+        "v003_baseline_candidate_count": 81,
+        "v005_fallback_recovery_count": 21
+      },
+      "output": {
+        "classification": "DEVELOPMENT_VARIANT_EVIDENCE — V005 — FOLD01 — NOT PROFITABILITY EVIDENCE",
+        "location_kind": "EXTERNAL_GIT_OUTSIDE",
+        "path": "phase8_data::/v2_variants/phase6-development-v2-V005/fold01/phase6-development-v2-V005_result.json",
+        "sha256": "27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe",
+        "bytes": 80554,
+        "read_back_verified": true
+      },
+      "decision_accounting": {
+        "scheduled": 13269,
+        "reducer_classified": 7316,
+        "missing_history": 4815,
+        "unavailable_input": 1138,
+        "evaluation_error": 0,
+        "reconciles": true
+      },
+      "gate_11_population": {
+        "rule": "all decisions that legitimately entered frozen Gate 11 (gate_11_confluence_score present); historical boolean descriptive only",
+        "gate11_entrants_observed": 526,
+        "frozen_gate11_entered": 526,
+        "reconciles": true
+      },
+      "V005_structural_pair_surface": {
+        "gate11_entrants_observed": 526,
+        "v005_structurally_active_count": 144,
+        "v005_final_surface_fvg_evidence_count": 110,
+        "v005_temporal_memory_fvg_evidence_count": 97,
+        "v005_total_fvg_evidence_count": 207,
+        "v005_sides": {
+          "FLAT": 382,
+          "LONG": 73,
+          "SHORT": 71
+        },
+        "v005_pair_state_counts": {
+          "ACTIVE": 144,
+          "INVALIDATED": 15,
+          "MITIGATED": 92,
+          "UNAVAILABLE": 275
+        }
+      },
+      "V005_variant_funnel": {
+        "gate_11_v005": {
+          "entered": 526,
+          "passed": 138,
+          "failed": 388
+        },
+        "canonical_strategy_v005": {
+          "entered": 138,
+          "passed": 110,
+          "failed": 28
+        },
+        "gate_12_13_rr_entry_v005": {
+          "entered": 110,
+          "passed": 102,
+          "failed": 8
+        },
+        "funnel_chain_reconciles": "candidate_ready 102 <= strategy pass 110 <= gate11 pass 138 <= entrants 526; entered-chains verified fail-closed inside the tooling"
+      },
+      "candidate_surface": {
+        "candidate_ready": 102,
+        "candidate_rate": 0.193916,
+        "candidate_v003_baseline_count": 81,
+        "candidate_v005_directional_fallback_count": 21,
+        "candidate_long_count": 55,
+        "candidate_short_count": 47,
+        "candidate_final_surface_count": 76,
+        "candidate_temporal_memory_count": 26,
+        "unique_candidate_setup_ids": 102,
+        "duplicate_candidate_setup_id_occurrences": 0,
+        "setup_id_reconciliation_holds": true,
+        "fallback_directions": {
+          "buy": 7,
+          "sell": 14
+        }
+      },
+      "opportunity_classification": "OPPORTUNITY_SUFFICIENT",
+      "opportunity_classification_basis": "mechanical application of the preregistered rule: raw candidate_ready (102) >= 90; establishes density adequacy under Tier-A research target >= 90; establishes neither sample sufficiency nor profitability",
+      "state_invariance_verified": true,
+      "liquidity_rules_invariance_verified": true,
+      "no_counterfactuals_computed": true,
+      "no_profitability_metrics": true,
+      "numeric_parameter_trials_consumed": 0,
+      "reserved_evidence_untouched": {
+        "data_2025_plus": true,
+        "fold_02": true,
+        "fold_03": true,
+        "fold_04": true,
+        "holdout": true,
+        "tier_b_sealed": true
+      },
+      "result_document": "docs/PHASE8_V2_VARIANT_V005_RESULT.md",
+      "budget_after_result": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "upward_strategy_variant_parameter_trial_budget_revision_prohibited": "ACTIVE",
+        "note": "the first real Fold-01 V005 strategy observation permanently consumed the fifth strategy-variant slot at the exposure timestamp 2026-10-13T14:35:22.294978+00:00"
+      },
+      "h009_status": "PENDING_SUPERVISORY_INTERPRETATION; H009-TC001 statement is NOT automatically mutated to SUPPORTED or REFUTED; raw candidate_ready reaches 102 >= 90 threshold with 81 baseline + 21 fallback candidates"
     }
   ],
   "provenance_corrections": [
