@@ -811,4 +811,13 @@ Copy-paste for a fresh agent session:
   2. Formal supervisory authorization to execute Charter §17 candidate freeze (`phase6-frozen-v2`).
   3. Pre-registration of the prospective Tier-B evaluation plan before unsealing any reserved folds.
 
+## Update — 2026-10-14: `phase6-frozen-v2` canonically created and sealed — configuration locked — research cycle permanently closed (Tier B strictly sealed pending prospective feasibility plan)
 
+- **Canonical Freeze Created:** Under Charter §17, `phase6-development-v2-V005` has been canonically frozen as `phase6-frozen-v2` (governance record `phase6-frozen-v2-F001`, specification `docs/PHASE8_V2_FROZEN_V2.md`, manifest `baseline/phase8_v2_frozen_candidate_manifest.json`).
+- **Zero Strategy Code Modification:** No new strategy implementation was created (no `frozen_v2.py`); candidate semantics remain the exact committed bytes of V005 at semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`.
+- **Prospective Contract:** Validated under `canonical_git_blob_v1`. Aggregate framed digest over the 7 minimal mandatory paths (`bot/state/gate_inputs.py`, `bot/state/gate_reducer.py`, `bot/strategy/config.py`, `bot/strategy/variant_v003.py`, `bot/strategy/variant_v005.py`, `strategies/smc_engine/entry_model.py`, `strategies/smc_engine/strategy_state.py`) is `22880f7acfb762b938997ef070fef13580679f37058f1853b8c8438fc9defc25`.
+- **Configuration Lock:** Complete `StrategyConfig` defaults locked: historical/config API fingerprint `6fce546fb4a3ad41c2fe6fb9`, full deterministic configuration SHA-256 `6fce546fb4a3ad41c2fe6fb98231ceb7840d15e60f234746d7c78c87d3791e19`.
+- **Audit RC001 Nuance & Risk Flag:** `phase8-v2-candidate-selection-audit-v1-RC001` appended to ledger and Section O added to `docs/PHASE8_V2_CANDIDATE_SELECTION_AUDIT.md`. Criterion 5 remains PASS for the full candidate surface. Mandatory risk flag `TIER_B_REGIME_CONCENTRATION_RISK` recorded for incremental fallbacks (20/21 in W17–W18, 16/21 in London, 20/21 in first half).
+- **Research Cycle Permanently Closed:** Record `phase6-development-v2-research-closure-v1` appended. Budget closed: 5/12 diagnostics, 5/8 variants, 0/4 numeric trials; 7 diagnostics, 3 variants, 4 numeric trials retired and unspent. No V006; no parameter tuning.
+- **Tier-B Status:** Folds 02–04, holdout, and 2025+ data remain strictly **SEALED** and unopened.
+- **Next Required Scientific Task:** Preregister the prospective Tier-B Feasibility Plan before unsealing Fold 02, specifying Fold-02 release, 60-candidate headroom, completed-trade/lifecycle methodology, fold-boundary and open-position treatment, fill/slippage scenarios, fail-fast sequence, progressive contamination transitions, and strict exclusion of profitability metrics.

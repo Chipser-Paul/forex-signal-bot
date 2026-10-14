@@ -4181,6 +4181,106 @@
       },
       "freeze_action": "PROHIBITED_IN_THIS_TASK — NO PHASE6_FROZEN_V2 CREATED — AWAITS SUPERVISORY AUTHORIZATION",
       "audit_document": "docs/PHASE8_V2_CANDIDATE_SELECTION_AUDIT.md"
+    },
+    {
+      "record_id": "phase8-v2-candidate-selection-audit-v1-RC001",
+      "record_type": "CANDIDATE_SELECTION_AUDIT_QUALIFICATION_RECORD",
+      "created_utc": "2026-10-14T17:00:00Z",
+      "references": {
+        "audit_record": "phase8-v2-candidate-selection-audit-v1",
+        "audit_document": "docs/PHASE8_V2_CANDIDATE_SELECTION_AUDIT.md",
+        "candidate": "phase6-development-v2-V005",
+        "result_record": "phase6-development-v2-V005-R001"
+      },
+      "criterion_5_disposition": "PASS",
+      "scope": "COMPLETE_V005_CANDIDATE_SURFACE",
+      "criterion_5_basis": "The complete 102-candidate surface spans both halves of Fold 01, April/May/June 2024, multiple trading sessions, and eight occupied ISO-week bins without single-day collapse.",
+      "mandatory_risk_flag": "TIER_B_REGIME_CONCENTRATION_RISK",
+      "risk_scope": "INCREMENTAL_V005_DIRECTIONAL_FALLBACK_MECHANISM",
+      "fallback_evidence": {
+        "fallback_count": 21,
+        "fallback_active_days": 5,
+        "weekly_distribution": {
+          "W17": 11,
+          "W18": 9,
+          "W19": 1
+        },
+        "temporal_concentration": "20 / 21 in W17-W18; 20 / 21 in first half of Fold 01",
+        "session_concentration": "16 / 21 in London session"
+      },
+      "qualification": "V005 demonstrates the H009 mechanism on contaminated Tier-A Fold 01, but its incremental fallback contribution is temporally and session concentrated. This does not invalidate candidate-level §14 temporal stability, but persistence of the incremental mechanism across reserved periods is unestablished and must be treated as a Tier-B confirmation risk."
+    },
+    {
+      "record_id": "phase6-development-v2-research-closure-v1",
+      "record_type": "RESEARCH_CYCLE_CLOSURE_RECORD",
+      "created_utc": "2026-10-14T17:00:00Z",
+      "research_identity": "phase6-development-v2",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "reason": "SINGLE_CANDIDATE_SELECTED_AND_FREEZE_AUTHORIZED",
+      "effective_state": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4"
+      },
+      "allowances_disposition": "UNUSED_AND_RETIRED_FOR_THIS_FROZEN_CANDIDATE_CYCLE",
+      "retired_allowances": {
+        "diagnostics_retired": 7,
+        "strategy_variants_retired": 3,
+        "numeric_parameter_trials_retired": 4
+      },
+      "post_freeze_rules": [
+        "No V006 development or registration under this charter.",
+        "No new Tier-A strategy semantics under this charter.",
+        "No numeric parameter tuning under this charter.",
+        "No diagnostic intended to modify candidate rules.",
+        "Any future strategy research cycle requires a new charter identity."
+      ],
+      "closure_status": "RESEARCH_CYCLE_PERMANENTLY_CLOSED"
+    },
+    {
+      "record_id": "phase6-frozen-v2-F001",
+      "record_type": "STRATEGY_FREEZE_RECORD",
+      "created_utc": "2026-10-14T17:00:00Z",
+      "freeze_identity": "phase6-frozen-v2",
+      "development_predecessor": "phase6-development-v2-V005",
+      "disposition": "FROZEN_FOR_RESERVED_FOLD_FEASIBILITY",
+      "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+      "freeze_document": "docs/PHASE8_V2_FROZEN_V2.md",
+      "manifest_path": "baseline/phase8_v2_frozen_candidate_manifest.json",
+      "prospective_contract_id": "canonical_git_blob_v1",
+      "strategy_semantic_aggregate_digest": "22880f7acfb762b938997ef070fef13580679f37058f1853b8c8438fc9defc25",
+      "configuration_fingerprint": "6fce546fb4a3ad41c2fe6fb9",
+      "full_configuration_sha256": "6fce546fb4a3ad41c2fe6fb98231ceb7840d15e60f234746d7c78c87d3791e19",
+      "ordered_semantic_paths": [
+        "bot/state/gate_inputs.py",
+        "bot/state/gate_reducer.py",
+        "bot/strategy/config.py",
+        "bot/strategy/variant_v003.py",
+        "bot/strategy/variant_v005.py",
+        "strategies/smc_engine/entry_model.py",
+        "strategies/smc_engine/strategy_state.py"
+      ],
+      "path_git_blob_ids": {
+        "bot/state/gate_inputs.py": "a4bdc19a949f75ea7fa7cc52c516b6626590fe6c",
+        "bot/state/gate_reducer.py": "e1841fc276401146e38a69b9555a0e4437a30290",
+        "bot/strategy/config.py": "fc992fb091bc5c04363552467e99807c83387386",
+        "bot/strategy/variant_v003.py": "c25f110c15c60bc5b32cffc0b3870de6d5d5144c",
+        "bot/strategy/variant_v005.py": "3820c6c66f96c91d98b47feda0e4f5f88aa5c70a",
+        "strategies/smc_engine/entry_model.py": "0dff4ccb47513ccd56cd955d9f618e69d9ec3c02",
+        "strategies/smc_engine/strategy_state.py": "b7500160ebfb084703c6fe02c16946c1185d21b2"
+      },
+      "cost_policy_reference": {
+        "attestation_file": "baseline/phase8_v2_cost_policy_canonical_attestation.json",
+        "git_blob_id": "1e08dc4a0bc2f82c8318e8aa57c71e90b0980b1e",
+        "artifact_sha256": "990109cc860a248663be758ca233e077acd96502d10cce91ad29726b760675f4",
+        "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108"
+      },
+      "development_evaluator_provenance": {
+        "evaluator_module": "backtests/phase8_v2_variant_v005_eval.py",
+        "git_blob_id": "6291999b059facadf6ea40482f8413872cf4cd23",
+        "canonical_file_digest": "dd4d864e6caf3413447121bac9bc412c1db7a8df6243422840e0e5d59ca26683"
+      },
+      "scientific_status": "FROZEN_CANDIDATE_NO_PROFITABILITY_EVIDENCE — TIER_B_SEALED_PENDING_PROSPECTIVE_FEASIBILITY_PLAN"
     }
   ],
   "provenance_corrections": [

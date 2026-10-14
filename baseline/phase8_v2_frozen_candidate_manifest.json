@@ -1,0 +1,192 @@
+{
+  "schema_version": "phase8v2.frozen-candidate-manifest.v1",
+  "record_type": "PROSPECTIVE_STRATEGY_FREEZE_MANIFEST",
+  "freeze_identity": "phase6-frozen-v2",
+  "development_predecessor": "phase6-development-v2-V005",
+  "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+  "governance_reference": {
+    "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+    "selected_hypothesis_id": "phase8-v2-H009-TC001",
+    "historical_hypothesis_id": "phase8-v2-H009",
+    "supporting_result_id": "phase6-development-v2-V005-R001",
+    "candidate_selection_audit_id": "phase8-v2-candidate-selection-audit-v1",
+    "candidate_selection_audit_qualification_id": "phase8-v2-candidate-selection-audit-v1-RC001",
+    "freeze_record_id": "phase6-frozen-v2-F001",
+    "research_closure_record_id": "phase6-development-v2-research-closure-v1",
+    "freeze_document": "docs/PHASE8_V2_FROZEN_V2.md"
+  },
+  "prospective_contract_record": {
+    "contract_id": "canonical_git_blob_v1",
+    "digest_algorithm": "sha256",
+    "commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+    "paths": [
+      "bot/state/gate_inputs.py",
+      "bot/state/gate_reducer.py",
+      "bot/strategy/config.py",
+      "bot/strategy/variant_v003.py",
+      "bot/strategy/variant_v005.py",
+      "strategies/smc_engine/entry_model.py",
+      "strategies/smc_engine/strategy_state.py"
+    ],
+    "digest": "22880f7acfb762b938997ef070fef13580679f37058f1853b8c8438fc9defc25",
+    "legacy_compatible": false
+  },
+  "ordered_semantic_paths": [
+    "bot/state/gate_inputs.py",
+    "bot/state/gate_reducer.py",
+    "bot/strategy/config.py",
+    "bot/strategy/variant_v003.py",
+    "bot/strategy/variant_v005.py",
+    "strategies/smc_engine/entry_model.py",
+    "strategies/smc_engine/strategy_state.py"
+  ],
+  "path_git_blob_ids": {
+    "bot/state/gate_inputs.py": "a4bdc19a949f75ea7fa7cc52c516b6626590fe6c",
+    "bot/state/gate_reducer.py": "e1841fc276401146e38a69b9555a0e4437a30290",
+    "bot/strategy/config.py": "fc992fb091bc5c04363552467e99807c83387386",
+    "bot/strategy/variant_v003.py": "c25f110c15c60bc5b32cffc0b3870de6d5d5144c",
+    "bot/strategy/variant_v005.py": "3820c6c66f96c91d98b47feda0e4f5f88aa5c70a",
+    "strategies/smc_engine/entry_model.py": "0dff4ccb47513ccd56cd955d9f618e69d9ec3c02",
+    "strategies/smc_engine/strategy_state.py": "b7500160ebfb084703c6fe02c16946c1185d21b2"
+  },
+  "strategy_semantic_aggregate_digest": "22880f7acfb762b938997ef070fef13580679f37058f1853b8c8438fc9defc25",
+  "configuration_lock": {
+    "version": "phase6-strategy-v1",
+    "executable_symbols": [
+      "XAUUSDm"
+    ],
+    "dxy_symbol_map": {
+      "EURUSD": "EURUSDm",
+      "GBPUSD": "GBPUSDm",
+      "USDCAD": "USDCADm",
+      "USDCHF": "USDCHFm",
+      "USDJPY": "USDJPYm",
+      "USDSEK": "USDSEKm"
+    },
+    "dxy_lookback_bars": 20,
+    "dxy_slope_threshold_fraction_per_bar": 0.0001,
+    "dxy_max_staleness_seconds": 3600.0,
+    "atr_period_bars": 14,
+    "regime_baseline_bars": 20,
+    "regime_trend_lookback_bars": 20,
+    "high_volatility_ratio": 1.5,
+    "trend_strength_atr": 0.9,
+    "order_block_displacement_atr": 1.5,
+    "order_block_expiry_bars": 30,
+    "news_block_before_seconds": 1800.0,
+    "news_block_after_seconds": 1800.0,
+    "news_max_age_seconds": 3600.0,
+    "rollover_start_utc": "21:55:00",
+    "rollover_end_utc": "22:10:00",
+    "confluence_threshold": 8
+  },
+  "configuration_fingerprint": "6fce546fb4a3ad41c2fe6fb9",
+  "full_configuration_sha256": "6fce546fb4a3ad41c2fe6fb98231ceb7840d15e60f234746d7c78c87d3791e19",
+  "v003_dependency_lock": {
+    "strategy_module": "bot/strategy/variant_v003.py",
+    "git_blob_id": "c25f110c15c60bc5b32cffc0b3870de6d5d5144c",
+    "specification_sha256": "e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95",
+    "temporal_memory_preserved": true
+  },
+  "entry_and_state_dependency_lock": {
+    "entry_model_module": "strategies/smc_engine/entry_model.py",
+    "entry_model_git_blob_id": "0dff4ccb47513ccd56cd955d9f618e69d9ec3c02",
+    "strategy_state_module": "strategies/smc_engine/strategy_state.py",
+    "strategy_state_git_blob_id": "b7500160ebfb084703c6fe02c16946c1185d21b2"
+  },
+  "protected_infrastructure_attestation": {
+    "charter_reference": "Charter §5 (Protected Safety Architecture)",
+    "attestation_status": "FULL_PROTECTIONS_INTACT_AND_UNBYPASSED",
+    "verified_controls": {
+      "production_executable_symbol_exact": "XAUUSDm only",
+      "causal_candle_availability": "Enforced causally (available_at <= decision_at)",
+      "active_bar_exclusion": "Forming active bar strictly excluded from causal inputs",
+      "htf_availability": "HTF candles filtered causally to available_at <= decision_at",
+      "news_fail_closed": "News window [decision - 30m, decision + 30m] with 60m max age fails closed",
+      "session_and_rollover_protection": "21:55-22:10 UTC rollover lockout enforced",
+      "dxy_semantics": "6-pair basket, 20-bar lookback, 3600s staleness enforced",
+      "setup_consumption_and_idempotency": "Setup IDs unique, non-reusable, monotonic",
+      "risk_authority": "Risk engine retains exclusive size/SL/TP sizing authority",
+      "drawdown_and_circuit_protections": "Account-level daily and max drawdown stops unbypassed",
+      "volume_precision": "Broker volume step 0.01 and lot constraints enforced",
+      "tick_freshness": "Tick staleness checks strictly maintained",
+      "spread_protection": "Max spread threshold 30.0 points enforced",
+      "projected_margin_protection": "Pre-trade margin calculation required",
+      "order_retry_and_revalidation": "Price and stop revalidation on retry enforced"
+    }
+  },
+  "cost_policy_attestation_reference": {
+    "attestation_file": "baseline/phase8_v2_cost_policy_canonical_attestation.json",
+    "git_blob_id": "1e08dc4a0bc2f82c8318e8aa57c71e90b0980b1e",
+    "artifact_sha256": "990109cc860a248663be758ca233e077acd96502d10cce91ad29726b760675f4",
+    "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108",
+    "prospective_contract": "canonical_git_blob_v1"
+  },
+  "development_evaluator_provenance": {
+    "evaluator_module": "backtests/phase8_v2_variant_v005_eval.py",
+    "git_blob_id": "6291999b059facadf6ea40482f8413872cf4cd23",
+    "canonical_file_digest": "dd4d864e6caf3413447121bac9bc412c1db7a8df6243422840e0e5d59ca26683",
+    "classification": "DEVELOPMENT_MEASUREMENT_PROVENANCE",
+    "distinction": "Development measurement only; Tier-B evaluation requires separate prospective preregistration"
+  },
+  "v005_empirical_result_binding": {
+    "result_id": "phase6-development-v2-V005-R001",
+    "external_artifact_sha256": "27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe",
+    "external_artifact_bytes": 80554,
+    "observed_raw_candidates": 102,
+    "unique_setup_ids": 102,
+    "duplicates": 0,
+    "source_breakdown": {
+      "v003_baseline": 81,
+      "v005_directional_fallback": 21
+    },
+    "direction_breakdown": {
+      "long": 55,
+      "short": 47
+    },
+    "v003_preservation": "81 / 81 exact candidate identities and exact deterministic entry objects"
+  },
+  "contamination_state": {
+    "tier_a_fold01": "CONTAMINATED_FOR_FUTURE_STRATEGY_DESIGN",
+    "tier_a_folds02_04": "RESERVED_SEALED_UNOPENED",
+    "tier_b_holdout": "SEALED_UNOPENED",
+    "post_2024_data": "SEALED_UNOPENED",
+    "task_contamination_event": "NONE"
+  },
+  "research_budget_closure": {
+    "closure_record_id": "phase6-development-v2-research-closure-v1",
+    "closure_reason": "SINGLE_CANDIDATE_SELECTED_AND_FREEZE_AUTHORIZED",
+    "diagnostics_budget": "5 / 12 executed (7 unused and retired)",
+    "variants_budget": "5 / 8 observed (3 unused and retired)",
+    "numeric_parameter_trials_budget": "0 / 4 executed (4 unused and retired)",
+    "closure_status": "RESEARCH_CYCLE_PERMANENTLY_CLOSED_ALLOWANCES_RETIRED"
+  },
+  "risk_flags": [
+    {
+      "flag": "TIER_B_REGIME_CONCENTRATION_RISK",
+      "scope": "INCREMENTAL_V005_DIRECTIONAL_FALLBACK_MECHANISM",
+      "evidence": {
+        "fallback_count": 21,
+        "fallback_active_days": 5,
+        "weekly_distribution": {
+          "W17": 11,
+          "W18": 9,
+          "W19": 1
+        },
+        "temporal_concentration": "20 / 21 in W17-W18; 20 / 21 in first half of Fold 01",
+        "session_concentration": "16 / 21 in London session"
+      },
+      "qualification": "V005 demonstrates the H009 mechanism on contaminated Tier-A Fold 01, but its incremental fallback contribution is temporally and session concentrated. This does not invalidate candidate-level §14 temporal stability, but persistence of the incremental mechanism across reserved periods is unestablished and must be treated as a Tier-B confirmation risk."
+    }
+  ],
+  "tier_b_status": {
+    "tier_b_state": "SEALED",
+    "preregistration_required": "PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_REQUIRED_BEFORE_FOLD02_RELEASE",
+    "unauthorized_actions": [
+      "NO_FOLD02_INSPECTION",
+      "NO_FOLD03_OR_FOLD04_ACCESS",
+      "NO_LIFECYCLE_FEASIBILITY_RUNS",
+      "NO_PROFITABILITY_CALCULATION"
+    ]
+  }
+}

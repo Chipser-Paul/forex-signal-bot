@@ -1,10 +1,10 @@
 # Phase 8 V2 — Tier-A Candidate Selection Audit
 
-**Document Identity:** `phase8-v2-candidate-selection-audit-v1`  
-**Classification:** `POST_RESULT_GOVERNANCE_AUDIT — SEALED_TIER_A_RESULT_ONLY — NOT_NEW_STRATEGY_TRIAL`  
-**Governing Charter:** `phase8-v2-research-charter-v1-8527e3a5eec98f53` (Charter §14 Candidate Selection & Charter §17 Freeze Criteria)  
-**Primary Evaluated Variant:** `phase6-development-v2-V005` (*Eligibility-Scoped Requested-Side Entry Direction Authority*)  
-**Primary Evaluated Result:** `phase6-development-v2-V005-R001` (External JSON: `phase6-development-v2-V005_result.json`, SHA-256 `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, 80,554 bytes)  
+**Document Identity:** `phase8-v2-candidate-selection-audit-v1`
+**Classification:** `POST_RESULT_GOVERNANCE_AUDIT — SEALED_TIER_A_RESULT_ONLY — NOT_NEW_STRATEGY_TRIAL`
+**Governing Charter:** `phase8-v2-research-charter-v1-8527e3a5eec98f53` (Charter §14 Candidate Selection & Charter §17 Freeze Criteria)
+**Primary Evaluated Variant:** `phase6-development-v2-V005` (*Eligibility-Scoped Requested-Side Entry Direction Authority*)
+**Primary Evaluated Result:** `phase6-development-v2-V005-R001` (External JSON: `phase6-development-v2-V005_result.json`, SHA-256 `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, 80,554 bytes)
 **Audit Purpose:** Comprehensive Charter §14 evaluation of candidate density, temporal stability, causal integrity, economic coherence, and architectural safety on contaminated Tier-A Fold 01, culminating in a provisional candidate-selection recommendation prior to Charter §17 freeze authorization.
 
 ---
@@ -297,3 +297,35 @@ Before `phase6-frozen-v2` can be created, the following actions must occur in a 
 * **Tier-B Holdout Dataset:** Strictly **SEALED** and unopened.
 * **Post-2024 Data (2025+):** Strictly **SEALED** and unopened.
 * **Integrity Guarantee:** Zero empirical observations have occurred outside of authorized Tier-A Fold 01.
+
+---
+
+## O. Audit RC001 Clarification — Fallback Concentration Nuance & Risk Flag
+
+**Governance Reference:** `phase8-v2-candidate-selection-audit-v1-RC001`
+**Classification:** POST-RESULT GOVERNANCE QUALIFICATION — NO EMPIRICAL RETEST
+
+### O.1 Criterion 5 Status
+Charter §14 Criterion 5 (Temporal Stability) remains **PASS** for the **COMPLETE** V005 candidate surface.
+
+* **Rationale:** The full 102-candidate surface spans both halves of Fold 01, covers April, May, and June 2024, spans multiple trading sessions (London, New York, Asian, off-session), and populates eight occupied ISO-week bins without single-day collapse.
+
+### O.2 Fallback Concentration Nuance & Mandatory Risk Flag
+While the overall candidate surface satisfies Criterion 5, fine-grained stratification of the 21 incremental V005 fallback recoveries reveals temporal and session clustering:
+
+* **Fallback Candidate Count:** `21`
+* **Fallback Active Days:** `5` distinct trading days
+* **Weekly Distribution:**
+  - W17: `11`
+  - W18: `9`
+  - W19: `1`
+  - **Temporal Concentration:** `20 / 21` (95.2%) fallbacks occur within W17–W18; `20 / 21` occur in the first half of Fold 01.
+* **Session Concentration:** `16 / 21` (76.2%) fallbacks occur during the London session.
+
+Accordingly, the mandatory prospective risk flag is formally recorded:
+> **`TIER_B_REGIME_CONCENTRATION_RISK`**
+
+### O.3 Clarification of Interpretation
+Supervisory review noted that interpreting the fallback distribution as confirming a general structural correction or proving the complete absence of regime concentration is too strong. Prospectively, the interpretation is clarified as:
+
+> *V005 demonstrates the H009 mechanism on contaminated Tier-A Fold 01, but its incremental fallback contribution is temporally and session concentrated. This does not invalidate candidate-level §14 temporal stability, but persistence of the incremental mechanism across reserved periods is unestablished and must be treated as a Tier-B confirmation risk.*
