@@ -4281,6 +4281,184 @@
         "canonical_file_digest": "dd4d864e6caf3413447121bac9bc412c1db7a8df6243422840e0e5d59ca26683"
       },
       "scientific_status": "FROZEN_CANDIDATE_NO_PROFITABILITY_EVIDENCE — TIER_B_SEALED_PENDING_PROSPECTIVE_FEASIBILITY_PLAN"
+    },
+    {
+      "record_id": "phase8-v2-H007-R001",
+      "result_id": "phase8-v2-H007-R001",
+      "record_type": "HYPOTHESIS_DISPOSITION_RECORD",
+      "hypothesis_id": "phase8-v2-H007",
+      "research_identity": "phase6-development-v2",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "created_utc": "2026-10-14T21:00:00Z",
+      "disposition": "SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE",
+      "qualification": "SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A \u2014 V002_OPPORTUNITY_INSUFFICIENT \u2014 NOT_SELECTED \u2014 NOT_PROFITABILITY_EVIDENCE",
+      "supporting_variant_id": "phase6-development-v2-V002",
+      "supporting_result_id": "phase6-development-v2-V002-R001",
+      "evidence": {
+        "canonical_structurally_active_ob_count": 144,
+        "same_direction_associated_final_fvg_count": 110,
+        "exact_overlap_descriptive_true": 67,
+        "exact_overlap_descriptive_false": 43,
+        "v002_gate_11_pass": 102,
+        "canonical_strategy_pass": 80,
+        "candidate_ready": 61,
+        "final_opportunity_classification": "OPPORTUNITY_INSUFFICIENT"
+      },
+      "interpretation": "H007's coherent structural-pair representation is supported as a structural semantic hypothesis. V002 did NOT achieve adequate end-to-end opportunity density and is therefore not the selected candidate. Hypothesis support must not be conflated with variant selection.",
+      "no_empirical_access": true,
+      "budget_consumed": 0,
+      "budget_after_disposition": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "allowances_disposition": "UNUSED_AND_RETIRED_FOR_THIS_FROZEN_CANDIDATE_CYCLE"
+      },
+      "reserved_evidence": {
+        "tier_b_sealed": true,
+        "folds_02_04_untouched": true,
+        "holdout_untouched": true,
+        "data_2025_plus_untouched": true
+      }
+    },
+    {
+      "record_id": "phase8-v2-ledger-seal-v1",
+      "result_id": "phase8-v2-ledger-seal-v1",
+      "record_type": "SCIENTIFIC_LEDGER_TERMINALITY_ATTESTATION",
+      "research_identity": "phase6-development-v2",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "created_utc": "2026-10-14T21:00:00Z",
+      "attestation": "ALL_OPENED_SCIENTIFIC_ENTITIES_TERMINALLY_RESOLVED",
+      "hypotheses_terminality_map": {
+        "phase8-v2-H001": {
+          "terminal_disposition": "SUPPORTED_BY_D003_D004_SYNTHESIS",
+          "authoritative_record_id": "phase8-v2-H001-R001"
+        },
+        "phase8-v2-H002": {
+          "terminal_disposition": "REJECTED_AS_PRIMARY_BOTTLENECK",
+          "authoritative_record_id": "phase8-v2-D003-R001"
+        },
+        "phase8-v2-H003": {
+          "terminal_disposition": "SUPPORTED_BY_D005",
+          "authoritative_record_id": "phase8-v2-D005-R001"
+        },
+        "phase8-v2-H004": {
+          "terminal_disposition": "DISCONTINUED_WITHOUT_EXECUTION",
+          "authoritative_record_id": "phase8-v2-H004-X001"
+        },
+        "phase8-v2-H005": {
+          "terminal_disposition": "REJECTED_AS_OPPORTUNITY_SOLUTION",
+          "authoritative_record_id": "phase6-development-v2-V001-R001"
+        },
+        "phase8-v2-H006": {
+          "terminal_disposition": "SUPPORTED_BY_D004",
+          "authoritative_record_id": "phase8-v2-D004-R001"
+        },
+        "phase8-v2-H007": {
+          "terminal_disposition": "SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE",
+          "authoritative_record_id": "phase8-v2-H007-R001"
+        },
+        "phase8-v2-H008": {
+          "terminal_disposition": "SUPPORTED_BY_D006",
+          "authoritative_record_id": "phase8-v2-H008-R001"
+        },
+        "phase8-v2-H009": {
+          "terminal_disposition": "SUPERSEDED_BY_H009_TC001",
+          "superseded_by": "phase8-v2-H009-TC001"
+        },
+        "phase8-v2-H009-TC001": {
+          "terminal_disposition": "SUPPORTED_BY_V005",
+          "authoritative_record_id": "phase8-v2-H009-R001"
+        }
+      },
+      "diagnostics_terminality_map": {
+        "phase8-v2-D001": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D001-R001"
+        },
+        "phase8-v2-D002": {
+          "status": "BLOCKED_BEFORE_EXECUTION",
+          "authoritative_record_id": "phase8-v2-D002-X001"
+        },
+        "phase8-v2-D003": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D003-R001"
+        },
+        "phase8-v2-D004": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D004-R001"
+        },
+        "phase8-v2-D005": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D005-R001"
+        },
+        "phase8-v2-D006": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D006-R001"
+        }
+      },
+      "variants_terminality_map": {
+        "phase6-development-v2-V001": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V001-R001"
+        },
+        "phase6-development-v2-V002": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V002-R001"
+        },
+        "phase6-development-v2-V003": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V003-R001"
+        },
+        "phase6-development-v2-V004": {
+          "status": "IMPLEMENTATION_BLOCKED_POST_EXPOSURE",
+          "authoritative_record_id": "phase6-development-v2-V004-ATTEMPT1"
+        },
+        "phase6-development-v2-V005": {
+          "status": "OPPORTUNITY_SUFFICIENT_SELECTED_AND_FROZEN",
+          "authoritative_record_id": "phase6-development-v2-V005-R001",
+          "audit_record_id": "phase8-v2-candidate-selection-audit-v1",
+          "freeze_record_id": "phase6-frozen-v2-F001"
+        }
+      },
+      "unresolved_entities_count": 0,
+      "budget_summary": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "allowances_disposition": "UNUSED_AND_RETIRED_FOR_THIS_FROZEN_CANDIDATE_CYCLE"
+      },
+      "reserved_evidence": {
+        "tier_b_sealed": true,
+        "folds_02_04_untouched": true,
+        "holdout_untouched": true,
+        "data_2025_plus_untouched": true
+      }
+    },
+    {
+      "record_id": "phase6-frozen-v2-F001-TC001",
+      "result_id": "phase6-frozen-v2-F001-TC001",
+      "record_type": "PRE_TIER_B_FREEZE_IDENTITY_CORRECTION",
+      "created_utc": "2026-10-14T21:00:00Z",
+      "freeze_identity": "phase6-frozen-v2",
+      "supersedes_record": "phase6-frozen-v2-F001",
+      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY \u2014 ZERO_STRATEGY_SEMANTIC_CHANGE \u2014 ZERO_EMPIRICAL_ACCESS",
+      "defects_repaired": [
+        "INCOMPLETE_STRATEGY_RUNTIME_DEPENDENCY_CLOSURE",
+        "INCOMPLETE_EFFECTIVE_XAUUSDM_CONFIGURATION_LOCK",
+        "VALIDATION_PIPELINE_IDENTITY_NOT_PROSPECTIVELY_BOUND",
+        "PROTECTED_INFRASTRUCTURE_ATTESTED_BUT_NOT_CRYPTOGRAPHICALLY_BOUND",
+        "H007_TERMINAL_DISPOSITION_MISSING"
+      ],
+      "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+      "historical_f001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERVISORY_ACCEPTANCE_WITHHELD \u2014 INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
+      "tc001_manifest_path": "baseline/phase8_v2_frozen_candidate_manifest_tc001.json",
+      "prospective_contract_id": "canonical_git_blob_v1",
+      "strategy_semantic_aggregate_digest_v2": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+      "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+      "validation_pipeline_aggregate_digest_v1": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+      "protected_infrastructure_aggregate_digest_v1": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+      "budget_impact": 0,
+      "zero_empirical_access": true
     }
   ],
   "provenance_corrections": [

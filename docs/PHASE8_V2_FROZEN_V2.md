@@ -233,3 +233,74 @@ The next task must create and preregister a prospective Tier-B Feasibility Plan 
 10. Strict exclusion of profitability metrics during feasibility.
 
 **NO TIER-B OBSERVATION IS PERMITTED IN THIS TASK.**
+
+---
+
+## 9. F001-TC001 — Complete Prospective Freeze Identity
+
+- **Governance Record:** `phase6-frozen-v2-F001-TC001`
+- **Record Classification:** `GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS`
+- **Manifest:** `baseline/phase8_v2_frozen_candidate_manifest_tc001.json` (schema `phase8v2.frozen-candidate-manifest.v2`)
+- **Semantic Anchor Commit:** `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`
+- **Prospective Contract ID:** `canonical_git_blob_v1`
+- **Historical F001 Status:** `PUBLISHED_PRE_TIER_B — SUPERVISORY_ACCEPTANCE_WITHHELD — INCOMPLETE_FREEZE_DEPENDENCY_SURFACE`
+- **Scientific Status:** `CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN`
+
+### 9.1 Context and Preservation of Historical F001 Narrative
+Under supervisory audit, historical freeze record `phase6-frozen-v2-F001` was identified as having four pre-Tier-B provenance and governance defects:
+1. Incomplete strategy runtime dependency closure (the historical 7-path entrypoint identity was incomplete);
+2. Incomplete configuration lock because the effective `XAUUSDm` symbol profile was not frozen;
+3. Validation-pipeline and protected-infrastructure identities were asserted in prose but not cryptographically bound;
+4. Hypothesis `phase8-v2-H007` lacked a terminal supervisory disposition record, leaving Charter §17 item 11 open.
+
+**Crucial Governance Invariants:**
+- **Candidate Selection Remains Valid:** `phase6-development-v2-V005` remains the single selected Charter §14 candidate (`SELECT_PHASE6_DEVELOPMENT_V2_V005_AS_SINGLE_FREEZE_CANDIDATE`).
+- **Zero Strategy Code Modification:** The underlying strategy code at semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` never changed and remains byte-identical.
+- **Zero Empirical Access:** No empirical store (Fold 01, Fold 02–04, Holdout, or 2025+ data) was accessed during this correction.
+- **Supersession for Prospective Use:** The historical 7-path aggregate digest (`22880f7acfb762b938997ef070fef13580679f37058f1853b8c8438fc9defc25`) is preserved historically as `HISTORICAL_PARTIAL_ENTRYPOINT_IDENTITY` and superseded for all future prospective Tier-B verification by `STRATEGY_SEMANTIC_IDENTITY_V2`.
+
+### 9.2 Complete Strategy-Semantic Dependency Closure (`STRATEGY_SEMANTIC_IDENTITY_V2`)
+Beginning from the 12 declared semantic roots:
+- `bot/state/gate_inputs.py`
+- `bot/state/gate_reducer.py`
+- `bot/strategy/config.py`
+- `bot/strategy/variant_v003.py`
+- `bot/strategy/variant_v005.py`
+- `strategies/smc_engine/entry_model.py`
+- `strategies/smc_engine/strategy_state.py`
+- `config/symbol_profiles/__init__.py`
+- `config/symbol_profiles/base.py`
+- `config/symbol_profiles/xauusdm.py`
+- `utils/symbol_profiles.py`
+- `bot/state/orchestrator.py`
+
+A complete recursive AST dependency closure across repository-local Python modules was computed against committed Git bytes at the semantic anchor commit.
+- **Path Count:** 83 unique paths (including `bot/analysis/*`, `bot/strategy/*`, `strategies/smc_engine/*`, `bot/execution/*`, `config/symbol_profiles/*`, `utils/*`).
+- **Contract:** `canonical_git_blob_v1`
+- **Aggregate SHA-256 Digest:** `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f`
+
+### 9.3 Effective XAUUSDm Configuration Lock & Complete Configuration Identity
+- **Effective XAUUSDm Profile:** Derived deterministically from `config/symbol_profiles/base.py` + `xauusdm.py` via `utils/symbol_profiles.py`. Unbounded tier (`float("inf")`) canonicalized as `{"__unbounded_profile_max__": true}` with sorted keys and compact separators.
+  - `effective_xauusdm_profile_sha256`: `7178799c23f85d5cfb867d73f1d9bcb74ae597beb88227ea9a217602770a879a`
+- **Core StrategyConfig Identity:** Retained from F001:
+  - Fingerprint: `6fce546fb4a3ad41c2fe6fb9`
+  - Full SHA-256: `6fce546fb4a3ad41c2fe6fb98231ceb7840d15e60f234746d7c78c87d3791e19`
+- **Complete Candidate Configuration Identity:** Deterministic JSON envelope `{"strategy_config": ..., "xauusdm_profile": ...}`:
+  - `COMPLETE_CANDIDATE_CONFIGURATION_IDENTITY`: `1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806`
+
+### 9.4 Prospective Validation Pipeline Identity (`VALIDATION_PIPELINE_IDENTITY_V1`)
+Derived from the 23 validation roots (`bot/validation/development_plan_revision.py::CODE_COMPONENTS` non-test paths and empirical input pipeline sources) via recursive AST closure:
+- **Path Count:** 147 unique paths.
+- **Contract:** `canonical_git_blob_v1`
+- **Aggregate SHA-256 Digest:** `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f`
+
+### 9.5 Protected Infrastructure Identity (`PROTECTED_INFRASTRUCTURE_IDENTITY_V1`)
+All 17 Charter §5 protected safety controls are mapped to enforcing source modules, symbols, and committed Git blob IDs:
+- **Enforcing Paths:** 11 unique modules (`bot/backtesting/models.py`, `bot/data/candles.py`, `bot/execution/broker/adapter.py`, `bot/execution/broker/validation.py`, `bot/execution/lifecycle/entry.py`, `bot/execution/news_filter.py`, `bot/execution/risk/authority.py`, `bot/execution/risk/sizing.py`, `bot/state/gate_inputs.py`, `bot/strategy/config.py`, `bot/strategy/setup_consumption.py`).
+- **Contract:** `canonical_git_blob_v1`
+- **Aggregate SHA-256 Digest:** `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d`
+
+### 9.6 Terminal Scientific Ledger Seal & H007 Supervisory Disposition
+- **`phase8-v2-H007-R001`:** Hypothesis `phase8-v2-H007` formally resolved as `SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE` (qualified: `SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A — V002_OPPORTUNITY_INSUFFICIENT — NOT_SELECTED — NOT_PROFITABILITY_EVIDENCE`).
+- **`phase8-v2-ledger-seal-v1`:** Authoritative terminality seal explicitly accounting for all hypotheses (H001..H009), all diagnostics (D001..D006), and all variants (V001..V005). Zero scientific entities remain unresolved.
+- **Research Budgets:** Remain retired: diagnostics 5/12, variants 5/8, numeric trials 0/4.

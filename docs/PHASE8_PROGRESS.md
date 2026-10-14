@@ -2137,3 +2137,17 @@ step: supervisory review before D002 or Variant 1.
 - **Complete configuration lock:** `StrategyConfig` defaults locked: API fingerprint `6fce546fb4a3ad41c2fe6fb9`, deterministic full configuration SHA-256 `6fce546fb4a3ad41c2fe6fb98231ceb7840d15e60f234746d7c78c87d3791e19`.
 - **Dependency & attestation locks:** V003 blob `c25f110c15c60bc5b32cffc0b3870de6d5d5144c` (spec SHA `e6aa3e8a4f7b909f178a18112a43425ccfe61448c3c8643aea9c3f5d670e0d95`), entry model blob `0dff4ccb47513ccd56cd955d9f618e69d9ec3c02`, StrategyState blob `b7500160ebfb084703c6fe02c16946c1185d21b2`, cost policy reference `baseline/phase8_v2_cost_policy_canonical_attestation.json` (blob `1e08dc4a0bc2f82c8318e8aa57c71e90b0980b1e`, execution model fingerprint `054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108`), development evaluator provenance `backtests/phase8_v2_variant_v005_eval.py` (blob `6291999b059facadf6ea40482f8413872cf4cd23`, digest `dd4d864e6caf3413447121bac9bc412c1db7a8df6243422840e0e5d59ca26683`), and Charter §5 safety controls verified intact.
 - **Scientific boundaries & limitations:** Fold 01 contaminated (`CONTAMINATED_FOR_FUTURE_STRATEGY_DESIGN`); zero profitability evidence; post-freeze tuning prohibited; Tier B (Folds 02–04, holdout, 2025+ data) remains strictly SEALED pending prospective Tier-B feasibility plan.
+
+
+## Update — 2026-10-14: phase6-frozen-v2-F001-TC001 — Prospective Freeze Identity Repaired before Tier-B
+
+- **Task & Identity:** Executed task phase6-frozen-v2-F001-TC001. Appended correction record phase6-frozen-v2-F001-TC001 (classification: GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS).
+- **Defects Repaired:** Formally repaired the four pre-Tier-B defects in historical record phase6-frozen-v2-F001:
+  1. Complete strategy-semantic dependency closure computed (83 paths under canonical_git_blob_v1, aggregate digest ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f);
+  2. Effective merged XAUUSDm profile locked (7178799c23f85d5cfb867d73f1d9bcb74ae597beb88227ea9a217602770a879a) and combined candidate configuration identity computed (1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806);
+  3. Validation-pipeline identity formally bound (VALIDATION_PIPELINE_IDENTITY_V1, 147 paths, aggregate digest 957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f);
+  4. Protected infrastructure cryptographically bound (PROTECTED_INFRASTRUCTURE_IDENTITY_V1, 11 paths, aggregate digest 666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d) mapping all 17 Charter §5 controls;
+  5. Terminal disposition for H007 recorded (phase8-v2-H007-R001, SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE) and canonical scientific ledger seal appended (phase8-v2-ledger-seal-v1).
+- **Manifest Published:** Published baseline/phase8_v2_frozen_candidate_manifest_tc001.json (schema phase8v2.frozen-candidate-manifest.v2). Historical manifest baseline/phase8_v2_frozen_candidate_manifest.json preserved immutably.
+- **Strict Scope Boundaries:** Zero strategy semantic code changes; semantic anchor remains 2fd3460b9010d8cca548f4fd6980b6b34fe594e2. Zero empirical access (Fold 01, Folds 02–04, holdout, 2025+ data unopened). Research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
+- **Effective Status:** phase6-frozen-v2 — CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN. Tier B remains SEALED pending supervisory review.
