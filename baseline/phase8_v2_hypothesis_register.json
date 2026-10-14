@@ -4096,6 +4096,91 @@
         "note": "the first real Fold-01 V005 strategy observation permanently consumed the fifth strategy-variant slot at the exposure timestamp 2026-10-13T14:35:22.294978+00:00"
       },
       "h009_status": "PENDING_SUPERVISORY_INTERPRETATION; H009-TC001 statement is NOT automatically mutated to SUPPORTED or REFUTED; raw candidate_ready reaches 102 >= 90 threshold with 81 baseline + 21 fallback candidates"
+    },
+    {
+      "record_id": "phase6-development-v2-V005-RC001",
+      "record_type": "POST_RESULT_NARRATION_CORRECTION",
+      "created_utc": "2026-10-14T16:00:00Z",
+      "references": {
+        "variant": "phase6-development-v2-V005",
+        "result_record": "phase6-development-v2-V005-R001",
+        "result_document": "docs/PHASE8_V2_VARIANT_V005_RESULT.md"
+      },
+      "gate_12_13_failed_count": 8,
+      "preserved_e2_readiness_failures_count": 7,
+      "withdrawn_narration": "1 setup failing frozen entry geometry / RR parameters",
+      "eighth_rejection_mechanism": "NOT_ESTABLISHED_BY_V005_R001",
+      "explanation": "Frozen score-8 determine_entry does not contain a post-readiness RR/pullback-distance rejection gate, and V005 R001 does not seal per-rejection sub-predicates for non-candidates beyond candidate_ready count. The eighth rejection mechanism is unestablished by V005 R001 evidence; store replay/re-inspection is prohibited.",
+      "scientific_consequence": "None. Category counts (526 entrants, 138 Gate-11 passes, 110 strategy passes, 102 candidates, 8 rejections), candidate identities, and OPPORTUNITY_SUFFICIENT classification remain valid and immutable."
+    },
+    {
+      "result_id": "phase8-v2-H009-R001",
+      "record_type": "HYPOTHESIS_DISPOSITION_RECORD",
+      "hypothesis_id": "phase8-v2-H009-TC001",
+      "historical_hypothesis_id": "phase8-v2-H009",
+      "supporting_variant_id": "phase6-development-v2-V005",
+      "supporting_result_id": "phase6-development-v2-V005-R001",
+      "created_utc": "2026-10-14T16:00:00Z",
+      "disposition": "SUPPORTED_BY_V005",
+      "qualification": "SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A — RESERVED_FOLD_CONFIRMATION_PENDING — NOT_PROFITABILITY_EVIDENCE",
+      "support_basis": [
+        "V005 preserves all 81 V003 baseline candidates exactly (multiset identity and deterministic JSON entry parity verified 81/81).",
+        "V005 adds 21 candidate-ready decisions through the preregistered requested-side directional-authority fallback.",
+        "Observed raw candidate_ready is 102, exceeding the preregistered 90 opportunity-adequacy target.",
+        "Fallback BUY/SELL direction agrees with requested side in 21 / 21 decisions (100% agreement, zero contradictions).",
+        "No liquidity rule was broadened or relaxed.",
+        "No readiness rule was relaxed (7 D006 E2 rejections remain rejected).",
+        "No numeric parameter changed (0 / 4 numeric parameter trials consumed).",
+        "No protected infrastructure or risk authority was weakened."
+      ],
+      "immutable_hypothesis_preservation": "Original phase8-v2-H009 and phase8-v2-H009-TC001 records in hypotheses array remain unchanged.",
+      "budget": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4"
+      },
+      "reserved_evidence": {
+        "tier_b_sealed": true,
+        "folds_02_04_untouched": true,
+        "holdout_untouched": true,
+        "data_2025_plus_untouched": true
+      }
+    },
+    {
+      "record_id": "phase8-v2-candidate-selection-audit-v1",
+      "record_type": "CANDIDATE_SELECTION_AUDIT_RECORD",
+      "title": "V2 Tier-A Candidate Selection Audit",
+      "classification": "POST_RESULT_GOVERNANCE_AUDIT — SEALED_TIER_A_RESULT_ONLY — NOT_NEW_STRATEGY_TRIAL",
+      "created_utc": "2026-10-14T16:00:00Z",
+      "evaluated_variant": "phase6-development-v2-V005",
+      "evaluated_result": "phase6-development-v2-V005-R001",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "criteria_evaluations": {
+        "criterion_1_economic_coherence": "PASS",
+        "criterion_2_causal_correctness": "PASS",
+        "criterion_3_code_simplicity": "PASS",
+        "criterion_4_opportunity_sufficiency": "PASS",
+        "criterion_5_temporal_stability": "PASS",
+        "criterion_6_long_short_balance": "PASS",
+        "criterion_7_limited_complexity_increase": "PASS",
+        "criterion_8_protected_safety_architecture": "PASS"
+      },
+      "candidate_pool_summary": {
+        "v001": "DISCONTINUED — 12 CANDIDATES — OPPORTUNITY_INSUFFICIENT",
+        "v002": "DISCONTINUED — 61 CANDIDATES — OPPORTUNITY_INSUFFICIENT",
+        "v003": "DISCONTINUED — 81 CANDIDATES — OPPORTUNITY_INSUFFICIENT",
+        "v004": "CLOSED — IMPLEMENTATION_BLOCKED_POST_EXPOSURE — ZERO OBSERVATIONS",
+        "v005": "RECOMMENDED — 102 CANDIDATES — OPPORTUNITY_SUFFICIENT"
+      },
+      "provisional_selection_recommendation": "SELECT_PHASE6_DEVELOPMENT_V2_V005_AS_SINGLE_FREEZE_CANDIDATE",
+      "recommended_candidate_identity": {
+        "commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "strategy_module": "bot/strategy/variant_v005.py",
+        "git_blob_sha": "3820c6c66f96c91d98b47feda0e4f5f88aa5c70a",
+        "fingerprint_sha256": "717dc07aff63d0150fbd47de036e81bd12e270c4a5de31f78f5fc48dc998fd2f"
+      },
+      "freeze_action": "PROHIBITED_IN_THIS_TASK — NO PHASE6_FROZEN_V2 CREATED — AWAITS SUPERVISORY AUTHORIZATION",
+      "audit_document": "docs/PHASE8_V2_CANDIDATE_SELECTION_AUDIT.md"
     }
   ],
   "provenance_corrections": [

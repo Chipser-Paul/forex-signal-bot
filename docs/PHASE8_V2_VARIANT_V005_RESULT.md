@@ -226,3 +226,22 @@ The hypothesis statement is NOT automatically mutated to `SUPPORTED` or `REFUTED
 - **Numeric Parameter Trials:** `0 / 4` consumed (4 remaining)
 - **Upward Revision Lock:** `ACTIVE` (budgets cannot be expanded)
 - **Reserved Evidence:** Folds 02–04, holdout dataset, and 2025+ calendar data remain strictly **SEALED** and untouched. Tier B remains **SEALED**.
+
+---
+
+## 19. V005-RC001 Supervisory Narration Correction
+
+* **Correction Record:** `phase6-development-v2-V005-RC001` (`POST_RESULT_NARRATION_CORRECTION`)
+* **Status of Section 8 Historical Narration:** Section 8 historically noted that the 8 rejections at Gate 12/13 entry consist of 7 D006 E2 readiness failures plus "1 setup failing frozen entry geometry / RR parameters".
+* **Supervisory Correction & Scope:**
+  1. The `gate_12_13` failed count remains exactly **`8`** (110 entered, 102 passed, 8 failed; `110 - 102 == 8`).
+  2. Exactly **`7`** rejections are supported by existing D006 and V005 evidence as preserved E2 readiness failures that lacked internal confirmation (`internal_bos_seen`, `choch_seen`, or `sweep_rejected`) under frozen score-8 conservative early-entry rules.
+  3. V005 R001 does **NOT** seal sufficient reason-level sub-predicates to classify the eighth rejection as RR/geometry.
+  4. Frozen score-8 `determine_entry` does not contain a post-readiness RR/pullback-distance rejection gate.
+  5. Therefore, the prior "RR/entry geometry" narration is formally **WITHDRAWN**.
+  6. The eighth rejection mechanism is formally classified as:
+     **`NOT_ESTABLISHED_BY_V005_R001`**
+     (unless separately established by already-sealed evidence without replay).
+  7. No guessing or post-hoc categorization is permitted; store replay or re-inspection of Fold 01 is strictly prohibited.
+* **Scientific Invariance:** Category counts (526 entrants, 138 Gate-11 passes, 110 strategy passes, 102 candidates, 8 rejections), candidate identities, and the `OPPORTUNITY_SUFFICIENT` classification remain 100% valid, sealed, and immutable.
+
