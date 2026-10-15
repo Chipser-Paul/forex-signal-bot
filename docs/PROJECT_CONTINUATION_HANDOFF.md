@@ -851,3 +851,22 @@ Copy-paste for a fresh agent session:
 - **Strict Invariance:** Candidate selection `phase6-development-v2-V005` invariant; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` invariant; all 4 canonical aggregate digests unchanged; zero empirical data accessed; research allowances remain retired (5/12 diagnostics, 5/8 variants, 0/4 numeric trials).
 - **Current Status:** `phase6-frozen-v2` — `AUTHORITATIVELY_SEALED_WITH_LEDGER_SEAL_V2`. Proceeding to Phase A Tier-B Feasibility Plan preregistration. Tier B remains strictly **SEALED**.
 
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-plan-v1 — Preregistration of Tier-B Reserved-Fold Feasibility Protocol (Fold 02 Remains Strictly Sealed)
+
+- **Tier-B Feasibility Protocol Preregistered:** Formally preregistered `phase8-v2-tierb-feasibility-plan-v1` (`docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md`, canonical manifest `baseline/phase8_v2_tierb_feasibility_plan.json`, schema `phase8v2.tierb-feasibility-plan.v1`, plan content SHA-256 `d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9`). Recorded in `baseline/phase8_v2_hypothesis_register.json`.
+- **Historical Plan Prohibited:** Historical V1 plan `evidence-development_evaluation_plan-v1-4a6ab94c3e303c81` is formally REPLACED and its execution is PROHIBITED.
+- **Exact Candidate Binding:** Firmly anchored to `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` under manifest `baseline/phase8_v2_frozen_candidate_manifest_tc003.json` and authoritative ledger seal `phase8-v2-ledger-seal-v2` (0 unresolved entities), preserving all 4 canonical aggregate digests:
+  - Strategy semantic AST closure (83 paths): `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f`
+  - Candidate configuration lock: `1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806`
+  - Validation pipeline closure (147 paths): `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f`
+  - Protected infrastructure V2 (11 paths, 18 controls): `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d`
+- **Protocol Rules & Thresholds:**
+  - Strict sequential release: Fold 02 -> Fold 03 -> Fold 04, with mandatory supervisory approval stopping points between folds.
+  - Stage 1 opportunity threshold: hard sample futility if `raw_candidate_ready < 30` (`SAMPLE_SIZE_FUTILITY`); descriptive headroom target `60` candidates (non-gating).
+  - Stage 2 completed-trade threshold: minimum `30` qualifying completed trades per reserved fold under `PRIMARY_BASELINE` only (`SWAP_EMAIL_REFERENCE` + `SLIPPAGE_MODERATE_ADVERSE` + `BASELINE_CURRENT_REFERENCE_PROXY`). Evaluated fail-closed as `LIFECYCLE_SAMPLE_INSUFFICIENT` if `< 30`.
+  - Open positions at fold end are classified `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE` and excluded from the minimum sample count. Non-completed states (`CANCELLED`, `EXPIRED`, `REJECTED`, unfilled, untriggered) are excluded.
+  - Zero cross-fold lookahead; zero position carryover across folds.
+  - Mandatory Fold-01 rehearsals: candidate parity rehearsal (102 raw candidates: 81 baseline, 21 fallback, 0 duplicates, exact candidate pairs) and lifecycle mechanics rehearsal.
+- **Strict Invariance & Boundaries:** Zero strategy semantic modifications; zero empirical data accessed; research allowances remain permanently retired (5/12 diagnostics, 5/8 variants, 0/4 numeric trials). All profitability metrics (P&L, win rate, Sharpe, drawdown, expectancy, profit factor) strictly prohibited.
+- **Current Status:** `phase8-v2-tierb-feasibility-plan-v1` — PREREGISTERED. Fold 02 remains strictly **SEALED** pending runner tooling implementation, synthetic tests, and explicit supervisory authorization.
+

@@ -1,0 +1,165 @@
+{
+  "plan_id": "phase8-v2-tierb-feasibility-plan-v1",
+  "schema_version": "phase8v2.tierb-feasibility-plan.v1",
+  "title": "Phase 8 V2 Reserved-Fold Candidate and Lifecycle Sample Feasibility Plan",
+  "created_utc": "2026-10-15T01:30:00Z",
+  "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — STRUCTURAL/LIFECYCLE ONLY — NOT_PROFITABILITY_EVIDENCE",
+  "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+  "historical_plan_disposition": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81 REPLACED_AND_EXECUTION_PROHIBITED",
+  "frozen_candidate_binding": {
+    "freeze_identity": "phase6-frozen-v2",
+    "development_predecessor": "phase6-development-v2-V005",
+    "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+    "authoritative_freeze_manifest": "baseline/phase8_v2_frozen_candidate_manifest_tc003.json",
+    "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+    "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+    "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+    "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+    "charter_section_5_controls_count": 18,
+    "cost_policy_attestation_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108",
+    "authoritative_ledger_seal": "phase8-v2-ledger-seal-v2",
+    "unresolved_entities_count": 0
+  },
+  "risk_flags": [
+    {
+      "flag": "TIER_B_REGIME_CONCENTRATION_RISK",
+      "description": "V005 incremental fallback candidates concentrated in W17-W18 (20/21), London session (16/21), and first half of Fold 01 (20/21). Descriptive risk only; no tuning or extra gating."
+    }
+  ],
+  "evidence_release_protocol": {
+    "reserved_folds_sequence": [
+      "fold-02",
+      "fold-03",
+      "fold-04"
+    ],
+    "release_order": "STRICT_SEQUENTIAL",
+    "prerequisite_rule": "Fold N+1 cannot be released or inspected unless Fold N fully passes feasibility and supervisory authorization is granted.",
+    "supervisory_stop_between_folds": true,
+    "contamination_record_required_before_read": true,
+    "accidental_exposure_policy": "Charter Section 16 stopping event; Holdout/2025+ exposure is permanent stopping event."
+  },
+  "stage_1_raw_candidate_protocol": {
+    "replay_type": "SCENARIO_INDEPENDENT_STRUCTURAL_ONLY",
+    "fills_or_costs_evaluated": false,
+    "futility_threshold": 30,
+    "futility_classification": "SAMPLE_SIZE_FUTILITY",
+    "headroom_target": 60,
+    "headroom_target_met_label": "RESERVED_FOLD_RAW_HEADROOM_TARGET_MET",
+    "headroom_target_not_met_label": "RESERVED_FOLD_RAW_HEADROOM_TARGET_NOT_MET",
+    "headroom_gating": false,
+    "reporting_fields": [
+      "raw_candidate_ready",
+      "unique_setup_ids",
+      "duplicate_count",
+      "long_count",
+      "short_count",
+      "v003_baseline_count",
+      "v005_directional_fallback_count",
+      "fallback_buy_count",
+      "fallback_sell_count",
+      "week_distribution",
+      "session_distribution",
+      "half_distribution"
+    ]
+  },
+  "stage_2_lifecycle_sample_protocol": {
+    "min_completed_trades_per_reserved_fold": 30,
+    "unit_of_application": "PER_RESERVED_FOLD_PRIMARY_BASELINE_ONLY",
+    "cross_fold_aggregation_permitted": false,
+    "cross_scenario_aggregation_permitted": false,
+    "primary_baseline_scenario": {
+      "scenario_name": "PRIMARY_BASELINE",
+      "swap_component": "SWAP_EMAIL_REFERENCE",
+      "slippage_component": "SLIPPAGE_MODERATE_ADVERSE",
+      "metadata_component": "BASELINE_CURRENT_REFERENCE_PROXY"
+    },
+    "sensitivity_or_worst_case_matrix_in_feasibility": false,
+    "pass_classification": "RESERVED_FOLD_SAMPLE_FEASIBILITY_PASS",
+    "failure_classification": "LIFECYCLE_SAMPLE_INSUFFICIENT",
+    "infrastructure_failure_classification": "FEASIBILITY_IMPLEMENTATION_OR_DATA_BLOCKAGE"
+  },
+  "completed_trade_definition": {
+    "qualifying_requirements": [
+      "Originates from frozen V005 candidate in released fold",
+      "Produces valid frozen trade geometry / EntryIntent",
+      "Receives durable confirmed entry fill",
+      "Reaches LifecycleStatus.OPEN or PARTIALLY_CLOSED",
+      "Reaches LifecycleStatus.CLOSED via normal frozen lifecycle using executable historical quotes",
+      "Not closed solely due to fold boundary end-of-data"
+    ],
+    "valid_natural_exit_reasons": [
+      "STOP_LOSS",
+      "BREAK_EVEN",
+      "TRAILING_STOP",
+      "TAKE_PROFIT",
+      "FROZEN_RISK_OR_EMERGENCY_CLOSURE_POST_ENTRY"
+    ],
+    "non_completed_states_excluded": [
+      "CANCELLED",
+      "EXPIRED",
+      "REJECTED",
+      "UNFILLED_INTENT",
+      "UNTRIGGERED_INTENT",
+      "NEVER_OPENED",
+      "PARTIALLY_CLOSED_WITHOUT_FINAL_CLOSE",
+      "DUPLICATE_LIFECYCLE_EVENT",
+      "END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE"
+    ]
+  },
+  "fold_boundary_contract": {
+    "cross_fold_empirical_lookahead_permitted": false,
+    "end_of_data_position_classification": "END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE",
+    "end_of_data_counts_toward_threshold": false,
+    "pending_intents_at_fold_end_counted": false,
+    "position_carry_into_next_fold_permitted": false,
+    "prior_fold_historical_causal_warmup_permitted": true
+  },
+  "adapter_and_geometry_contract": {
+    "v005_eligibility_authoritative_module": "bot/strategy/variant_v005.py",
+    "strategy_semantic_modification_permitted": false,
+    "level_and_intent_infrastructure": [
+      "bot/strategy/trade_levels.py",
+      "bot/strategy/setup_intent.py"
+    ],
+    "profile_settings": {
+      "symbol": "XAUUSDm",
+      "min_rr": 1.5
+    },
+    "geometry_attrition_classification": "LEVEL_OR_INTENT_CONSTRUCTION_ATTRITION",
+    "direction_invariant": "INTENT_DIRECTION_MUST_EQUAL_V005_ENTRY_DIRECTION",
+    "setup_identity_preservation": "EXACT_1_TO_1_INTENT_TO_POSITION_CONSUMPTION_BARRIER"
+  },
+  "rehearsal_requirements": {
+    "fold01_parity_rehearsal_required": true,
+    "required_fold01_candidate_count": 102,
+    "required_fold01_v003_baseline_count": 81,
+    "required_fold01_v005_fallback_count": 21,
+    "required_fold01_unique_setups": 102,
+    "required_fold01_duplicates": 0,
+    "fold01_lifecycle_mechanics_rehearsal_required": true,
+    "fold01_rehearsal_counts_toward_tier_b": false,
+    "tuning_during_rehearsal_permitted": false
+  },
+  "prohibited_metrics": [
+    "profit_and_loss",
+    "net_profit",
+    "gross_profit",
+    "gross_loss",
+    "win_rate",
+    "profit_factor",
+    "expectancy",
+    "sharpe_ratio",
+    "sortino_ratio",
+    "returns_pct",
+    "equity_curve",
+    "drawdown_monetary",
+    "drawdown_pct",
+    "avg_winner",
+    "avg_loser",
+    "r_multiple_profitability"
+  ],
+  "prospective_contract": "canonical_git_blob_v1",
+  "budget_impact": 0,
+  "zero_empirical_access": true,
+  "plan_content_sha256": "d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9"
+}

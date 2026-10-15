@@ -4643,6 +4643,49 @@
       "tier_b_sealed": true,
       "budget_impact": 0,
       "zero_empirical_access": true
+    },
+    {
+      "record_id": "phase8-v2-tierb-feasibility-plan-v1",
+      "result_id": "phase8-v2-tierb-feasibility-plan-v1",
+      "record_type": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_PREREGISTRATION",
+      "created_utc": "2026-10-15T01:30:00Z",
+      "plan_id": "phase8-v2-tierb-feasibility-plan-v1",
+      "title": "Phase 8 V2 Reserved-Fold Candidate and Lifecycle Sample Feasibility Plan",
+      "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — STRUCTURAL/LIFECYCLE ONLY — NOT_PROFITABILITY_EVIDENCE",
+      "plan_file": "baseline/phase8_v2_tierb_feasibility_plan.json",
+      "plan_doc": "docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md",
+      "plan_content_sha256": "d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "historical_plan_disposition": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81 REPLACED_AND_EXECUTION_PROHIBITED",
+      "frozen_candidate_binding": {
+        "freeze_identity": "phase6-frozen-v2",
+        "development_predecessor": "phase6-development-v2-V005",
+        "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "authoritative_freeze_manifest": "baseline/phase8_v2_frozen_candidate_manifest_tc003.json",
+        "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+        "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+        "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+        "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+        "charter_section_5_controls_count": 18,
+        "authoritative_ledger_seal": "phase8-v2-ledger-seal-v2"
+      },
+      "risk_flags": [
+        "TIER_B_REGIME_CONCENTRATION_RISK"
+      ],
+      "reserved_folds_sequence": [
+        "fold-02",
+        "fold-03",
+        "fold-04"
+      ],
+      "stage_1_raw_futility_threshold": 30,
+      "stage_1_raw_headroom_target": 60,
+      "stage_2_min_completed_trades_per_fold": 30,
+      "stage_2_primary_scenario": "PRIMARY_BASELINE",
+      "end_of_data_excluded_from_sample": true,
+      "mandatory_fold01_parity_rehearsal_required": true,
+      "budget_impact": 0,
+      "zero_empirical_access": true,
+      "tier_b_status": "TIER_B_PLAN_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
     }
   ],
   "provenance_corrections": [

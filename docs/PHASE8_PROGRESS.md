@@ -2172,3 +2172,26 @@ step: supervisory review before D002 or Variant 1.
 - **Strict Invariance:** Strategy candidate `phase6-development-v2-V005` unchanged; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; all 4 canonical aggregate digests unchanged; zero empirical data accessed; research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
 - **Effective Status:** phase6-frozen-v2 — AUTHORITATIVELY_SEALED_WITH_LEDGER_SEAL_V2. Ready for Phase A Tier-B Feasibility Plan preregistration. Tier B remains strictly SEALED.
 
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-plan-v1 — Preregistration of Tier-B Reserved-Fold Feasibility Protocol (Fold 02 Remains Strictly Sealed)
+
+- **Task & Preregistration:** Preregistered the prospective Tier-B feasibility plan `phase8-v2-tierb-feasibility-plan-v1` (specification `docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md`, canonical plan manifest `baseline/phase8_v2_tierb_feasibility_plan.json`, schema `phase8v2.tierb-feasibility-plan.v1`, deterministic content SHA-256 `d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9`). Appended plan registration record `phase8-v2-tierb-feasibility-plan-v1` to `baseline/phase8_v2_hypothesis_register.json`.
+- **Historical Plan Disposition:** Historical V1 plan `evidence-development_evaluation_plan-v1-4a6ab94c3e303c81` is formally recorded as REPLACED and its execution remains strictly PROHIBITED.
+- **Candidate Binding:** Formally binds frozen strategy candidate `phase6-frozen-v2` (development predecessor `phase6-development-v2-V005`, anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`, manifest `baseline/phase8_v2_frozen_candidate_manifest_tc003.json`) with all four invariant aggregate digests:
+  - Strategy semantic AST closure (83 paths): `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f`;
+  - Candidate configuration lock: `1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806`;
+  - Validation pipeline closure (147 paths): `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f`;
+  - Protected infrastructure V2 (11 paths, 18 controls): `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d`;
+  - Authoritative ledger seal: `phase8-v2-ledger-seal-v2` (0 unresolved entities).
+- **Two-Stage Feasibility Architecture:**
+  - *Stage 1 (Opportunity Feasibility):* Evaluates raw candidate generation under scenario-independent structural replay. Hard sample futility threshold is `< 30` raw candidates (`SAMPLE_SIZE_FUTILITY` hard stop). Headroom target is `60` raw candidates (`RESERVED_FOLD_RAW_HEADROOM_TARGET_MET` vs `RESERVED_FOLD_RAW_HEADROOM_TARGET_NOT_MET`, descriptive, strictly non-gating).
+  - *Stage 2 (Lifecycle Execution Feasibility):* Evaluates realistic execution lifecycle under `PRIMARY_BASELINE` only (`SWAP_EMAIL_REFERENCE` + `SLIPPAGE_MODERATE_ADVERSE` + `BASELINE_CURRENT_REFERENCE_PROXY`). Minimum sample requirement is `30` qualifying completed trades per reserved fold. Fails closed with `LIFECYCLE_SAMPLE_INSUFFICIENT` if `< 30`. Cross-fold and cross-scenario aggregation strictly prohibited.
+- **Qualifying Completed Trade & Boundary Rules:**
+  - Qualifying trades must reach terminal state `CLOSED` via normal frozen lifecycle (`STOP_LOSS`, `BREAK_EVEN`, `TRAILING_STOP`, `TAKE_PROFIT`, or legitimate emergency risk closure post-entry).
+  - Open positions at fold end are classified `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE` and explicitly excluded from the 30-trade minimum count.
+  - Non-completed states (`CANCELLED`, `EXPIRED`, `REJECTED`, unfilled, untriggered) are excluded.
+  - Zero cross-fold lookahead; no position carryover across folds; prior-fold causal warmup permitted.
+- **Sequential Release & Progressive Contamination:** Strictly sequential release: Fold 02 -> Fold 03 -> Fold 04. Supervisory approval required between folds. Contamination record required before reading each fold.
+- **Mandatory Fold-01 Rehearsals:** Tooling must pass Fold-01 candidate parity rehearsal (102 raw candidates: 81 baseline, 21 fallback, 0 duplicates, exact candidate pairs) and lifecycle mechanics rehearsal before any Fold-02 store access.
+- **Strict Prohibitions:** All profitability metrics (P&L, win rate, Sharpe, drawdown, expectancy, profit factor, equity curves) strictly prohibited. Zero empirical data accessed. Research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
+- **Current Status:** `phase8-v2-tierb-feasibility-plan-v1` PREREGISTERED. Fold 02 remains strictly **SEALED** pending tooling implementation, synthetic tests, and explicit supervisory authorization.
+
