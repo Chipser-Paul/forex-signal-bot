@@ -4459,6 +4459,157 @@
       "protected_infrastructure_aggregate_digest_v1": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
       "budget_impact": 0,
       "zero_empirical_access": true
+    },
+    {
+      "record_id": "phase8-v2-ledger-seal-v2",
+      "result_id": "phase8-v2-ledger-seal-v2",
+      "record_type": "SCIENTIFIC_LEDGER_TERMINALITY_ATTESTATION",
+      "research_identity": "phase6-development-v2",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "created_utc": "2026-10-15T00:00:00Z",
+      "classification": "SCIENTIFIC_LEDGER_TERMINALITY_ATTESTATION_CORRECTED",
+      "supersedes_record": "phase8-v2-ledger-seal-v1",
+      "attestation": "ALL_OPENED_SCIENTIFIC_ENTITIES_TERMINALLY_RESOLVED",
+      "correction_rationale": "Historical seal phase8-v2-ledger-seal-v1 misstated terminal dispositions for H002, H004, and H005 by conflating downstream variant opportunity insufficiency or static implementation audits with hypothesis rejection. This corrected seal restores exact preregistered and authoritative disposition terminology while preserving all historical records append-only.",
+      "hypotheses_terminality_map": {
+        "phase8-v2-H001": {
+          "terminal_disposition": "SUPPORTED_BY_D003_D004_SYNTHESIS",
+          "authoritative_record_id": "phase8-v2-H001-R001"
+        },
+        "phase8-v2-H002": {
+          "terminal_disposition": "SUPPORTED_BY_D003",
+          "authoritative_record_id": "phase8-v2-D003-R001",
+          "correction_note": "Corrected from REJECTED_AS_PRIMARY_BOTTLENECK to SUPPORTED_BY_D003. D003 empirically supported H002; downstream research pivot does not reverse preregistered diagnostic disposition."
+        },
+        "phase8-v2-H003": {
+          "terminal_disposition": "SUPPORTED_BY_D005",
+          "authoritative_record_id": "phase8-v2-D005-R001"
+        },
+        "phase8-v2-H004": {
+          "terminal_disposition": "SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT",
+          "authoritative_record_id": "phase8-v2-H004-X001",
+          "correction_note": "Corrected from DISCONTINUED_WITHOUT_EXECUTION to SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT. The D001 zero-FVG behavior was explained by a deterministic implementation defect documented in H004-X001."
+        },
+        "phase8-v2-H005": {
+          "terminal_disposition": "SUPPORTED_BY_V001",
+          "authoritative_record_id": "phase6-development-v2-V001-R001",
+          "correction_note": "Corrected from REJECTED_AS_OPPORTUNITY_SOLUTION to SUPPORTED_BY_V001. Hypothesis support and variant opportunity sufficiency are orthogonal dimensions; V001 opportunity insufficiency does not negate H005 support."
+        },
+        "phase8-v2-H006": {
+          "terminal_disposition": "SUPPORTED_BY_D004",
+          "authoritative_record_id": "phase8-v2-D004-R001"
+        },
+        "phase8-v2-H007": {
+          "terminal_disposition": "SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE",
+          "authoritative_record_id": "phase8-v2-H007-R001"
+        },
+        "phase8-v2-H008": {
+          "terminal_disposition": "SUPPORTED_BY_D006",
+          "authoritative_record_id": "phase8-v2-D006-R001"
+        },
+        "phase8-v2-H009": {
+          "terminal_disposition": "SUPERSEDED_BY_H009_TC001",
+          "superseded_by": "phase8-v2-H009-TC001"
+        },
+        "phase8-v2-H009-TC001": {
+          "terminal_disposition": "SUPPORTED_BY_V005",
+          "authoritative_record_id": "phase8-v2-H009-R001"
+        }
+      },
+      "diagnostics_terminality_map": {
+        "phase8-v2-D001": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D001-R001"
+        },
+        "phase8-v2-D002": {
+          "status": "BLOCKED_BEFORE_EXECUTION",
+          "authoritative_record_id": "phase8-v2-D002-X001"
+        },
+        "phase8-v2-D003": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D003-R001"
+        },
+        "phase8-v2-D004": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D004-R001"
+        },
+        "phase8-v2-D005": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D005-R001"
+        },
+        "phase8-v2-D006": {
+          "status": "EXECUTED",
+          "authoritative_record_id": "phase8-v2-D006-R001"
+        }
+      },
+      "variants_terminality_map": {
+        "phase6-development-v2-V001": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V001-R001"
+        },
+        "phase6-development-v2-V002": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V002-R001"
+        },
+        "phase6-development-v2-V003": {
+          "status": "OPPORTUNITY_INSUFFICIENT",
+          "authoritative_record_id": "phase6-development-v2-V003-R001"
+        },
+        "phase6-development-v2-V004": {
+          "status": "IMPLEMENTATION_BLOCKED_POST_EXPOSURE",
+          "authoritative_record_id": "phase6-development-v2-V004-ATTEMPT1"
+        },
+        "phase6-development-v2-V005": {
+          "status": "OPPORTUNITY_SUFFICIENT_SELECTED_AND_FROZEN",
+          "authoritative_record_id": "phase6-development-v2-V005-R001",
+          "audit_record_id": "phase8-v2-candidate-selection-audit-v1",
+          "freeze_record_id": "phase6-frozen-v2-F001"
+        }
+      },
+      "unresolved_entities_count": 0,
+      "budget_summary": {
+        "diagnostics_executed": "5 / 12",
+        "strategy_variants_observed": "5 / 8",
+        "numeric_parameter_trials": "0 / 4",
+        "allowances_disposition": "UNUSED_AND_RETIRED_FOR_THIS_FROZEN_CANDIDATE_CYCLE"
+      },
+      "reserved_evidence": {
+        "tier_b_sealed": true,
+        "folds_02_04_untouched": true,
+        "holdout_untouched": true,
+        "data_2025_plus_untouched": true
+      }
+    },
+    {
+      "record_id": "phase6-frozen-v2-F001-TC002",
+      "result_id": "phase6-frozen-v2-F001-TC002",
+      "record_type": "PRE_TIER_B_FREEZE_VERIFICATION_AND_LEDGER_CORRECTION",
+      "created_utc": "2026-10-15T00:00:00Z",
+      "freeze_identity": "phase6-frozen-v2",
+      "supersedes_records": [
+        "phase6-frozen-v2-F001",
+        "phase6-frozen-v2-F001-TC001"
+      ],
+      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY \u2014 ZERO_STRATEGY_SEMANTIC_CHANGE \u2014 ZERO_EMPIRICAL_ACCESS",
+      "defects_repaired": [
+        "WORKTREE_BYTE_VERIFIER_VIOLATES_CANONICAL_GIT_BLOB_V1",
+        "DEPENDENCY_CLOSURE_NOT_FAIL_CLOSED_ON_DYNAMIC_OR_PARSE_AMBIGUITY",
+        "CHARTER_SECTION5_NO_FUTURE_LEAKAGE_CONTROL_OMITTED",
+        "LEDGER_SEAL_V1_MISSTATES_H002_H004_H005"
+      ],
+      "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+      "historical_f001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERVISORY_ACCEPTANCE_WITHHELD \u2014 INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
+      "historical_tc001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERSEDED_BY_TC002 \u2014 VERIFIER_AND_LEDGER_REPAIRED",
+      "tc002_manifest_path": "baseline/phase8_v2_frozen_candidate_manifest_tc002.json",
+      "prospective_contract_id": "canonical_git_blob_v1",
+      "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+      "strategy_semantic_revalidation_status": "TC001_IDENTITY_REVALIDATED_CANONICALLY_UNCHANGED",
+      "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+      "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+      "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+      "charter_section_5_controls_count": 18,
+      "budget_impact": 0,
+      "zero_empirical_access": true
     }
   ],
   "provenance_corrections": [

@@ -304,3 +304,73 @@ All 17 Charter §5 protected safety controls are mapped to enforcing source modu
 - **`phase8-v2-H007-R001`:** Hypothesis `phase8-v2-H007` formally resolved as `SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE` (qualified: `SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A — V002_OPPORTUNITY_INSUFFICIENT — NOT_SELECTED — NOT_PROFITABILITY_EVIDENCE`).
 - **`phase8-v2-ledger-seal-v1`:** Authoritative terminality seal explicitly accounting for all hypotheses (H001..H009), all diagnostics (D001..D006), and all variants (V001..V005). Zero scientific entities remain unresolved.
 - **Research Budgets:** Remain retired: diagnostics 5/12, variants 5/8, numeric trials 0/4.
+
+---
+
+## 10. F001-TC002 — Commit-Bound Verification, 18 Charter §5 Controls, and Corrected Ledger Seal
+
+- **Governance Record:** `phase6-frozen-v2-F001-TC002`
+- **Record Classification:** `GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS`
+- **Manifest:** `baseline/phase8_v2_frozen_candidate_manifest_tc002.json` (schema `phase8v2.frozen-candidate-manifest.v3`)
+- **Semantic Anchor Commit:** `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`
+- **Prospective Contract ID:** `canonical_git_blob_v1`
+- **Historical F001 Status:** `PUBLISHED_PRE_TIER_B — SUPERVISORY_ACCEPTANCE_WITHHELD — INCOMPLETE_FREEZE_DEPENDENCY_SURFACE`
+- **Historical TC001 Status:** `PUBLISHED_PRE_TIER_B — SUPERSEDED_BY_TC002 — VERIFIER_AND_LEDGER_REPAIRED`
+- **Scientific Status:** `CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN`
+
+### 10.1 Context and Defect Resolution
+Supervisory audit of TC001 identified three remaining pre-Tier-B governance and verification defects:
+1. TC001 unit tests utilized worktree-based helpers with CRLF normalization rather than resolving immutable Git blobs directly from the Git object database at the requested anchor commit;
+2. Dependency closure resolution lacked fail-closed behavior for unparseable syntax or unresolved dynamic imports;
+3. Charter §5 control coverage listed 17 controls rather than the 18 contractual protections (omitting a distinct `no_future_leakage` record), and ledger seal v1 misstated terminal dispositions for H002, H004, and H005.
+
+### 10.2 Commit-Bound Git-Blob Verification
+- **Elimination of Worktree Helpers:** Removed all worktree-reading and newline-normalizing test helpers (`pure_git_blob_bytes`, `pure_git_blob_id`).
+- **Commit-Bound Resolution:** All blob reads and digests resolve directly from the Git object database at explicit 40-character commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` via `canonical_blob_bytes` and `canonical_framed_digest` backed by pure-Python `GitObjectStore`.
+- **Invariance Across Worktree Changes:** Verified that arbitrary modifications to checkout/worktree files do not alter canonical digests computed for an anchored commit.
+- **Sensitivity to Committed Bytes:** Verified that distinct committed bytes (including LF vs CRLF in Git object storage) produce distinct canonical digests.
+
+### 10.3 Hardened AST Dependency Closure
+- **Anchor-Bound Source Parsing:** Closure resolution reads module source bytes directly from committed Git blobs at the anchor commit prior to AST parsing.
+- **Fatal Parse Failure:** Any unparseable Python module in the closure immediately raises `FREEZE_DEPENDENCY_PARSE_FAILURE`.
+- **Dynamic Import Fail-Closed:** Dynamic import calls (`__import__`, `importlib.import_module`) resolve deterministically if literal repository-local targets; dynamic or ambiguous targets immediately raise `FREEZE_DEPENDENCY_DYNAMIC_IMPORT_UNRESOLVED`.
+- **Strategy Semantic Closure Revalidated:** Recomputing the strategy runtime dependency closure from the 12 candidate roots under the hardened verifier naturally resolves exactly 83 paths with byte-identical aggregate digest `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f` (`TC001_IDENTITY_REVALIDATED_CANONICALLY_UNCHANGED`).
+- **Validation Pipeline Closure Revalidated:** Recomputing from the 23 validation roots under the hardened verifier naturally resolves exactly 147 paths with byte-identical aggregate digest `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f` (`TC001_IDENTITY_REVALIDATED_CANONICALLY_UNCHANGED`).
+
+### 10.4 Exact 18 Charter §5 Controls & Protected Infrastructure Identity V2
+The control mapping has been updated to explicitly reflect all 18 contractual protections of Charter §5:
+1. `causal_candle_availability`: `bot/data/candles.py` (`causal_snapshot`)
+2. `active_bar_exclusion`: `bot/data/candles.py` (`causal_snapshot`)
+3. `no_future_leakage`: `bot/data/candles.py` (`causal_snapshot`)
+4. `htf_availability_semantics`: `bot/state/gate_inputs.py` (`build_gate_inputs`)
+5. `execution_lifecycle_legality`: `bot/execution/lifecycle/entry.py` (`process_entry_event`)
+6. `entry_idempotency`: `bot/strategy/setup_consumption.py` (`register_binding`)
+7. `setup_consumption_invariants`: `bot/strategy/setup_consumption.py` (`setup_reuse_reason`)
+8. `risk_authority`: `bot/execution/risk/authority.py` (`PersistentRiskAuthority`)
+9. `equity_based_drawdown_protection`: `bot/execution/risk/sizing.py` (`assess_trade_risk`)
+10. `circuit_protection`: `bot/execution/risk/authority.py` (`unavailable_decision`)
+11. `volume_precision`: `bot/execution/broker/validation.py` (`normalize_volume_down`)
+12. `broker_tick_freshness`: `bot/execution/broker/validation.py` (`validate_tick`)
+13. `spread_protections`: `bot/execution/broker/validation.py` (`validate_spread`)
+14. `projected_margin_safeguards`: `bot/execution/broker/validation.py` (`validate_margin`)
+15. `order_retry_revalidation_rules`: `bot/execution/broker/adapter.py` (`SecureBrokerExecutor`)
+16. `production_symbol_allowlist_xauusdm_only`: `bot/strategy/config.py` (`StrategyConfig`)
+17. `news_fail_closed_behavior`: `bot/execution/news_filter.py` (`get_news_status`)
+18. `validation_fidelity_requirements`: `bot/backtesting/models.py` (`FidelityClass`)
+
+- **Enforcing Paths Union:** The union of enforcing paths across all 18 controls comprises the identical 11 unique modules (`bot/backtesting/models.py`, `bot/data/candles.py`, `bot/execution/broker/adapter.py`, `bot/execution/broker/validation.py`, `bot/execution/lifecycle/entry.py`, `bot/execution/news_filter.py`, `bot/execution/risk/authority.py`, `bot/execution/risk/sizing.py`, `bot/state/gate_inputs.py`, `bot/strategy/config.py`, `bot/strategy/setup_consumption.py`).
+- **Protected Aggregate Digest:** `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d` under `canonical_git_blob_v1`.
+
+### 10.5 Corrected Scientific Ledger Seal V2
+- **`phase8-v2-ledger-seal-v2`:** Published to supersede `phase8-v2-ledger-seal-v1` for prospective freeze use while preserving v1 historically. Corrects terminal hypothesis dispositions to strictly match authoritative records:
+  - `phase8-v2-H001`: `SUPPORTED_BY_D003_D004_SYNTHESIS` (`phase8-v2-H001-R001`)
+  - `phase8-v2-H002`: `SUPPORTED_BY_D003` (`phase8-v2-D003-R001`)
+  - `phase8-v2-H003`: `SUPPORTED_BY_D005` (`phase8-v2-D005-R001`)
+  - `phase8-v2-H004`: `SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT` (`phase8-v2-H004-X001`)
+  - `phase8-v2-H005`: `SUPPORTED_BY_V001` (`phase6-development-v2-V001-R001`)
+  - `phase8-v2-H006`: `SUPPORTED_BY_D004` (`phase8-v2-D004-R001`)
+  - `phase8-v2-H007`: `SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE` (`phase8-v2-H007-R001`, accepted)
+  - `phase8-v2-H008`: `SUPPORTED_BY_D006` (`phase8-v2-D006-R001`)
+  - `phase8-v2-H009`: `SUPERSEDED_BY_H009_TC001`
+  - `phase8-v2-H009-TC001`: `SUPPORTED_BY_V005` (`phase8-v2-H009-R001`)
+- **Diagnostic & Variant Terminality:** D001..D006 and V001..V005 terminal maps remain fully accounted for. Unresolved scientific entities count: exactly 0.

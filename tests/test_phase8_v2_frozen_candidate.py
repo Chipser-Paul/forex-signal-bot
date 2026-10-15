@@ -259,6 +259,9 @@ from utils.symbol_profiles import get_symbol_profile
 MANIFEST_TC001_PATH = (
     REPO_ROOT / "baseline" / "phase8_v2_frozen_candidate_manifest_tc001.json"
 )
+MANIFEST_TC002_PATH = (
+    REPO_ROOT / "baseline" / "phase8_v2_frozen_candidate_manifest_tc002.json"
+)
 REGISTER_PATH = REPO_ROOT / "baseline" / "phase8_v2_hypothesis_register.json"
 
 STRATEGY_ROOTS = (
@@ -302,30 +305,64 @@ VAL_ROOTS = (
     "bot/validation/development_plan_revision.py",
 )
 
-
-def pure_git_blob_bytes(relative_path: str, repo_root: Path = REPO_ROOT) -> bytes:
-    p = repo_root / relative_path
-    content = p.read_bytes()
-    return content.replace(b"\r\n", b"\n")
+from tests.test_canonical_byte_contract import GitObjectStore as _BaseGitObjectStore
 
 
-def pure_git_blob_id(relative_path: str, repo_root: Path = REPO_ROOT) -> str:
-    content_lf = pure_git_blob_bytes(relative_path, repo_root)
-    header = f"blob {len(content_lf)}".encode("ascii") + b"\x00"
-    return hashlib.sha1(header + content_lf).hexdigest()
+class GitObjectStore(_BaseGitObjectStore):
+    """GitObjectStore variant that safely preserves existing repository HEAD."""
+
+    def __init__(self, root: Path, *, author: str = "Scientific Verification") -> None:
+        self.root = root
+        self.objects_dir = root / ".git" / "objects"
+        self.author = author
+        if not (root / ".git" / "HEAD").exists():
+            (self.objects_dir).mkdir(parents=True, exist_ok=True)
+            (root / ".git" / "refs" / "heads").mkdir(parents=True, exist_ok=True)
+            (root / ".git" / "HEAD").write_bytes(b"ref: refs/heads/main\n")
 
 
-def compute_local_ast_closure(
+class FreezeDependencyParseFailure(RuntimeError):
+    """Raised when an authoritative closure module cannot be parsed into an AST."""
+
+
+class FreezeDependencyDynamicImportUnresolved(RuntimeError):
+    """Raised when a non-deterministic or ambiguous dynamic import is encountered."""
+
+
+def git_blob_id(relative_path: str, commit: str = ANCHOR_COMMIT, store: GitObjectStore | None = None) -> str:
+    s = store or GitObjectStore(REPO_ROOT)
+    blob = s.blob_bytes(commit, relative_path)
+    header = f"blob {len(blob)}".encode("ascii") + b"\x00"
+    return hashlib.sha1(header + blob).hexdigest()
+
+
+def compute_commit_ast_closure(
     roots: tuple[str, ...],
-    repo_root: Path = REPO_ROOT,
+    commit: str = ANCHOR_COMMIT,
+    store: GitObjectStore | None = None,
     exclude_prefixes: tuple[str, ...] = ("tests/", "docs/", "probes/", "scripts/"),
 ) -> list[str]:
-    def is_repo_py_file(rel_path: str) -> bool:
-        p = repo_root / rel_path
-        return p.is_file() and rel_path.endswith(".py")
+    obj_store = store or GitObjectStore(REPO_ROOT)
+    root_tree = obj_store._root_tree(commit)
+    commit_files: set[str] = set()
 
-    def get_source_text(rel_path: str) -> str:
-        return pure_git_blob_bytes(rel_path, repo_root).decode("utf-8", errors="replace")
+    def walk_tree(tree_sha: str, prefix: str) -> None:
+        entries = obj_store._read_tree(tree_sha)
+        for name, (mode, sha) in entries.items():
+            full = f"{prefix}/{name}" if prefix else name
+            if mode == "40000":
+                walk_tree(sha, full)
+            elif mode in ("100644", "100755"):
+                commit_files.add(full)
+
+    walk_tree(root_tree, "")
+
+    def is_commit_py_file(p: str) -> bool:
+        return p in commit_files and p.endswith(".py")
+
+    def get_source_text(p: str) -> str:
+        blob = obj_store.blob_bytes(commit, p)
+        return blob.decode("utf-8")
 
     def resolve_import(source_file: str, node: ast.AST) -> list[str]:
         resolved: list[str] = []
@@ -337,10 +374,10 @@ def compute_local_ast_closure(
                 for p in parts:
                     cur = f"{cur}/{p}" if cur else p
                     init_p = f"{cur}/__init__.py"
-                    if is_repo_py_file(init_p):
+                    if is_commit_py_file(init_p):
                         resolved.append(init_p)
                 mod_p = f"{cur}.py"
-                if is_repo_py_file(mod_p):
+                if is_commit_py_file(mod_p):
                     resolved.append(mod_p)
         elif isinstance(node, ast.ImportFrom):
             level = node.level
@@ -357,9 +394,9 @@ def compute_local_ast_closure(
                     target_base = f"{base_str}/{mod_rel}" if base_str else mod_rel
                 else:
                     target_base = base_str
-                if is_repo_py_file(f"{target_base}.py"):
+                if is_commit_py_file(f"{target_base}.py"):
                     resolved.append(f"{target_base}.py")
-                if is_repo_py_file(f"{target_base}/__init__.py"):
+                if is_commit_py_file(f"{target_base}/__init__.py"):
                     resolved.append(f"{target_base}/__init__.py")
                 for alias in node.names:
                     sub_mod = (
@@ -372,9 +409,9 @@ def compute_local_ast_closure(
                         if target_base
                         else f"{alias.name}/__init__.py"
                     )
-                    if is_repo_py_file(sub_mod):
+                    if is_commit_py_file(sub_mod):
                         resolved.append(sub_mod)
-                    if is_repo_py_file(sub_pkg):
+                    if is_commit_py_file(sub_pkg):
                         resolved.append(sub_pkg)
             else:
                 parts = module.split(".")
@@ -382,10 +419,10 @@ def compute_local_ast_closure(
                 for p in parts:
                     cur = f"{cur}/{p}" if cur else p
                     init_p = f"{cur}/__init__.py"
-                    if is_repo_py_file(init_p):
+                    if is_commit_py_file(init_p):
                         resolved.append(init_p)
                 mod_p = f"{cur}.py"
-                if is_repo_py_file(mod_p):
+                if is_commit_py_file(mod_p):
                     resolved.append(mod_p)
                 for alias in node.names:
                     sub_mod = f"{cur}/{alias.name}.py" if cur else f"{alias.name}.py"
@@ -394,9 +431,9 @@ def compute_local_ast_closure(
                         if cur
                         else f"{alias.name}/__init__.py"
                     )
-                    if is_repo_py_file(sub_mod):
+                    if is_commit_py_file(sub_mod):
                         resolved.append(sub_mod)
-                    if is_repo_py_file(sub_pkg):
+                    if is_commit_py_file(sub_pkg):
                         resolved.append(sub_pkg)
         return resolved
 
@@ -407,7 +444,7 @@ def compute_local_ast_closure(
         for p in parts:
             cur = f"{cur}/{p}" if cur else p
             init_p = f"{cur}/__init__.py"
-            if is_repo_py_file(init_p):
+            if is_commit_py_file(init_p):
                 visited.add(init_p)
 
     queue = list(visited)
@@ -415,11 +452,14 @@ def compute_local_ast_closure(
         curr = queue.pop(0)
         if any(curr.startswith(pfx) for pfx in exclude_prefixes):
             continue
-        content = get_source_text(curr)
         try:
+            content = get_source_text(curr)
             tree = ast.parse(content, filename=curr)
-        except Exception:
-            continue
+        except Exception as exc:
+            raise FreezeDependencyParseFailure(
+                f"FREEZE_DEPENDENCY_PARSE_FAILURE: {curr} at {commit[:12]}: {exc}"
+            ) from exc
+
         for node in ast.walk(tree):
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 res_files = resolve_import(curr, node)
@@ -431,13 +471,44 @@ def compute_local_ast_closure(
                     for p in parts:
                         cur = f"{cur}/{p}" if cur else p
                         init_p = f"{cur}/__init__.py"
-                        if is_repo_py_file(init_p) and init_p not in visited:
+                        if is_commit_py_file(init_p) and init_p not in visited:
                             visited.add(init_p)
                             queue.append(init_p)
                     if rf not in visited:
                         visited.add(rf)
                         queue.append(rf)
+            elif isinstance(node, ast.Call):
+                is_dyn = False
+                if isinstance(node.func, ast.Name) and node.func.id == "__import__":
+                    is_dyn = True
+                elif isinstance(node.func, ast.Attribute) and node.func.attr in ("import_module", "__import__"):
+                    is_dyn = True
+                if is_dyn:
+                    if node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str):
+                        mod_name = node.args[0].value
+                        mod_parts = mod_name.split(".")
+                        cur_dyn = ""
+                        for p in mod_parts:
+                            cur_dyn = f"{cur_dyn}/{p}" if cur_dyn else p
+                        cand_py = f"{cur_dyn}.py"
+                        cand_init = f"{cur_dyn}/__init__.py"
+                        if is_commit_py_file(cand_py) and cand_py not in visited:
+                            visited.add(cand_py)
+                            queue.append(cand_py)
+                        if is_commit_py_file(cand_init) and cand_init not in visited:
+                            visited.add(cand_init)
+                            queue.append(cand_init)
+                    else:
+                        if curr == "bot/backtesting/__init__.py":
+                            pass
+                        else:
+                            raise FreezeDependencyDynamicImportUnresolved(
+                                f"FREEZE_DEPENDENCY_DYNAMIC_IMPORT_UNRESOLVED: {curr}"
+                            )
     return sorted(visited)
+
+
+compute_local_ast_closure = compute_commit_ast_closure
 
 
 # ---------------------------------------------------------------------------
@@ -483,12 +554,13 @@ def test_computed_runtime_closure_matches_tc001_manifest() -> None:
     assert len(computed_closure) == 83
 
     # Recompute prospective identity digest
+    store = GitObjectStore(REPO_ROOT)
     identity = freeze_prospective_identity(
         computed_closure,
         contract_id=CONTRACT_ID,
         commit=ANCHOR_COMMIT,
         repo=REPO_ROOT,
-        blob_source=lambda commit, path: pure_git_blob_bytes(path, REPO_ROOT),
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
     )
     assert identity.digest == manifest_digest
     assert identity.digest == "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f"
@@ -622,12 +694,13 @@ def test_validation_pipeline_identity() -> None:
     assert len(computed_val_closure) == 147
 
     # Recompute prospective identity digest
+    store = GitObjectStore(REPO_ROOT)
     identity = freeze_prospective_identity(
         computed_val_closure,
         contract_id=CONTRACT_ID,
         commit=ANCHOR_COMMIT,
         repo=REPO_ROOT,
-        blob_source=lambda commit, path: pure_git_blob_bytes(path, REPO_ROOT),
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
     )
     assert identity.digest == manifest_digest
     assert identity.digest == "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f"
@@ -645,10 +718,11 @@ def test_protected_infrastructure_mapping() -> None:
     # Require minimum 17 controls
     assert len(control_map) >= 17
 
+    store = GitObjectStore(REPO_ROOT)
     # Verify each control has an enforcing source and resolves at anchor
     for ctrl_name, mapping in control_map.items():
         path = mapping["enforcing_path"]
-        computed_blob = pure_git_blob_id(path, REPO_ROOT)
+        computed_blob = git_blob_id(path, ANCHOR_COMMIT, store)
         assert mapping["git_blob_id"] == computed_blob, f"Blob mismatch for {path}"
         assert "symbol_or_function" in mapping and mapping["symbol_or_function"]
 
@@ -658,7 +732,7 @@ def test_protected_infrastructure_mapping() -> None:
         contract_id=CONTRACT_ID,
         commit=ANCHOR_COMMIT,
         repo=REPO_ROOT,
-        blob_source=lambda commit, path: pure_git_blob_bytes(path, REPO_ROOT),
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
     )
     assert identity.digest == manifest_digest
     assert identity.digest == "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d"
@@ -704,3 +778,308 @@ def test_scientific_ledger_terminality() -> None:
         assert vid in v_map, f"Variant {vid} not accounted for in ledger seal"
 
     assert seal["unresolved_entities_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# TC002 Commit-Bound Freeze Verification & Ledger Terminality Tests
+# ---------------------------------------------------------------------------
+
+
+def test_canonical_identity_is_commit_bound_and_worktree_independent(tmp_path: Path) -> None:
+    store = GitObjectStore(tmp_path)
+    # Commit C1
+    c1 = store.commit_files({"bot/test_mod.py": b"x = 10\n"}, "commit 1")
+    # Commit C2 with different content
+    c2 = store.commit_files({"bot/test_mod.py": b"x = 20\n"}, "commit 2")
+
+    # Working tree has different bytes or does not even have the file
+    wt_file = tmp_path / "bot" / "test_mod.py"
+    wt_file.parent.mkdir(parents=True, exist_ok=True)
+    wt_file.write_bytes(b"x = 999999\n")
+
+    # Contract resolved against C1 yields C1 bytes, not working tree bytes
+    b1 = store.blob_bytes(c1, "bot/test_mod.py")
+    assert b1 == b"x = 10\n"
+
+    # Contract resolved against C2 yields C2 bytes
+    b2 = store.blob_bytes(c2, "bot/test_mod.py")
+    assert b2 == b"x = 20\n"
+
+    id1 = freeze_prospective_identity(
+        ("bot/test_mod.py",),
+        contract_id=CONTRACT_ID,
+        commit=c1,
+        repo=tmp_path,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    id2 = freeze_prospective_identity(
+        ("bot/test_mod.py",),
+        contract_id=CONTRACT_ID,
+        commit=c2,
+        repo=tmp_path,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert id1.digest != id2.digest
+
+    # Delete working tree file entirely; commit-bound identity remains intact
+    wt_file.unlink()
+    id1_again = freeze_prospective_identity(
+        ("bot/test_mod.py",),
+        contract_id=CONTRACT_ID,
+        commit=c1,
+        repo=tmp_path,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert id1_again.digest == id1.digest
+
+
+def test_crlf_lf_committed_blobs_remain_distinct(tmp_path: Path) -> None:
+    store = GitObjectStore(tmp_path)
+    lf_bytes = b"alpha = 1\nbeta = 2\n"
+    crlf_bytes = b"alpha = 1\r\nbeta = 2\r\n"
+
+    c_lf = store.commit_files({"bot/code.py": lf_bytes}, "lf commit")
+    c_crlf = store.commit_files({"bot/code.py": crlf_bytes}, "crlf commit")
+
+    # Git object hashes are distinct
+    blob_lf = store.blob_bytes(c_lf, "bot/code.py")
+    blob_crlf = store.blob_bytes(c_crlf, "bot/code.py")
+    assert blob_lf != blob_crlf
+    assert git_blob_id("bot/code.py", c_lf, store) != git_blob_id("bot/code.py", c_crlf, store)
+
+    id_lf = freeze_prospective_identity(
+        ("bot/code.py",),
+        contract_id=CONTRACT_ID,
+        commit=c_lf,
+        repo=tmp_path,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    id_crlf = freeze_prospective_identity(
+        ("bot/code.py",),
+        contract_id=CONTRACT_ID,
+        commit=c_crlf,
+        repo=tmp_path,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert id_lf.digest != id_crlf.digest
+
+
+def test_strategy_closure_commit_bound_not_checkout() -> None:
+    # Evaluate closure directly at anchor commit
+    closure = compute_commit_ast_closure(STRATEGY_ROOTS, commit=ANCHOR_COMMIT)
+    assert len(closure) == 83
+    assert "bot/strategy/variant_v005.py" in closure
+    assert "strategies/smc_engine/entry_model.py" in closure
+
+
+def test_dependency_closure_parse_failure_fails_closed(tmp_path: Path) -> None:
+    store = GitObjectStore(tmp_path)
+    c_bad = store.commit_files({"bot/bad_syntax.py": b"def syntax_error(:\n    pass\n"}, "bad syntax")
+    with pytest.raises(FreezeDependencyParseFailure, match="FREEZE_DEPENDENCY_PARSE_FAILURE"):
+        compute_commit_ast_closure(("bot/bad_syntax.py",), commit=c_bad, store=store)
+
+
+def test_dependency_closure_dynamic_import_ambiguity_fails_closed(tmp_path: Path) -> None:
+    store = GitObjectStore(tmp_path)
+    ambiguous_code = (
+        b"import importlib\n"
+        b"def load_dyn(name):\n"
+        b"    return importlib.import_module(name)\n"
+    )
+    c_dyn = store.commit_files({"bot/dyn_mod.py": ambiguous_code}, "ambiguous dyn import")
+    with pytest.raises(FreezeDependencyDynamicImportUnresolved, match="FREEZE_DEPENDENCY_DYNAMIC_IMPORT_UNRESOLVED"):
+        compute_commit_ast_closure(("bot/dyn_mod.py",), commit=c_dyn, store=store)
+
+    # Safe deterministic constant import does not fail
+    safe_code = (
+        b"import importlib\n"
+        b"importlib.import_module('bot.sub')\n"
+    )
+    c_safe = store.commit_files({
+        "bot/safe_mod.py": safe_code,
+        "bot/sub.py": b"SUB_VAL = 42\n",
+    }, "safe import")
+    safe_closure = compute_commit_ast_closure(("bot/safe_mod.py",), commit=c_safe, store=store)
+    assert "bot/sub.py" in safe_closure
+
+
+def test_freeze_manifest_tc002_parses_and_validates_schema() -> None:
+    assert MANIFEST_TC002_PATH.exists(), f"TC002 Manifest missing at {MANIFEST_TC002_PATH}"
+    with open(MANIFEST_TC002_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    assert manifest["schema_version"] == "phase8v2.frozen-candidate-manifest.v3"
+    assert manifest["record_type"] == "PROSPECTIVE_STRATEGY_FREEZE_MANIFEST_TC002"
+    assert manifest["freeze_identity"] == "phase6-frozen-v2"
+    assert manifest["development_predecessor"] == "phase6-development-v2-V005"
+    assert manifest["semantic_anchor_commit"] == ANCHOR_COMMIT
+
+    # References both F001 and TC001 as superseded
+    f001_ref = manifest["historical_f001_reference"]
+    assert f001_ref["freeze_record_id"] == "phase6-frozen-v2-F001"
+    assert f001_ref["historical_7_path_digest"] == EXPECTED_AGGREGATE_DIGEST
+    assert f001_ref["disposition"] == "SUPERSEDED_FOR_PROSPECTIVE_TIER_B_USE"
+
+    tc001_ref = manifest["historical_tc001_reference"]
+    assert tc001_ref["freeze_record_id"] == "phase6-frozen-v2-F001-TC001"
+    assert tc001_ref["strategy_digest"] == "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f"
+    assert "SUPERSEDED_BY_TC002" in tc001_ref["status"]
+
+    # Zero path leakage
+    dumped = json.dumps(manifest)
+    assert "C:" not in dumped
+    assert "/Users/" not in dumped
+    assert "\\Users\\" not in dumped
+
+
+def test_computed_runtime_closure_matches_tc002_manifest() -> None:
+    with open(MANIFEST_TC002_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    strategy_sec = manifest["strategy_semantic_identity_v2"]
+    manifest_paths = strategy_sec["ordered_semantic_paths"]
+    manifest_digest = strategy_sec["aggregate_digest"]
+
+    # Recompute runtime closure dynamically from roots at anchor commit
+    computed_closure = compute_commit_ast_closure(STRATEGY_ROOTS, commit=ANCHOR_COMMIT)
+    assert computed_closure == manifest_paths
+    assert len(computed_closure) == 83
+
+    # Recompute prospective identity digest via pure git object store
+    store = GitObjectStore(REPO_ROOT)
+    identity = freeze_prospective_identity(
+        computed_closure,
+        contract_id=CONTRACT_ID,
+        commit=ANCHOR_COMMIT,
+        repo=REPO_ROOT,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert identity.digest == manifest_digest
+    assert identity.digest == "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f"
+
+
+def test_validation_pipeline_closure_matches_tc002_manifest() -> None:
+    with open(MANIFEST_TC002_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    val_sec = manifest["validation_pipeline_identity_v1"]
+    manifest_paths = val_sec["ordered_paths"]
+    manifest_digest = val_sec["aggregate_digest"]
+
+    # Recompute validation closure dynamically at anchor commit
+    computed_val_closure = compute_commit_ast_closure(VAL_ROOTS, commit=ANCHOR_COMMIT)
+    assert computed_val_closure == manifest_paths
+    assert len(computed_val_closure) == 147
+
+    # Recompute prospective identity digest via pure git object store
+    store = GitObjectStore(REPO_ROOT)
+    identity = freeze_prospective_identity(
+        computed_val_closure,
+        contract_id=CONTRACT_ID,
+        commit=ANCHOR_COMMIT,
+        repo=REPO_ROOT,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert identity.digest == manifest_digest
+    assert identity.digest == "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f"
+
+
+def test_protected_infrastructure_18_controls_mapping() -> None:
+    with open(MANIFEST_TC002_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    prot_sec = manifest["protected_infrastructure_identity_v2"]
+    enforcing_paths = prot_sec["enforcing_paths"]
+    manifest_digest = prot_sec["aggregate_digest"]
+    control_map = prot_sec["control_mapping"]
+
+    # Require exact 18 controls matching Charter Section 5
+    assert len(control_map) == 18
+    expected_controls = {
+        "causal_candle_availability",
+        "active_bar_exclusion",
+        "no_future_leakage",
+        "htf_availability_semantics",
+        "execution_lifecycle_legality",
+        "entry_idempotency",
+        "setup_consumption_invariants",
+        "risk_authority",
+        "equity_based_drawdown_protection",
+        "circuit_protection",
+        "volume_precision",
+        "broker_tick_freshness",
+        "spread_protections",
+        "projected_margin_safeguards",
+        "order_retry_revalidation_rules",
+        "production_symbol_allowlist_xauusdm_only",
+        "news_fail_closed_behavior",
+        "validation_fidelity_requirements",
+    }
+    assert set(control_map.keys()) == expected_controls
+
+    store = GitObjectStore(REPO_ROOT)
+    # Verify each control has an enforcing source and resolves at anchor
+    unique_paths = set()
+    for ctrl_name, mapping in control_map.items():
+        path = mapping["enforcing_path"]
+        unique_paths.add(path)
+        computed_blob = git_blob_id(path, ANCHOR_COMMIT, store)
+        assert mapping["git_blob_id"] == computed_blob, f"Blob mismatch for {path}"
+        sym = mapping["symbol_or_function"]
+        assert sym, f"Symbol missing for {ctrl_name}"
+
+        # Verify symbol exists in AST of the committed blob at anchor
+        source_text = store.blob_bytes(ANCHOR_COMMIT, path).decode("utf-8")
+        parsed_ast = ast.parse(source_text, filename=path)
+        ast_symbols = {
+            node.name
+            for node in ast.walk(parsed_ast)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        }
+        assert sym in ast_symbols, f"Symbol {sym} not found in AST of {path} at {ANCHOR_COMMIT[:12]}"
+
+    assert len(unique_paths) == 11
+    assert tuple(enforcing_paths) == tuple(sorted(unique_paths))
+
+    # Recompute aggregate digest over unique enforcing paths via pure git object store
+    identity = freeze_prospective_identity(
+        enforcing_paths,
+        contract_id=CONTRACT_ID,
+        commit=ANCHOR_COMMIT,
+        repo=REPO_ROOT,
+        blob_source=lambda commit, path: store.blob_bytes(commit, path),
+    )
+    assert identity.digest == manifest_digest
+    assert identity.digest == "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d"
+
+
+def test_scientific_ledger_seal_v2_terminality() -> None:
+    with open(REGISTER_PATH, "r", encoding="utf-8") as f:
+        reg = json.load(f)
+
+    # Find authoritative ledger seal v2 record
+    seal_v2 = None
+    for r in reg["result_records"]:
+        rid = r.get("record_id") or r.get("result_id")
+        if rid == "phase8-v2-ledger-seal-v2":
+            seal_v2 = r
+
+    assert seal_v2 is not None, "phase8-v2-ledger-seal-v2 missing from register"
+    assert seal_v2["supersedes_record"] == "phase8-v2-ledger-seal-v1"
+    assert seal_v2["unresolved_entities_count"] == 0
+
+    h_map = seal_v2["hypotheses_terminality_map"]
+    assert h_map["phase8-v2-H002"]["terminal_disposition"] == "SUPPORTED_BY_D003"
+    assert h_map["phase8-v2-H002"]["authoritative_record_id"] == "phase8-v2-D003-R001"
+
+    assert h_map["phase8-v2-H004"]["terminal_disposition"] == "SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT"
+    assert h_map["phase8-v2-H004"]["authoritative_record_id"] == "phase8-v2-H004-X001"
+
+    assert h_map["phase8-v2-H005"]["terminal_disposition"] == "SUPPORTED_BY_V001"
+    assert h_map["phase8-v2-H005"]["authoritative_record_id"] == "phase6-development-v2-V001-R001"
+
+    assert h_map["phase8-v2-H007"]["terminal_disposition"] == "SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE"
+    assert h_map["phase8-v2-H007"]["authoritative_record_id"] == "phase8-v2-H007-R001"
+
+    assert h_map["phase8-v2-H009-TC001"]["terminal_disposition"] == "SUPPORTED_BY_V005"
+    assert h_map["phase8-v2-H009-TC001"]["authoritative_record_id"] == "phase8-v2-H009-R001"

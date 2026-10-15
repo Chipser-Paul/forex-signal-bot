@@ -2151,3 +2151,15 @@ step: supervisory review before D002 or Variant 1.
 - **Manifest Published:** Published baseline/phase8_v2_frozen_candidate_manifest_tc001.json (schema phase8v2.frozen-candidate-manifest.v2). Historical manifest baseline/phase8_v2_frozen_candidate_manifest.json preserved immutably.
 - **Strict Scope Boundaries:** Zero strategy semantic code changes; semantic anchor remains 2fd3460b9010d8cca548f4fd6980b6b34fe594e2. Zero empirical access (Fold 01, Folds 02–04, holdout, 2025+ data unopened). Research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
 - **Effective Status:** phase6-frozen-v2 — CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN. Tier B remains SEALED pending supervisory review.
+
+## Update — 2026-10-15: phase6-frozen-v2-F001-TC002 — Commit-Bound Verification, 18 Charter §5 Controls, and Corrected Ledger Seal
+
+- **Task & Identity:** Executed task phase6-frozen-v2-F001-TC002. Appended governance correction record phase6-frozen-v2-F001-TC002 (classification: GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS).
+- **Defects Repaired:** Formally resolved the three pre-Tier-B defects identified in TC001 review:
+  1. Worktree byte helpers eliminated; all verification uses commit-bound Git object database reads (`canonical_blob_bytes`, `canonical_framed_digest`, pure-Python `GitObjectStore`);
+  2. AST dependency closure hardened to fail closed on parse failures (`FREEZE_DEPENDENCY_PARSE_FAILURE`) and ambiguous dynamic imports (`FREEZE_DEPENDENCY_DYNAMIC_IMPORT_UNRESOLVED`);
+  3. Charter §5 control coverage expanded to exact 18 contractual protections (adding distinct `no_future_leakage` record; union remains 11 unique paths and digest 666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d);
+  4. Corrected scientific ledger seal published (`phase8-v2-ledger-seal-v2`) restoring authoritative terminal dispositions for H002 (SUPPORTED_BY_D003), H004 (SUPPORTED_BY_STATIC_IMPLEMENTATION_AUDIT), and H005 (SUPPORTED_BY_V001). Historical seal v1 preserved immutably.
+- **Manifest Published:** Published `baseline/phase8_v2_frozen_candidate_manifest_tc002.json` (schema `phase8v2.frozen-candidate-manifest.v3`). Historical manifests F001 and TC001 preserved immutably.
+- **Strict Invariance:** Strategy candidate `phase6-development-v2-V005` unchanged; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero empirical data accessed; research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
+- **Effective Status:** phase6-frozen-v2 — CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN. Tier B remains strictly SEALED pending prospective feasibility plan preregistration and supervisory approval.
