@@ -309,3 +309,164 @@ def test_feasibility_plan_documentation_exists_and_binds_sha() -> None:
     assert "SAMPLE_SIZE_FUTILITY" in doc_text
     assert "LIFECYCLE_SAMPLE_INSUFFICIENT" in doc_text
     assert "END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE" in doc_text
+
+
+PLAN_TC001_PATH = REPO_ROOT / "baseline" / "phase8_v2_tierb_feasibility_plan_tc001.json"
+EXPECTED_PLAN_TC001_ID = "phase8-v2-tierb-feasibility-plan-v1-TC001"
+EXPECTED_PLAN_TC001_SCHEMA = "phase8v2.tierb-feasibility-plan.v2"
+EXPECTED_PLAN_TC001_CONTENT_SHA256 = (
+    "5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf"
+)
+EXPECTED_COST_POLICY_PKG = "evidence-development_cost_policy-v1-6b1a986b1f8d7b81"
+EXPECTED_COST_POLICY_FINGERPRINT = (
+    "aa0ccc9368c0cf55b4775b4295f0424d4bdb0e5fd6cbfaf27137763be58e9404"
+)
+EXPECTED_EXECUTION_MODEL_FINGERPRINT = (
+    "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108"
+)
+EXPECTED_COST_ATTESTATION_FINGERPRINT = (
+    "10e9a42e501b24b3cff3459a955cfef37c67d542dc76ef8300bcff596321ff42"
+)
+EXPECTED_COST_ACTIVATION_PKG = "evidence-cost_policy_activation-v1-802914181c0ca505"
+EXPECTED_METADATA_BOUNDS_PKG = "evidence-development_metadata_bounds-v1-8dad509e60c8014a"
+EXPECTED_METADATA_POLICY_FINGERPRINT = (
+    "54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f"
+)
+EXPECTED_SCENARIO_MATRIX_FINGERPRINT = (
+    "3c59adbc16c2e2780041c1021e44066c5c43d980c5991af7fe32dcaaa36c3401"
+)
+EXPECTED_PRIMARY_BASELINE_SCENARIO_ID = (
+    "SWAP_EMAIL_REFERENCE|SLIPPAGE_MODERATE_ADVERSE|BASELINE_CURRENT_REFERENCE_PROXY"
+)
+EXPECTED_SEALED_V005_R001_SHA256 = (
+    "27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe"
+)
+EXPECTED_SEALED_V005_R001_BYTES = 80554
+
+
+@pytest.fixture(scope="module")
+def plan_tc001_data() -> dict:
+    assert PLAN_TC001_PATH.is_file(), f"TC001 plan missing: {PLAN_TC001_PATH}"
+    with open(PLAN_TC001_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def test_plan_tc001_json_parses_and_validates_schema(plan_tc001_data: dict) -> None:
+    """TC001 plan JSON parses and validates against schema phase8v2.tierb-feasibility-plan.v2."""
+    assert plan_tc001_data["plan_id"] == EXPECTED_PLAN_TC001_ID
+    assert plan_tc001_data["schema_version"] == EXPECTED_PLAN_TC001_SCHEMA
+    assert plan_tc001_data["record_type"] == "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION"
+    assert plan_tc001_data["parent_plan"] == EXPECTED_PLAN_ID
+    assert plan_tc001_data["parent_plan_content_sha256"] == EXPECTED_PLAN_CONTENT_SHA256
+    assert plan_tc001_data["zero_empirical_access"] is True
+    assert plan_tc001_data["budget_impact"] == 0
+    assert plan_tc001_data["prospective_contract"] == "canonical_git_blob_v1"
+
+
+def test_plan_tc001_canonical_content_sha256(plan_tc001_data: dict) -> None:
+    """TC001 canonical content SHA-256 matches exact hash computation."""
+    content_copy = {k: v for k, v in plan_tc001_data.items() if k != "plan_content_sha256"}
+    rendered_core = json.dumps(content_copy, sort_keys=True, separators=(",", ":"))
+    computed_sha = hashlib.sha256(rendered_core.encode("utf-8")).hexdigest()
+    assert computed_sha == EXPECTED_PLAN_TC001_CONTENT_SHA256
+    assert plan_tc001_data["plan_content_sha256"] == EXPECTED_PLAN_TC001_CONTENT_SHA256
+
+
+def test_plan_tc001_cost_policy_provenance(plan_tc001_data: dict) -> None:
+    """TC001 plan correctly binds Phase 8H, 8I, and 8L cost policy provenance."""
+    prov = plan_tc001_data["cost_policy_provenance_binding"]
+    p8h = prov["phase8h_cost_policy"]
+    assert p8h["package_id"] == EXPECTED_COST_POLICY_PKG
+    assert p8h["policy_fingerprint"] == EXPECTED_COST_POLICY_FINGERPRINT
+    assert p8h["canonical_execution_model_fingerprint"] == EXPECTED_EXECUTION_MODEL_FINGERPRINT
+    assert p8h["cost_policy_canonical_attestation_fingerprint"] == EXPECTED_COST_ATTESTATION_FINGERPRINT
+    assert p8h["underlying_policy_state"] == "PREREGISTERED_INACTIVE"
+
+    p8i = prov["phase8i_activation"]
+    assert p8i["package_id"] == EXPECTED_COST_ACTIVATION_PKG
+    assert p8i["activation_state"] == "ACTIVE_FOR_DEVELOPMENT_VALIDATION"
+
+    p8l = prov["phase8l_metadata_bounds"]
+    assert p8l["bounds_package_id"] == EXPECTED_METADATA_BOUNDS_PKG
+    assert p8l["metadata_bounds_policy_fingerprint"] == EXPECTED_METADATA_POLICY_FINGERPRINT
+
+
+def test_plan_tc001_scenario_matrix_binding(plan_tc001_data: dict) -> None:
+    """TC001 binds factorized scenario matrix fingerprint and primary baseline scenario."""
+    sm = plan_tc001_data["factorized_scenario_matrix_binding"]
+    assert sm["unique_scenario_count"] == 16
+    assert sm["matrix_canonical_fingerprint"] == EXPECTED_SCENARIO_MATRIX_FINGERPRINT
+    assert sm["primary_baseline_scenario"]["scenario_id"] == EXPECTED_PRIMARY_BASELINE_SCENARIO_ID
+
+
+def test_plan_tc001_exact_fold_schedule(plan_tc001_data: dict) -> None:
+    """TC001 exact fold schedule matches development evaluation plan _fixed_folds()."""
+    from bot.validation.development_evaluation_plan import _fixed_folds
+
+    fixed_folds = _fixed_folds()
+    schedule = plan_tc001_data["exact_fold_schedule"]
+    assert len(schedule) == 4
+    for fold in fixed_folds:
+        fold_id = fold["fold_id"]
+        assert fold_id in schedule
+        s = schedule[fold_id]
+        assert s["evaluation"]["start"] == fold["evaluation"]["start"]
+        assert s["evaluation"]["end"] == fold["evaluation"]["end"]
+        assert s["warmup"]["start"] == fold["warmup"]["start"]
+        assert s["warmup"]["end"] == fold["warmup"]["end"]
+        assert s["purge_seconds"] == fold["purge_seconds"]
+        assert s["embargo_seconds"] == fold["embargo_seconds"]
+
+
+def test_plan_tc001_exit_reasons_and_end_of_data(plan_tc001_data: dict) -> None:
+    """TC001 valid exit reasons match ExitReason enum and END_OF_DATA is excluded."""
+    from bot.execution.lifecycle.models import ExitReason
+
+    completed = plan_tc001_data["completed_trade_definition"]
+    valid_exits = completed["valid_natural_exit_reasons"]
+    for reason in valid_exits:
+        assert hasattr(ExitReason, reason), f"Reason {reason} not in ExitReason enum"
+
+    assert completed["end_of_data_exit_enum"] == ExitReason.END_OF_DATA.name
+    assert completed["end_of_data_classification"] == "END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE"
+    assert "END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE" in completed["non_completed_states_excluded"]
+
+
+def test_plan_tc001_rehearsal_requirements(plan_tc001_data: dict) -> None:
+    """TC001 rehearsal requirements bind sealed V005 R001 SHA, byte count, counts, and entry parity formula."""
+    rehearsal = plan_tc001_data["rehearsal_requirements"]
+    assert rehearsal["fold01_parity_rehearsal_required"] is True
+    assert rehearsal["sealed_v005_r001_reference"]["expected_external_result_sha256"] == EXPECTED_SEALED_V005_R001_SHA256
+    assert rehearsal["sealed_v005_r001_reference"]["expected_bytes"] == EXPECTED_SEALED_V005_R001_BYTES
+    assert rehearsal["required_fold01_candidate_count"] == 102
+    assert rehearsal["required_fold01_v003_baseline_count"] == 81
+    assert rehearsal["required_fold01_v005_fallback_count"] == 21
+    assert rehearsal["required_fold01_unique_setups"] == 102
+    assert rehearsal["required_fold01_duplicates"] == 0
+    assert rehearsal["decision_setup_multiset_equality_required"] is True
+    assert rehearsal["exact_entry_parity_formula"] == "json.dumps(entry, sort_keys=True, separators=(',', ':'), allow_nan=False)"
+
+
+def test_plan_tc001_hypothesis_register_record(register_data: dict) -> None:
+    """TC001 record exists in hypothesis register with correct attributes."""
+    records = [
+        r for r in register_data.get("result_records", [])
+        if r.get("plan_id") == EXPECTED_PLAN_TC001_ID
+    ]
+    assert len(records) == 1, f"Expected 1 record for {EXPECTED_PLAN_TC001_ID}, found {len(records)}"
+    record = records[0]
+    assert record["record_type"] == "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION"
+    assert record["plan_content_sha256"] == EXPECTED_PLAN_TC001_CONTENT_SHA256
+    assert record["plan_file"] == "baseline/phase8_v2_tierb_feasibility_plan_tc001.json"
+    assert record["supersedes_plan_id"] == EXPECTED_PLAN_ID
+    assert record["zero_empirical_access"] is True
+    assert record["budget_impact"] == 0
+
+
+def test_plan_tc001_documentation_section_15() -> None:
+    """docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md contains Section 15 and TC001 content SHA-256."""
+    assert DOC_PATH.is_file()
+    doc_text = DOC_PATH.read_text(encoding="utf-8")
+    assert "## 15. Plan-TC001 Provenance Corrections & Evidence Contracts" in doc_text
+    assert EXPECTED_PLAN_TC001_ID in doc_text
+    assert EXPECTED_PLAN_TC001_CONTENT_SHA256 in doc_text

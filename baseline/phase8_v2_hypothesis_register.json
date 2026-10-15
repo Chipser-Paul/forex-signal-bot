@@ -4686,6 +4686,86 @@
       "budget_impact": 0,
       "zero_empirical_access": true,
       "tier_b_status": "TIER_B_PLAN_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
+    },
+    {
+      "record_id": "phase8-v2-tierb-feasibility-plan-v1-TC001",
+      "result_id": "phase8-v2-tierb-feasibility-plan-v1-TC001",
+      "record_type": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION",
+      "created_utc": "2026-10-15T02:30:00Z",
+      "plan_id": "phase8-v2-tierb-feasibility-plan-v1-TC001",
+      "supersedes_plan_id": "phase8-v2-tierb-feasibility-plan-v1",
+      "title": "Phase 8 V2 Reserved-Fold Candidate and Lifecycle Sample Feasibility Plan (TC001)",
+      "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — STRUCTURAL/LIFECYCLE ONLY — NOT_PROFITABILITY_EVIDENCE",
+      "plan_file": "baseline/phase8_v2_tierb_feasibility_plan_tc001.json",
+      "plan_doc": "docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md",
+      "plan_content_sha256": "5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf",
+      "parent_plan_content_sha256": "d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "historical_plan_disposition": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81 REPLACED_AND_EXECUTION_PROHIBITED",
+      "corrections_applied": [
+        "COST_POLICY_PROVENANCE_SEPARATED_FROM_EXECUTION_MODEL",
+        "PHASE8H_COST_POLICY_AND_PHASE8I_ACTIVATION_BOUND",
+        "PHASE8L_METADATA_BOUNDS_AND_PROXIES_QUALIFIED",
+        "FACTORIZED_SCENARIO_MATRIX_CANONICAL_FINGERPRINT_BOUND",
+        "EXACT_RESERVED_FOLD_WINDOWS_AND_WARMUPS_FROZEN",
+        "LIFECYCLE_EXIT_REASONS_BOUND_TO_FROZEN_ENUM",
+        "FOLD01_REHEARSAL_PARITY_STRENGTHENED_WITH_EXACT_ENTRIES_AND_DECISION_PAIRS"
+      ],
+      "frozen_candidate_binding": {
+        "freeze_identity": "phase6-frozen-v2",
+        "development_predecessor": "phase6-development-v2-V005",
+        "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "authoritative_freeze_manifest": "baseline/phase8_v2_frozen_candidate_manifest_tc003.json",
+        "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+        "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+        "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+        "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+        "charter_section_5_controls_count": 18,
+        "authoritative_ledger_seal": "phase8-v2-ledger-seal-v2"
+      },
+      "cost_policy_binding": {
+        "policy_package_id": "evidence-development_cost_policy-v1-6b1a986b1f8d7b81",
+        "policy_fingerprint": "aa0ccc9368c0cf55b4775b4295f0424d4bdb0e5fd6cbfaf27137763be58e9404",
+        "canonical_execution_model_fingerprint": "054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108",
+        "cost_policy_canonical_attestation_fingerprint": "10e9a42e501b24b3cff3459a955cfef37c67d542dc76ef8300bcff596321ff42",
+        "activation_package_id": "evidence-cost_policy_activation-v1-802914181c0ca505",
+        "activation_state": "ACTIVE_FOR_DEVELOPMENT_VALIDATION",
+        "metadata_bounds_package_id": "evidence-development_metadata_bounds-v1-8dad509e60c8014a",
+        "metadata_bounds_fingerprint": "54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f"
+      },
+      "factorized_scenario_matrix": {
+        "matrix_schema": "phase8n.factorized-scenario-matrix.v1",
+        "unique_scenarios": 16,
+        "matrix_canonical_fingerprint": "3c59adbc16c2e2780041c1021e44066c5c43d980c5991af7fe32dcaaa36c3401",
+        "primary_baseline_scenario_id": "SWAP_EMAIL_REFERENCE|SLIPPAGE_MODERATE_ADVERSE|BASELINE_CURRENT_REFERENCE_PROXY"
+      },
+      "risk_flags": [
+        "TIER_B_REGIME_CONCENTRATION_RISK"
+      ],
+      "reserved_folds_sequence": [
+        "fold-02",
+        "fold-03",
+        "fold-04"
+      ],
+      "stage_1_raw_futility_threshold": 30,
+      "stage_1_raw_headroom_target": 60,
+      "stage_2_min_completed_trades_per_fold": 30,
+      "stage_2_primary_scenario": "PRIMARY_BASELINE",
+      "valid_natural_exit_reasons": [
+        "STOP_LOSS",
+        "BREAK_EVEN",
+        "TRAILING_STOP",
+        "TAKE_PROFIT",
+        "EMERGENCY"
+      ],
+      "end_of_data_exit_enum": "END_OF_DATA",
+      "end_of_data_excluded_from_sample": true,
+      "mandatory_fold01_parity_rehearsal_required": true,
+      "sealed_v005_r001_expected_sha256": "27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe",
+      "sealed_v005_r001_expected_bytes": 80554,
+      "budget_impact": 0,
+      "zero_empirical_access": true,
+      "tier_b_status": "TIER_B_PLAN_TC001_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
     }
   ],
   "provenance_corrections": [

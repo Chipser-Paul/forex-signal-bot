@@ -870,3 +870,14 @@ Copy-paste for a fresh agent session:
 - **Strict Invariance & Boundaries:** Zero strategy semantic modifications; zero empirical data accessed; research allowances remain permanently retired (5/12 diagnostics, 5/8 variants, 0/4 numeric trials). All profitability metrics (P&L, win rate, Sharpe, drawdown, expectancy, profit factor) strictly prohibited.
 - **Current Status:** `phase8-v2-tierb-feasibility-plan-v1` — PREREGISTERED. Fold 02 remains strictly **SEALED** pending runner tooling implementation, synthetic tests, and explicit supervisory authorization.
 
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-plan-v1-TC001 — Provenance & Machine-Contract Corrections (Fold 02 Remains Strictly Sealed)
+
+- **Plan Correction Published:** Published `phase8-v2-tierb-feasibility-plan-v1-TC001` (`baseline/phase8_v2_tierb_feasibility_plan_tc001.json`, schema `phase8v2.tierb-feasibility-plan.v2`, plan content SHA-256 `5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf`). Original plan preserved append-only (`d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9`).
+- **Machine Contracts Hardened:**
+  1. *Cost-Policy Disambiguation:* Explicitly separated execution model fingerprint (`054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108`) from cost-policy attestation fingerprint (`10e9a42e501b24b3cff3459a955cfef37c67d542dc76ef8300bcff596321ff42`); bound Phase 8H policy, Phase 8I activation (`ACTIVE_FOR_DEVELOPMENT_VALIDATION`), Phase 8I dataset review, and Phase 8L metadata bounds (`54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`).
+  2. *Scenario Matrix Canonical Fingerprint:* Bound factorized 16-scenario matrix fingerprint `3c59adbc16c2e2780041c1021e44066c5c43d980c5991af7fe32dcaaa36c3401` under `phase8n.factorized-scenario-matrix.v1` and primary scenario `SWAP_EMAIL_REFERENCE|SLIPPAGE_MODERATE_ADVERSE|BASELINE_CURRENT_REFERENCE_PROXY`.
+  3. *Exact Fold Schedule & Warmups:* Frozen exact 28-day warm-up start dates and evaluation windows for Folds 01-04 from `_fixed_folds()` with purge/embargo seconds.
+  4. *Lifecycle Exit Enum Parity:* Bound qualifying exit reasons directly to frozen `ExitReason` enum: `STOP_LOSS`, `BREAK_EVEN`, `TRAILING_STOP`, `TAKE_PROFIT`, `EMERGENCY`. Forced fold end classified as `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE`.
+  5. *Strengthened Fold-01 Empirical Rehearsal:* Bound sealed result `phase6-development-v2-V005-R001` (SHA `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, 80,554 bytes); required exact 102/81/21/102/0 counts, `(decision_id, setup_id)` multiset equality, and exact deterministic JSON entry parity (`allow_nan=False`).
+- **Strict Invariance:** Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; zero empirical store access; Tier B remains strictly **SEALED**.
+

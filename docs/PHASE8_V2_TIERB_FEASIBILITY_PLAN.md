@@ -304,3 +304,53 @@ Before any reserved fold is opened, the future implementation task must build th
 - **Prospective Contract:** `canonical_git_blob_v1`
 - **Research Budget Impact:** 0 (allowances remain retired).
 - **Empirical Access:** 0 (Tier-B partitions remain strictly sealed).
+
+---
+
+## 15. Plan-TC001 Provenance Corrections & Evidence Contracts
+
+Under supervisory review, four machine-contract corrections and provenance hardenings were formally applied append-only in `phase8-v2-tierb-feasibility-plan-v1-TC001`:
+
+- **Correction Record ID:** `phase8-v2-tierb-feasibility-plan-v1-TC001`
+- **Plan Manifest:** `baseline/phase8_v2_tierb_feasibility_plan_tc001.json`
+- **Schema:** `phase8v2.tierb-feasibility-plan.v2`
+- **Parent Plan:** `phase8-v2-tierb-feasibility-plan-v1` (content SHA `d42d7392cc124b3d8ab09a6212aa29038317fd93ae5d486b24d72904eddea1c9` preserved immutably)
+- **TC001 Plan Content SHA-256:** `5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf`
+
+### 15.1 Cost-Policy & Provenance Disambiguation
+- **Canonical Execution Model Fingerprint:** `054c02ddc07dff2e61a45ed27200eaaf8ec93cc4308db38649395443b6b09108` (derived from `bot/backtesting/costs.py`, `bot/backtesting/models.py`, `bot/backtesting/engine.py` at anchor `d87b71491203249e6ab3dd95bca4b9ee89cf3e9e`).
+- **Cost-Policy Canonical Attestation Fingerprint:** `10e9a42e501b24b3cff3459a955cfef37c67d542dc76ef8300bcff596321ff42` (`baseline/phase8_v2_cost_policy_canonical_attestation.json`).
+- **Phase 8H Policy Package:** `evidence-development_cost_policy-v1-6b1a986b1f8d7b81` (policy fingerprint `aa0ccc9368c0cf55b4775b4295f0424d4bdb0e5fd6cbfaf27137763be58e9404`, content SHA `6b1a986b1f8d7b81ff10616fd848cb93d6dd0b19d4a96f1a512d629716b42b42`, state `PREREGISTERED_INACTIVE`).
+- **Phase 8I Activation Package:** `evidence-cost_policy_activation-v1-802914181c0ca505` (state `ACTIVE_FOR_DEVELOPMENT_VALIDATION`, authorizes development accounting only).
+- **Phase 8I Dataset Review:** `evidence-dataset_acceptance_review-v1-4d47816f5f336fe2`.
+- **Phase 8L Development Metadata Bounds:**
+  - Unavailability: `evidence-broker_metadata_unavailability-v1-f1be088c17a391c4`
+  - Bounds: `evidence-development_metadata_bounds-v1-8dad509e60c8014a`
+  - Readiness: `evidence-development_metadata_bounds_readiness-v1-6fa811a3200c6042`
+  - Policy Fingerprint: `54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`
+- **Development-Proxy Qualifications:** All Stage-2 results carry mandatory qualifications: `DEVELOPMENT_PROXY_NOT_HISTORICALLY_VALIDATED` and `HISTORICAL_SWAP_UNCERTAIN`.
+
+### 15.2 Factorized 16-Scenario Matrix Fingerprint
+- **Matrix Schema:** `phase8n.factorized-scenario-matrix.v1`
+- **Unique Scenarios:** 16 (64 required cells across 4 folds).
+- **Matrix Canonical Fingerprint:** `3c59adbc16c2e2780041c1021e44066c5c43d980c5991af7fe32dcaaa36c3401`
+- **PRIMARY_BASELINE Scenario Object:** `SWAP_EMAIL_REFERENCE|SLIPPAGE_MODERATE_ADVERSE|BASELINE_CURRENT_REFERENCE_PROXY` (role: `PRIMARY`).
+
+### 15.3 Exact Reserved-Fold Schedule & Windows
+- **Fold 01:** Evaluation `[2024-04-01T00:00:00Z, 2024-06-08T00:00:00Z)`; warmup begins `2024-03-04T00:00:00Z`; purge `86400`s; embargo `86400`s.
+- **Fold 02:** Evaluation `[2024-06-09T00:00:00Z, 2024-08-16T00:00:00Z)`; warmup begins `2024-05-12T00:00:00Z`; purge `86400`s; embargo `86400`s.
+- **Fold 03:** Evaluation `[2024-08-17T00:00:00Z, 2024-10-24T00:00:00Z)`; warmup begins `2024-07-20T00:00:00Z`; purge `86400`s; embargo `86400`s.
+- **Fold 04:** Evaluation `[2024-10-25T00:00:00Z, 2025-01-01T00:00:00Z)`; warmup begins `2024-09-27T00:00:00Z`; purge `86400`s; embargo `0`s.
+- Warm-up duration is exactly 28 days (2,419,200 seconds) terminating at evaluation start.
+
+### 15.4 Lifecycle Exit Enum Parity
+- Qualifying natural exit reasons correspond verbatim to frozen `ExitReason` enum: `STOP_LOSS`, `BREAK_EVEN`, `TRAILING_STOP`, `TAKE_PROFIT`, `EMERGENCY`.
+- Fold-end forced closure uses frozen `ExitReason.END_OF_DATA`, classified as `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE` and strictly excluded from the 30-trade minimum quota.
+
+### 15.5 Strengthened Fold-01 Empirical Rehearsal
+- Formally classified as `CONTAMINATED_FOLD01_EMPIRICAL_TOOLING_REHEARSAL — NOT_TIER_B_EVIDENCE`.
+- Bound to sealed `phase6-development-v2-V005-R001` (SHA-256 `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, 80,554 bytes).
+- Rehearsal asserts:
+  - Exact counts: 102 raw candidates, 81 baseline, 21 fallback, 102 unique setups, 0 duplicates;
+  - Exact `(decision_id, setup_id)` multiset equality;
+  - Exact deterministic JSON entry object equality: `json.dumps(entry, sort_keys=True, separators=(',', ':'), allow_nan=False)`. Mismatch halts fail-closed with `FOLD01_V005_ENTRY_PARITY_FAILURE`.
