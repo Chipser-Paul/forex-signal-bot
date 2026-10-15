@@ -2207,3 +2207,16 @@ step: supervisory review before D002 or Variant 1.
   6. *Strengthened Fold-01 Empirical Rehearsal:* Bound sealed result `phase6-development-v2-V005-R001` (SHA `27b8849eb97074d55c36bf11645cae8821d517b1f9e52e0c9a37976c77abcbfe`, 80,554 bytes); required exact 102/81/21/102/0 counts, `(decision_id, setup_id)` multiset equality, and exact deterministic JSON entry parity (`allow_nan=False`).
 - **Strict Invariance:** Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; all 4 canonical aggregate digests unchanged; zero strategy semantic modification; zero empirical store access; Tier B remains strictly **SEALED**.
 
+## Update — 2026-10-15: Implementation & Freeze of Tier-B Feasibility Tooling (Phase B — Synthetic Only — Zero Empirical Access)
+
+- **Tooling Implementation & Freeze:**
+  - Implemented validation engine `bot/validation/tierb_feasibility.py` enforcing Plan-TC001 contracts, TC003 candidate manifest verification, 4 canonical digests, ledger seal v2 with 0 unresolved entities, pre-release evidence preflight (`evidence-development_cost_policy-v1-6b1a986b1f8d7b81`, `evidence-cost_policy_activation-v1-802914181c0ca505`, `evidence-broker_metadata_unavailability-v1-f1be088c17a391c4`, `evidence-development_metadata_bounds-v1-8dad509e60c8014a`, `evidence-development_metadata_bounds_readiness-v1-6fa811a3200c6042`), Stage-1 V005 candidate evaluation, Stage-2 completed-trade accounting under `PRIMARY_BASELINE`, `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE` exclusions, exact 1-to-1 setup-to-position barrier, and strict profitability firewall.
+  - Implemented CLI runner `backtests/phase8_v2_tierb_feasibility.py` (`verify-plan`, `verify-tooling`, `preflight`, `fold01-parity-rehearsal`, `run-fold` commands).
+  - Implemented synthetic test suite `tests/test_phase8_v2_tierb_feasibility_runner.py` (12 tests passing). All 36 feasibility tests across plan and runner pass synchronously (100% green).
+- **Zero Empirical Access & Holdout Invariance:**
+  - ZERO empirical data bytes accessed.
+  - Fold 01 empirical store remains closed.
+  - Reserved folds (`fold-02`, `fold-03`, `fold-04`), holdout, and 2025+ remain strictly sealed.
+  - Absolute zero profitability metrics calculated or exposed.
+  - Research allowances remain retired: 5/12 diagnostics, 5/8 variants, 0/4 numeric trials (task budget impact: 0).
+
