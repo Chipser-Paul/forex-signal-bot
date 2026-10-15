@@ -904,3 +904,50 @@ Copy-paste for a fresh agent session:
   3. *Activation & Metadata Readiness Verification:* Mandated `verify_activation_record` on Phase 8I activation (`ACTIVE_FOR_DEVELOPMENT_VALIDATION`) and `verify_readiness` on Phase 8L metadata bounds (`54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`).
   4. *Commit-Bound Execution Integrity:* Mandated that Git blobs at the active tooling execution commit must match authoritative digests under TC003 (`ec4b5e...`, `1aa8b7...`, `957dba...`, `666be3...`) with clean worktree, failing closed with `FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH` upon any drift.
 - **Strict Invariance:** Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; zero empirical store access; Tier B remains strictly **SEALED**.
+
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-tooling-v1-TC001 — Complete Real Empirical-Runner Architecture & Zero Empirical Access Freeze
+
+- **Task & Identity:** Completed Phase B tooling repair task `phase8-v2-tierb-feasibility-tooling-v1-TC001`. Resolved all 14 supervisory review defects recorded under tooling disposition `phase8-v2-tierb-feasibility-tooling-v1-R001` (`IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL`).
+- **Tooling Artifacts & Canonical Fingerprints:**
+  - `bot/validation/tierb_feasibility.py`:
+    - Length: 56,981 bytes
+    - Raw / canonical SHA-256: `5800deb0fe575d0ad40106863aea199aaac952a707dad3c58534a3ae0f2b7463`
+    - Git blob SHA-1: `1c2cd94f88c4a20e116ced82bf2d6e3e067cd882`
+  - `backtests/phase8_v2_tierb_feasibility.py`:
+    - Length: 11,850 bytes
+    - Raw / canonical SHA-256: `3d2963f37e52b4ba6ee837ba4609f35df0fdd2bd7015b38803a6c3c2d10df869`
+    - Git blob SHA-1: `4e4d1f59784e4459eacee075ea01bc4682c820f9`
+  - `tests/test_phase8_v2_tierb_feasibility_runner.py`:
+    - Length: 28,057 bytes
+    - Raw / canonical SHA-256: `61d4fc18cbaa0b48f770d1446f3bd92568f7e45bdd8e70c28574e8cf76241bc9`
+    - Git blob SHA-1: `9d6b6411d229bf7f54701db8f09e27dad2ac29d8`
+- **14 Supervisory Review Defect Resolutions:**
+  1. *Complete 16-Item Input Chain:* Verified complete 16-item input chain presence across real repository and data roots (`exness`, `derived`, `dxy`, `evidence`, `baseline`).
+  2. *Prospective Input Readiness Preflight:* Integrated `verify_input_readiness_prospective` in `tick_verification_depth="identity-chain"` mode under contract `canonical_git_blob_v1`.
+  3. *Phase 8I Activation Verification:* Integrated `verify_activation_record` confirming `ACTIVE_FOR_DEVELOPMENT_VALIDATION` bound to `evidence-development_cost_policy-v1-6b1a986b1f8d7b81`.
+  4. *Phase 8L Metadata Readiness Verification:* Integrated `verify_readiness` validating policy fingerprint `54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`.
+  5. *Commit-Bound Execution Integrity:* Enforced candidate integrity against `baseline/phase8_v2_frozen_candidate_manifest_tc003.json` and 4 invariant digests (`ec4b5e...`, `1aa8b7...`, `957dba...`, `666be3...`) with clean worktree, failing closed with `FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH`.
+  6. *Canonical Candidate Schema:* Implemented `validate_canonical_candidate` validating mandatory fields, finite available time, and side/direction bijection (`LONG` <-> `buy`, `SHORT` <-> `sell`).
+  7. *Evaluation Window Filtering:* Implemented `filter_candidates_by_window` enforcing `evaluation_start <= available_at < evaluation_end` (warmup candidates produce 0 count).
+  8. *Sealed Candidate Extraction & Parity:* Implemented `verify_fold01_parity_against_sealed_v005` extracting strictly from `sealed_data["candidate_surface"]["candidates"]`, enforcing 102/81/21 counts, `(decision_id, setup_id)` multiset equality, and exact deterministic JSON entry parity (`allow_nan=False`).
+  9. *Stage-1 Candidate Replay:* Implemented `evaluate_stage1_candidates` assessing Stage-1 feasibility with 30 futility threshold and 60 non-gating headroom target.
+  10. *Qualifying Natural Exit Membership:* Enforced qualifying exits strictly belonging to `QUALIFYING_NATURAL_EXITS` (`STOP_LOSS`, `BREAK_EVEN`, `TRAILING_STOP`, `TAKE_PROFIT`, `EMERGENCY`) reaching terminal `CLOSED` state; unknown exits fail closed.
+  11. *End-of-Data Exclusion:* Strictly excluded `END_OF_DATA_FORCED_CLOSE_EXCLUDED_FROM_SAMPLE` from qualifying trade sample.
+  12. *Levels and EntryIntent Construction:* Implemented `candidate_to_trade_levels` (enforcing symbol `XAUUSDm`, min_rr 1.5, OB zone boundary anchoring) and `candidate_to_entry_intent`.
+  13. *Real Lifecycle Engine Execution:* Implemented `execute_candidate_lifecycle` under `PRIMARY_BASELINE` using `create_entry_state`, `process_entry_event`, `record_fill`, and `manage_position`.
+  14. *Release Authorization & First-Byte Read Guard:* Implemented `ReleaseAuthorizationRecord` schema validation and `GuardedEmpiricalStoreReader` enforcing check order and recording `FIRST_EMPIRICAL_BYTE_READ` at first store byte read.
+- **Verification & Test Proof:**
+  - Runner test suite: 26 passed in 46.41s (100% green).
+  - Feasibility plan test suite: 30 passed in 2.64s (100% green).
+  - Frozen candidate test suite: 29 passed in 16.55s (100% green).
+  - Readiness completion test suite: 8 passed in 3.86s (100% green).
+  - CLI preflight verified: passed across all 12 packages, prospective contract verified, activation verified, metadata verified.
+  - Whitespace check: `git diff --check` passed cleanly.
+- **Strict Invariance & Boundaries:**
+  - ZERO empirical data bytes accessed.
+  - Fold 01 empirical store remains closed.
+  - Reserved folds (`fold-02`, `fold-03`, `fold-04`), holdout, and 2025+ remain strictly sealed.
+  - Absolute zero profitability metrics calculated or exposed.
+  - Research allowances remain retired: 5/12 diagnostics, 5/8 variants, 0/4 numeric trials (task budget impact: 0).
+  - Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; Tier B remains strictly **SEALED**.
+- **Current Status:** V2 Tier-B Feasibility Tooling TC001 complete and frozen. Zero empirical access occurred. Contaminated Fold-01 rehearsal awaits supervisory authorization.
