@@ -470,3 +470,155 @@ def test_plan_tc001_documentation_section_15() -> None:
     assert "## 15. Plan-TC001 Provenance Corrections & Evidence Contracts" in doc_text
     assert EXPECTED_PLAN_TC001_ID in doc_text
     assert EXPECTED_PLAN_TC001_CONTENT_SHA256 in doc_text
+
+
+PLAN_TC002_PATH = REPO_ROOT / "baseline" / "phase8_v2_tierb_feasibility_plan_tc002.json"
+EXPECTED_PLAN_TC002_ID = "phase8-v2-tierb-feasibility-plan-v1-TC002"
+EXPECTED_PLAN_TC002_SCHEMA = "phase8v2.tierb-feasibility-plan.v3"
+EXPECTED_PLAN_TC002_CONTENT_SHA256 = (
+    "033ea8a04ef6ee991001774abff034f6e4e0ea11445e30b030665c5aa413d943"
+)
+EXPECTED_TOOLING_R001_ID = "phase8-v2-tierb-feasibility-tooling-v1-R001"
+EXPECTED_COMPLETE_INPUT_CHAIN_KEYS = [
+    "tick_year_package_id",
+    "derived_candles_package_id",
+    "candle_attestation_package_id",
+    "dxy_package_id",
+    "observed_spread_package_id",
+    "official_usd_news_package_id",
+    "phase8h_cost_policy_package_id",
+    "phase8i_activation_package_id",
+    "phase8i_dataset_acceptance_review_package_id",
+    "historical_metadata_unavailability_package_id",
+    "phase8l_metadata_bounds_package_id",
+    "phase8l_metadata_readiness_package_id",
+    "contamination_register_path",
+    "candidate_freeze_manifest_path",
+    "plan_tc002_path",
+    "authoritative_ledger_seal_id",
+]
+
+
+@pytest.fixture(scope="module")
+def plan_tc002_data() -> dict:
+    assert PLAN_TC002_PATH.is_file(), f"TC002 plan missing: {PLAN_TC002_PATH}"
+    with open(PLAN_TC002_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def test_plan_tc002_json_parses_and_validates_schema(plan_tc002_data: dict) -> None:
+    """TC002 plan JSON parses and validates against schema phase8v2.tierb-feasibility-plan.v3."""
+    assert plan_tc002_data["plan_id"] == EXPECTED_PLAN_TC002_ID
+    assert plan_tc002_data["schema_version"] == EXPECTED_PLAN_TC002_SCHEMA
+    assert plan_tc002_data["record_type"] == "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION"
+    assert plan_tc002_data["parent_plan"] == EXPECTED_PLAN_TC001_ID
+    assert plan_tc002_data["parent_plan_content_sha256"] == EXPECTED_PLAN_TC001_CONTENT_SHA256
+    assert plan_tc002_data["zero_empirical_access"] is True
+    assert plan_tc002_data["budget_impact"] == 0
+    assert plan_tc002_data["prospective_contract"] == "canonical_git_blob_v1"
+
+
+def test_plan_tc002_canonical_content_sha256(plan_tc002_data: dict) -> None:
+    """TC002 canonical content SHA-256 matches exact hash computation."""
+    content_copy = {k: v for k, v in plan_tc002_data.items() if k != "plan_content_sha256"}
+    rendered_core = json.dumps(content_copy, sort_keys=True, separators=(",", ":"))
+    computed_sha = hashlib.sha256(rendered_core.encode("utf-8")).hexdigest()
+    assert computed_sha == EXPECTED_PLAN_TC002_CONTENT_SHA256
+    assert plan_tc002_data["plan_content_sha256"] == EXPECTED_PLAN_TC002_CONTENT_SHA256
+
+
+def test_plan_tc002_complete_pre_release_input_chain(plan_tc002_data: dict) -> None:
+    """TC002 plan binds all 16 items of the development input chain."""
+    chain = plan_tc002_data["complete_pre_release_input_chain"]
+    assert len(chain) == 16
+    for key in EXPECTED_COMPLETE_INPUT_CHAIN_KEYS:
+        assert key in chain, f"Missing input chain key: {key}"
+    assert chain["tick_year_package_id"] == "exness-xauusdm-2024-development-b2a0234a470dd397"
+    assert chain["derived_candles_package_id"] == "derived-candles-2024-v1-20260911T195553Z"
+    assert chain["candle_attestation_package_id"] == "derived-candles-attestation-v1-6715e5c64d888215"
+    assert chain["dxy_package_id"] == "dxy-development-2024-v1-20260912T091410.712364Z"
+    assert chain["observed_spread_package_id"] == "observed_spread-v1-e25bdb9bf028a5be"
+    assert chain["official_usd_news_package_id"] == "evidence-official_news-v1-78279c5e26c1c6d1"
+    assert chain["phase8h_cost_policy_package_id"] == EXPECTED_COST_POLICY_PKG
+    assert chain["phase8i_activation_package_id"] == EXPECTED_COST_ACTIVATION_PKG
+    assert chain["phase8i_dataset_acceptance_review_package_id"] == "evidence-dataset_acceptance_review-v1-4d47816f5f336fe2"
+    assert chain["historical_metadata_unavailability_package_id"] == "evidence-broker_metadata_unavailability-v1-f1be088c17a391c4"
+    assert chain["phase8l_metadata_bounds_package_id"] == EXPECTED_METADATA_BOUNDS_PKG
+    assert chain["phase8l_metadata_readiness_package_id"] == "evidence-development_metadata_bounds_readiness-v1-6fa811a3200c6042"
+    assert chain["contamination_register_path"] == "baseline/phase8_contamination_register.json"
+    assert chain["candidate_freeze_manifest_path"] == "baseline/phase8_v2_frozen_candidate_manifest_tc003.json"
+    assert chain["plan_tc002_path"] == "baseline/phase8_v2_tierb_feasibility_plan_tc002.json"
+    assert chain["authoritative_ledger_seal_id"] == EXPECTED_LEDGER_SEAL
+
+
+def test_plan_tc002_pre_release_evidence_preflight_contracts(plan_tc002_data: dict) -> None:
+    """TC002 plan defines prospective readiness, activation, metadata readiness, and frozen integrity contracts."""
+    preflight = plan_tc002_data["pre_release_evidence_preflight"]
+    assert len(preflight["required_evidence_packages"]) == 12
+
+    vr = preflight["prospective_readiness_verifier"]
+    assert vr["module"] == "bot.validation.development_evaluation_plan"
+    assert vr["function"] == "verify_input_readiness_prospective"
+    assert vr["tick_verification_depth"] == "identity-chain"
+    assert vr["deep_stream_prohibited_in_preflight"] is True
+    assert vr["research_identity"] == "phase6-development-v2"
+    assert vr["variant_id"] == "phase6-development-v2-V005"
+    assert vr["fingerprint_contract"] == "canonical_git_blob_v1"
+
+    arc = preflight["additional_readiness_checks"]
+    p8i = arc["phase8i_activation_verification"]
+    assert p8i["module"] == "bot.validation.cost_policy_activation"
+    assert p8i["function"] == "verify_activation_record"
+    assert p8i["required_activation_state"] == "ACTIVE_FOR_DEVELOPMENT_VALIDATION"
+    assert p8i["required_policy_package_id"] == EXPECTED_COST_POLICY_PKG
+
+    p8l = arc["phase8l_metadata_readiness_verification"]
+    assert p8l["module"] == "bot.validation.development_metadata_bounds"
+    assert p8l["function"] == "verify_readiness"
+    assert p8l["required_policy_package_id"] == EXPECTED_METADATA_BOUNDS_PKG
+    assert p8l["required_policy_fingerprint"] == EXPECTED_METADATA_POLICY_FINGERPRINT
+    assert arc["manifest_only_check_forbidden"] is True
+
+    fci = preflight["frozen_candidate_execution_integrity"]
+    assert fci["contract"] == "canonical_git_blob_v1"
+    assert fci["authoritative_manifest_path"] == "baseline/phase8_v2_frozen_candidate_manifest_tc003.json"
+    assert fci["expected_strategy_digest"] == EXPECTED_STRATEGY_DIGEST
+    assert fci["expected_complete_config_sha256"] == EXPECTED_CONFIG_SHA256
+    assert fci["expected_validation_digest"] == EXPECTED_VALIDATION_DIGEST
+    assert fci["expected_protected_digest_v2"] == EXPECTED_PROTECTED_DIGEST_V2
+    assert fci["drift_classification"] == "FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH"
+
+
+def test_plan_tc002_hypothesis_register_records(register_data: dict) -> None:
+    """TC002 plan and tooling R001 records exist in hypothesis register."""
+    records = register_data.get("result_records", [])
+
+    # Check tooling R001 disposition
+    tooling_records = [r for r in records if r.get("record_id") == EXPECTED_TOOLING_R001_ID]
+    assert len(tooling_records) == 1, f"Expected 1 record for {EXPECTED_TOOLING_R001_ID}"
+    tr = tooling_records[0]
+    assert tr["disposition"] == "IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL"
+    assert tr["affected_commit"] == "fef16b8d819e0339f6e8427fb126ba6126da0fc2"
+    assert len(tr["bound_defects"]) == 14
+    assert tr["budget_impact"] == 0
+    assert tr["empirical_exposure"] == 0
+
+    # Check plan TC002 record
+    tc002_records = [r for r in records if r.get("plan_id") == EXPECTED_PLAN_TC002_ID]
+    assert len(tc002_records) == 1, f"Expected 1 record for {EXPECTED_PLAN_TC002_ID}"
+    pr = tc002_records[0]
+    assert pr["record_type"] == "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION"
+    assert pr["plan_content_sha256"] == EXPECTED_PLAN_TC002_CONTENT_SHA256
+    assert pr["plan_file"] == "baseline/phase8_v2_tierb_feasibility_plan_tc002.json"
+    assert pr["supersedes_plan_id"] == EXPECTED_PLAN_TC001_ID
+    assert pr["zero_empirical_access"] is True
+    assert pr["budget_impact"] == 0
+
+
+def test_plan_tc002_documentation_section_16() -> None:
+    """docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md contains Section 16 and TC002 content SHA-256."""
+    assert DOC_PATH.is_file()
+    doc_text = DOC_PATH.read_text(encoding="utf-8")
+    assert "## 16. Plan-TC002 Pre-Release Evidence Contract & Execution Integrity Hardening" in doc_text
+    assert EXPECTED_PLAN_TC002_ID in doc_text
+    assert EXPECTED_PLAN_TC002_CONTENT_SHA256 in doc_text

@@ -894,3 +894,13 @@ Copy-paste for a fresh agent session:
   - Absolute zero profitability metrics calculated or exposed.
   - Research allowances remain retired: 5/12 diagnostics, 5/8 variants, 0/4 numeric trials (task budget impact: 0).
 
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-plan-v1-TC002 — Pre-Release Evidence Contract & Execution Integrity Hardening (Fold 02 Remains Strictly Sealed)
+
+- **Plan Correction Published:** Published `phase8-v2-tierb-feasibility-plan-v1-TC002` (`baseline/phase8_v2_tierb_feasibility_plan_tc002.json`, schema `phase8v2.tierb-feasibility-plan.v3`, plan content SHA-256 `033ea8a04ef6ee991001774abff034f6e4e0ea11445e30b030665c5aa413d943`). Parent plan `phase8-v2-tierb-feasibility-plan-v1-TC001` (content SHA `5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf`) preserved immutably.
+- **Tooling Disposition Recorded:** Appended `phase8-v2-tierb-feasibility-tooling-v1-R001` (`IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL`) for commit `fef16b8d819e0339f6e8427fb126ba6126da0fc2` (14 defects bound, 0 budget impact, 0 empirical exposure) and plan record `phase8-v2-tierb-feasibility-plan-v1-TC002`.
+- **Pre-Release Evidence Contract Hardened:**
+  1. *Complete 16-Item Input Chain:* Bound full 16-item development input chain (2024 ticks, derived candles, candle attestation, DXY, observed spread, official USD news, Phase 8H cost policy, Phase 8I activation, Phase 8I dataset review, historical metadata unavailability, Phase 8L metadata bounds, Phase 8L metadata readiness, contamination register, candidate freeze manifest TC003, plan TC002, ledger seal v2).
+  2. *Prospective Readiness Integration:* Mandated invocation of `verify_input_readiness_prospective` in `tick_verification_depth="identity-chain"` mode with contract `canonical_git_blob_v1`.
+  3. *Activation & Metadata Readiness Verification:* Mandated `verify_activation_record` on Phase 8I activation (`ACTIVE_FOR_DEVELOPMENT_VALIDATION`) and `verify_readiness` on Phase 8L metadata bounds (`54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`).
+  4. *Commit-Bound Execution Integrity:* Mandated that Git blobs at the active tooling execution commit must match authoritative digests under TC003 (`ec4b5e...`, `1aa8b7...`, `957dba...`, `666be3...`) with clean worktree, failing closed with `FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH` upon any drift.
+- **Strict Invariance:** Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; zero empirical store access; Tier B remains strictly **SEALED**.

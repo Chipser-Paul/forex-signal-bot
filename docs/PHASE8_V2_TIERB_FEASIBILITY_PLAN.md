@@ -354,3 +354,50 @@ Under supervisory review, four machine-contract corrections and provenance harde
   - Exact counts: 102 raw candidates, 81 baseline, 21 fallback, 102 unique setups, 0 duplicates;
   - Exact `(decision_id, setup_id)` multiset equality;
   - Exact deterministic JSON entry object equality: `json.dumps(entry, sort_keys=True, separators=(',', ':'), allow_nan=False)`. Mismatch halts fail-closed with `FOLD01_V005_ENTRY_PARITY_FAILURE`.
+
+---
+
+## 16. Plan-TC002 Pre-Release Evidence Contract & Execution Integrity Hardening
+
+Under supervisory review of tooling commit `fef16b8d819e0339f6e8427fb126ba6126da0fc2` (dispositioned as `IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL` in record `phase8-v2-tierb-feasibility-tooling-v1-R001` with 0 budget impact and 0 empirical exposure), `phase8-v2-tierb-feasibility-plan-v1-TC002` was created to complete the pre-release evidence contract and mandate commit-bound execution integrity:
+
+- **Correction Record ID:** `phase8-v2-tierb-feasibility-plan-v1-TC002`
+- **Plan Manifest:** `baseline/phase8_v2_tierb_feasibility_plan_tc002.json`
+- **Schema:** `phase8v2.tierb-feasibility-plan.v3`
+- **Parent Plan:** `phase8-v2-tierb-feasibility-plan-v1-TC001` (content SHA `5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf` preserved immutably)
+- **TC002 Plan Content SHA-256:** `033ea8a04ef6ee991001774abff034f6e4e0ea11445e30b030665c5aa413d943`
+- **Classification:** `PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — STRUCTURAL/LIFECYCLE ONLY — NOT_PROFITABILITY_EVIDENCE`
+
+### 16.1 Complete 16-Item Pre-Release Input Chain
+Before any empirical partition (Fold 01 rehearsal or reserved folds) can be accessed, the runner must verify the presence and cryptographic integrity of the complete 16-item development input chain:
+1. **2024 Tick-Year Package:** `exness-xauusdm-2024-development-b2a0234a470dd397`
+2. **Derived Candles:** `derived-candles-2024-v1-20260911T195553Z`
+3. **Candle Attestation:** `derived-candles-attestation-v1-6715e5c64d888215`
+4. **DXY Index:** `dxy-development-2024-v1-20260912T091410.712364Z`
+5. **Observed Spread:** `observed_spread-v1-e25bdb9bf028a5be`
+6. **Official USD News:** `evidence-official_news-v1-78279c5e26c1c6d1`
+7. **Phase 8H Cost Policy:** `evidence-development_cost_policy-v1-6b1a986b1f8d7b81`
+8. **Phase 8I Activation Package:** `evidence-cost_policy_activation-v1-802914181c0ca505`
+9. **Phase 8I Dataset Acceptance Review:** `evidence-dataset_acceptance_review-v1-4d47816f5f336fe2`
+10. **Historical Broker Metadata Unavailability:** `evidence-broker_metadata_unavailability-v1-f1be088c17a391c4`
+11. **Phase 8L Development Metadata Bounds:** `evidence-development_metadata_bounds-v1-8dad509e60c8014a`
+12. **Phase 8L Metadata Bounds Readiness:** `evidence-development_metadata_bounds_readiness-v1-6fa811a3200c6042`
+13. **Contamination Register:** `baseline/phase8_contamination_register.json`
+14. **Candidate Freeze Manifest:** `baseline/phase8_v2_frozen_candidate_manifest_tc003.json`
+15. **Feasibility Plan TC002:** `baseline/phase8_v2_tierb_feasibility_plan_tc002.json`
+16. **Authoritative Ledger Seal:** `phase8-v2-ledger-seal-v2`
+
+### 16.2 Prospective Readiness & Governance Verification
+Rather than relying on ad-hoc file checks:
+- The runner executes `bot.validation.development_evaluation_plan.verify_input_readiness_prospective` with `tick_verification_depth="identity-chain"`, `research_identity="phase6-development-v2"`, `variant_id="phase6-development-v2-V005"`, and `fingerprint_contract="canonical_git_blob_v1"`.
+- Phase 8I activation is verified via `bot.validation.cost_policy_activation.verify_activation_record`, requiring state `ACTIVE_FOR_DEVELOPMENT_VALIDATION` and exact binding to policy `evidence-development_cost_policy-v1-6b1a986b1f8d7b81`.
+- Phase 8L metadata readiness is verified via `bot.validation.development_metadata_bounds.verify_readiness`, asserting exact bounds policy and fingerprint `54f9a9817613bf3115039dd43b66c476a72627880663d4fb6c3f59cbbde1be1f`.
+
+### 16.3 Commit-Bound Frozen Candidate Execution Integrity
+- Strategy research is permanently closed. The candidate remains `phase6-frozen-v2` at semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`.
+- Execution integrity requires that the current active commit's Git blobs for all strategy, configuration, validation, and protected runtime paths match verbatim the digests recorded in `phase8_v2_frozen_candidate_manifest_tc003.json`:
+  - Strategy Semantic Digest: `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f`
+  - Candidate Configuration SHA-256: `1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806`
+  - Validation Pipeline Digest: `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f`
+  - Protected Infrastructure Digest V2: `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d`
+- Any worktree drift or blob mismatch halts execution immediately prior to opening any feature store with classification `FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH`.

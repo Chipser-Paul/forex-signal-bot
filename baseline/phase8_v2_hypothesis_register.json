@@ -4767,6 +4767,74 @@
       "zero_empirical_access": true,
       "tier_b_status": "TIER_B_PLAN_TC001_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
     }
+,
+    {
+      "record_id": "phase8-v2-tierb-feasibility-tooling-v1-R001",
+      "result_id": "phase8-v2-tierb-feasibility-tooling-v1-R001",
+      "record_type": "TIER_B_FEASIBILITY_TOOLING_DISPOSITION",
+      "created_utc": "2026-10-15T09:30:00Z",
+      "disposition": "IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL",
+      "affected_commit": "fef16b8d819e0339f6e8427fb126ba6126da0fc2",
+      "governing_plan": "phase8-v2-tierb-feasibility-plan-v1-TC001",
+      "bound_defects": [
+        "exact Fold-01 candidate multiset comparison absent",
+        "exact entry-object comparison absent",
+        "sealed candidate extraction points to wrong JSON surface",
+        "pre-release evidence preflight checks existence only",
+        "prospective input readiness chain incomplete",
+        "Stage-1 adapter does not replay V005",
+        "Stage-1 candidate schema mismatch",
+        "evaluation-window validation absent",
+        "qualifying exit membership not enforced",
+        "V005 -> levels -> intent adapter absent",
+        "lifecycle execution absent",
+        "release/first-byte guard absent",
+        "empirical CLI commands are non-executable stubs",
+        "tooling canonical SHA-256 identities not recorded"
+      ],
+      "budget_impact": 0,
+      "empirical_exposure": 0,
+      "candidate_identity": "phase6-frozen-v2",
+      "strategy_research_status": "PERMANENTLY_CLOSED",
+      "notes": "No Fold-01 rehearsal occurred; no reserved fold was accessed; zero empirical store bytes read; research allowances remain permanently retired."
+    },
+    {
+      "record_id": "phase8-v2-tierb-feasibility-plan-v1-TC002",
+      "result_id": "phase8-v2-tierb-feasibility-plan-v1-TC002",
+      "record_type": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY_PLAN_CORRECTION",
+      "created_utc": "2026-10-15T10:00:00Z",
+      "plan_id": "phase8-v2-tierb-feasibility-plan-v1-TC002",
+      "supersedes_plan_id": "phase8-v2-tierb-feasibility-plan-v1-TC001",
+      "title": "Phase 8 V2 Reserved-Fold Candidate and Lifecycle Sample Feasibility Plan (TC002)",
+      "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — STRUCTURAL/LIFECYCLE ONLY — NOT_PROFITABILITY_EVIDENCE",
+      "plan_file": "baseline/phase8_v2_tierb_feasibility_plan_tc002.json",
+      "plan_doc": "docs/PHASE8_V2_TIERB_FEASIBILITY_PLAN.md",
+      "plan_content_sha256": "033ea8a04ef6ee991001774abff034f6e4e0ea11445e30b030665c5aa413d943",
+      "parent_plan_content_sha256": "5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf",
+      "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
+      "historical_plan_disposition": "evidence-development_evaluation_plan-v1-4a6ab94c3e303c81 REPLACED_AND_EXECUTION_PROHIBITED",
+      "corrections_applied": [
+        "PRE_RELEASE_EVIDENCE_CONTRACT_COMPLETED_WITH_FULL_INPUT_CHAIN",
+        "PROSPECTIVE_READINESS_VERIFIER_IDENTITY_CHAIN_BOUND",
+        "ADDITIONAL_PHASE8I_ACTIVATION_AND_PHASE8L_METADATA_READINESS_VERIFIERS_BOUND",
+        "COMMIT_BOUND_FROZEN_CANDIDATE_EXECUTION_INTEGRITY_MANDATED"
+      ],
+      "frozen_candidate_binding": {
+        "freeze_identity": "phase6-frozen-v2",
+        "development_predecessor": "phase6-development-v2-V005",
+        "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+        "authoritative_freeze_manifest": "baseline/phase8_v2_frozen_candidate_manifest_tc003.json",
+        "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+        "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+        "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+        "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+        "charter_section_5_controls_count": 18,
+        "authoritative_ledger_seal": "phase8-v2-ledger-seal-v2"
+      },
+      "budget_impact": 0,
+      "zero_empirical_access": true,
+      "tier_b_status": "TIER_B_PLAN_TC002_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
+    }
   ],
   "provenance_corrections": [
     {
