@@ -374,3 +374,22 @@ The control mapping has been updated to explicitly reflect all 18 contractual pr
   - `phase8-v2-H009`: `SUPERSEDED_BY_H009_TC001`
   - `phase8-v2-H009-TC001`: `SUPPORTED_BY_V005` (`phase8-v2-H009-R001`)
 - **Diagnostic & Variant Terminality:** D001..D006 and V001..V005 terminal maps remain fully accounted for. Unresolved scientific entities count: exactly 0.
+
+## 11. TC003 Governance Pointer Correction (phase6-frozen-v2-F001-TC003)
+
+### 11.1 Context and Defect Resolution
+Supervisory audit of TC002 identified an internal pointer inconsistency within the prospective freeze manifest:
+- While TC002 correctly introduced and bound authoritative record `phase8-v2-ledger-seal-v2` in its ledger reference block, its generic `governance_reference.ledger_seal_record_id` block still pointed to superseded `phase8-v2-ledger-seal-v1`.
+- TC003 resolves this internal pointer defect by establishing `governance_reference.ledger_seal_record_id = phase8-v2-ledger-seal-v2`, with `historical_ledger_seal_record_id = phase8-v2-ledger-seal-v1` marked as `SUPERSEDED_FOR_PROSPECTIVE_FREEZE_USE`.
+- No strategy code, candidate semantics, or canonical digests are modified.
+
+### 11.2 Invariant Canonical Identities
+TC003 strictly preserves all canonical identities established in F001/TC001/TC002:
+- **Strategy Semantic Aggregate Digest (83 paths):** `ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f`
+- **Validation Pipeline Aggregate Digest (147 paths):** `957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f`
+- **Complete Candidate Configuration SHA-256:** `1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806`
+- **Protected Infrastructure V2 Digest (18 controls):** `666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d`
+- **Semantic Anchor Commit:** `2fd3460b9010d8cca548f4fd6980b6b34fe594e2`
+- **Prospective Freeze Manifest:** `baseline/phase8_v2_frozen_candidate_manifest_tc003.json` (`phase8v2.frozen-candidate-manifest.v4`)
+- **Authoritative Hypothesis Register Entry:** `phase6-frozen-v2-F001-TC003`
+

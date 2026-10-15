@@ -843,3 +843,11 @@ Copy-paste for a fresh agent session:
 - **Manifest Published:** Published `baseline/phase8_v2_frozen_candidate_manifest_tc002.json` (schema `phase8v2.frozen-candidate-manifest.v3`).
 - **Strict Invariance:** Candidate selection `phase6-development-v2-V005` invariant; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` invariant; zero empirical data accessed; research allowances remain retired (5/12 diagnostics, 5/8 variants, 0/4 numeric trials).
 - **Current Status:** `phase6-frozen-v2` — `CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN`. Tier B remains strictly **SEALED** pending preregistration of the prospective Tier-B feasibility protocol.
+
+## Update — 2026-10-15: phase6-frozen-v2-F001-TC003 — Prospective Freeze Manifest Ledger Pointer Correction
+
+- **Defect Repaired:** Resolved internal pointer inconsistency in the prospective freeze manifest where `governance_reference.ledger_seal_record_id` referenced superseded `phase8-v2-ledger-seal-v1`. Bound authoritative `ledger_seal_record_id = phase8-v2-ledger-seal-v2` with `historical_ledger_seal_record_id = phase8-v2-ledger-seal-v1` marked `SUPERSEDED_FOR_PROSPECTIVE_FREEZE_USE`.
+- **Manifest Published:** Published `baseline/phase8_v2_frozen_candidate_manifest_tc003.json` (schema `phase8v2.frozen-candidate-manifest.v4`). Historical manifests F001, TC001, and TC002 preserved immutably.
+- **Strict Invariance:** Candidate selection `phase6-development-v2-V005` invariant; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` invariant; all 4 canonical aggregate digests unchanged; zero empirical data accessed; research allowances remain retired (5/12 diagnostics, 5/8 variants, 0/4 numeric trials).
+- **Current Status:** `phase6-frozen-v2` — `AUTHORITATIVELY_SEALED_WITH_LEDGER_SEAL_V2`. Proceeding to Phase A Tier-B Feasibility Plan preregistration. Tier B remains strictly **SEALED**.
+

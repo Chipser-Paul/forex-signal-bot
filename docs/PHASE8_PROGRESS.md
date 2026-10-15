@@ -2163,3 +2163,12 @@ step: supervisory review before D002 or Variant 1.
 - **Manifest Published:** Published `baseline/phase8_v2_frozen_candidate_manifest_tc002.json` (schema `phase8v2.frozen-candidate-manifest.v3`). Historical manifests F001 and TC001 preserved immutably.
 - **Strict Invariance:** Strategy candidate `phase6-development-v2-V005` unchanged; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero empirical data accessed; research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
 - **Effective Status:** phase6-frozen-v2 — CANONICALLY_SEALED_FOR_PROSPECTIVE_TIER_B_FEASIBILITY_PLAN_DESIGN. Tier B remains strictly SEALED pending prospective feasibility plan preregistration and supervisory approval.
+
+## Update — 2026-10-15: phase6-frozen-v2-F001-TC003 — Prospective Freeze Manifest Ledger Pointer Correction
+
+- **Task & Identity:** Executed task phase6-frozen-v2-F001-TC003 (Phase G0). Appended governance correction record `phase6-frozen-v2-F001-TC003` (classification: `GOVERNANCE_ONLY — ZERO_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS`).
+- **Defects Repaired:** Corrected internal stale pointer in manifest governance reference where `governance_reference.ledger_seal_record_id` referenced superseded `phase8-v2-ledger-seal-v1`. Bound authoritative `ledger_seal_record_id = phase8-v2-ledger-seal-v2` with `historical_ledger_seal_record_id = phase8-v2-ledger-seal-v1` marked `SUPERSEDED_FOR_PROSPECTIVE_FREEZE_USE`.
+- **Manifest Published:** Published `baseline/phase8_v2_frozen_candidate_manifest_tc003.json` (schema `phase8v2.frozen-candidate-manifest.v4`). Historical manifests F001, TC001, and TC002 preserved immutably.
+- **Strict Invariance:** Strategy candidate `phase6-development-v2-V005` unchanged; semantic anchor commit `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; all 4 canonical aggregate digests unchanged; zero empirical data accessed; research budgets remain retired (diagnostics 5/12, variants 5/8, numeric trials 0/4).
+- **Effective Status:** phase6-frozen-v2 — AUTHORITATIVELY_SEALED_WITH_LEDGER_SEAL_V2. Ready for Phase A Tier-B Feasibility Plan preregistration. Tier B remains strictly SEALED.
+

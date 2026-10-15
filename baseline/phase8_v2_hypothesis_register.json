@@ -4610,6 +4610,39 @@
       "charter_section_5_controls_count": 18,
       "budget_impact": 0,
       "zero_empirical_access": true
+    },
+    {
+      "record_id": "phase6-frozen-v2-F001-TC003",
+      "result_id": "phase6-frozen-v2-F001-TC003",
+      "record_type": "PRE_TIER_B_GOVERNANCE_POINTER_CORRECTION",
+      "created_utc": "2026-10-15T01:00:00Z",
+      "freeze_identity": "phase6-frozen-v2",
+      "supersedes_records": [
+        "phase6-frozen-v2-F001",
+        "phase6-frozen-v2-F001-TC001",
+        "phase6-frozen-v2-F001-TC002"
+      ],
+      "classification": "GOVERNANCE_ONLY — ZERO_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS",
+      "defects_repaired": [
+        "GOVERNANCE_REFERENCE_STALE_LEDGER_SEAL_POINTER"
+      ],
+      "authoritative_ledger_seal": "phase8-v2-ledger-seal-v2",
+      "historical_ledger_seal_reference": "phase8-v2-ledger-seal-v1",
+      "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
+      "historical_f001_status": "PUBLISHED_PRE_TIER_B — SUPERSEDED_BY_TC003 — INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
+      "historical_tc001_status": "PUBLISHED_PRE_TIER_B — SUPERSEDED_BY_TC003 — VERIFIER_AND_LEDGER_REPAIRED",
+      "historical_tc002_status": "PUBLISHED_PRE_TIER_B — SUPERSEDED_BY_TC003 — GOVERNANCE_POINTER_CORRECTED",
+      "tc003_manifest_path": "baseline/phase8_v2_frozen_candidate_manifest_tc003.json",
+      "prospective_contract_id": "canonical_git_blob_v1",
+      "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
+      "strategy_semantic_revalidation_status": "TC001_IDENTITY_REVALIDATED_CANONICALLY_UNCHANGED",
+      "complete_candidate_configuration_sha256": "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806",
+      "validation_pipeline_aggregate_digest": "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f",
+      "protected_infrastructure_aggregate_digest_v2": "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d",
+      "charter_section_5_controls_count": 18,
+      "tier_b_sealed": true,
+      "budget_impact": 0,
+      "zero_empirical_access": true
     }
   ],
   "provenance_corrections": [

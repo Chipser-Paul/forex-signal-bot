@@ -262,6 +262,9 @@ MANIFEST_TC001_PATH = (
 MANIFEST_TC002_PATH = (
     REPO_ROOT / "baseline" / "phase8_v2_frozen_candidate_manifest_tc002.json"
 )
+MANIFEST_TC003_PATH = (
+    REPO_ROOT / "baseline" / "phase8_v2_frozen_candidate_manifest_tc003.json"
+)
 REGISTER_PATH = REPO_ROOT / "baseline" / "phase8_v2_hypothesis_register.json"
 
 STRATEGY_ROOTS = (
@@ -1083,3 +1086,71 @@ def test_scientific_ledger_seal_v2_terminality() -> None:
 
     assert h_map["phase8-v2-H009-TC001"]["terminal_disposition"] == "SUPPORTED_BY_V005"
     assert h_map["phase8-v2-H009-TC001"]["authoritative_record_id"] == "phase8-v2-H009-R001"
+
+
+def test_freeze_manifest_tc003_parses_and_validates_schema() -> None:
+    assert MANIFEST_TC003_PATH.exists(), f"TC003 Manifest missing at {MANIFEST_TC003_PATH}"
+    with open(MANIFEST_TC003_PATH, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    assert manifest["schema_version"] == "phase8v2.frozen-candidate-manifest.v4"
+    assert manifest["record_type"] == "PROSPECTIVE_STRATEGY_FREEZE_MANIFEST_TC003"
+    assert manifest["freeze_identity"] == "phase6-frozen-v2"
+    assert manifest["development_predecessor"] == "phase6-development-v2-V005"
+    assert manifest["semantic_anchor_commit"] == ANCHOR_COMMIT
+
+    # Authoritative ledger pointer is phase8-v2-ledger-seal-v2
+    gov = manifest["governance_reference"]
+    assert gov["ledger_seal_record_id"] == "phase8-v2-ledger-seal-v2"
+    assert gov["historical_ledger_seal_record_id"] == "phase8-v2-ledger-seal-v1"
+    assert gov["historical_ledger_seal_disposition"] == "SUPERSEDED_FOR_PROSPECTIVE_FREEZE_USE"
+
+    # Historical references chain F001 -> TC001 -> TC002
+    assert "historical_f001_reference" in manifest
+    assert "historical_tc001_reference" in manifest
+    assert "historical_tc002_reference" in manifest
+    tc002_ref = manifest["historical_tc002_reference"]
+    assert tc002_ref["freeze_record_id"] == "phase6-frozen-v2-F001-TC002"
+    assert "SUPERSEDED_BY_TC003" in tc002_ref["status"]
+
+    # Invariant digests match exactly
+    assert (
+        manifest["strategy_semantic_identity_v2"]["aggregate_digest"]
+        == "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f"
+    )
+    assert (
+        manifest["validation_pipeline_identity_v1"]["aggregate_digest"]
+        == "957dba56e2244b8cae773ddc17c716da629732d3f492e77578978ef9e091da3f"
+    )
+    assert (
+        manifest["configuration_identity"]["complete_candidate_configuration_identity"]
+        == "1aa8b73fb207e10abfe9725bc2979e14692815a5ffe91502cef892b8bae6e806"
+    )
+    assert (
+        manifest["protected_infrastructure_identity_v2"]["aggregate_digest"]
+        == "666be323da1f5634e00d5a3285089d9318c99b300696d1f621db4d2cf07f9d7d"
+    )
+
+    # Zero path leakage
+    dumped = json.dumps(manifest)
+    assert "C:" not in dumped
+    assert "/Users/" not in dumped
+    assert "\\Users\\" not in dumped
+
+
+def test_scientific_register_tc003_record() -> None:
+    with open(REGISTER_PATH, "r", encoding="utf-8") as f:
+        reg = json.load(f)
+
+    tc003_rec = None
+    for r in reg["result_records"]:
+        rid = r.get("record_id") or r.get("result_id")
+        if rid == "phase6-frozen-v2-F001-TC003":
+            tc003_rec = r
+
+    assert tc003_rec is not None, "phase6-frozen-v2-F001-TC003 missing from register"
+    assert tc003_rec["authoritative_ledger_seal"] == "phase8-v2-ledger-seal-v2"
+    assert tc003_rec["historical_ledger_seal_reference"] == "phase8-v2-ledger-seal-v1"
+    assert tc003_rec["budget_impact"] == 0
+    assert tc003_rec["zero_empirical_access"] is True
+    assert tc003_rec["tier_b_sealed"] is True
