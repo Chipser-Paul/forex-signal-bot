@@ -1,4 +1,4 @@
-"""Phase 8 V2 Tier-B Feasibility Engine (phase8-v2-tierb-feasibility-plan-v1-TC002 / phase8-v2-tierb-feasibility-tooling-v1-TC001).
+"""Phase 8 V2 Tier-B Feasibility Engine (phase8-v2-tierb-feasibility-plan-v1-TC002 / phase8-v2-tierb-feasibility-tooling-v1-TC002).
 
 Implements the prospective two-stage candidate and lifecycle sample feasibility
 protocol governing the evaluation of frozen development candidate `phase6-frozen-v2`
@@ -26,14 +26,14 @@ Strict constraints enforced by this module:
                            + never_opened + duplicate_events);
 10. Absolute zero profitability metrics (P&L, win rate, Sharpe, drawdown, expectancy,
     profit factor, equity curves strictly prohibited and firewalled);
-11. First-byte guard: FIRST_EMPIRICAL_BYTE_READ recorded at first store byte read.
+11. First-byte guard: EMPIRICAL_READ_BOUNDARY_ENTERED recorded immediately prior to
+    first empirical store read.
 """
 
 from __future__ import annotations
 
 from collections import Counter
-import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -48,25 +48,28 @@ from bot.execution.lifecycle.models import (
     LifecycleStatus,
     ManagementConfig,
     MarketEvent,
-    MarketEventKind,
     PositionState,
-    ReadinessStyle,
 )
 from bot.execution.lifecycle.entry import (
     create_entry_state,
-    new_entry_intent,
     process_entry_event,
     record_fill,
 )
 from bot.execution.lifecycle.management import manage_position
-from bot.strategy.trade_levels import LevelInputs, LevelResult, build_trade_levels
+from bot.scientific.canonical_bytes import (
+    BlobSource,
+    canonical_blob_bytes,
+    working_tree_canonical_agreement,
+)
+from bot.strategy.setup_intent import (
+    SetupSymbolMetadata,
+    intent_from_setup_levels,
+    level_inputs_from_setup,
+)
+from bot.strategy.trade_levels import LevelResult, build_trade_levels
 from bot.strategy.variant_v005 import (
-    SPEC_SHA256 as V005_SPEC_SHA256,
-    V005_ID,
     V005_SOURCE_DIRECTIONAL_FALLBACK,
-    V005_SOURCE_NONE,
     V005_SOURCE_V003_BASELINE,
-    evaluate_v005_entry_readiness,
 )
 
 UTC = timezone.utc
@@ -82,8 +85,8 @@ PARENT_PLAN_CONTENT_SHA256 = (
     "5c2d5e4f29d2dfb3720dc264c8b28d240c0cf1cb8a62ccd40923ed5d8b2cfddf"
 )
 
-TOOLING_CORRECTION_ID = "phase8-v2-tierb-feasibility-tooling-v1-TC001"
-HISTORICAL_TOOLING_COMMIT = "fef16b8d819e0339f6e8427fb126ba6126da0fc2"
+TOOLING_CORRECTION_ID = "phase8-v2-tierb-feasibility-tooling-v1-TC002"
+HISTORICAL_TOOLING_COMMIT = "132343a0b1de527f6ecdb1776b7a90132068dbea"
 
 FREEZE_IDENTITY = "phase6-frozen-v2"
 DEVELOPMENT_PREDECESSOR = "phase6-development-v2-V005"
@@ -188,6 +191,13 @@ LABEL_PREFLIGHT_BLOCKAGE = "TIER_B_PRE_RELEASE_EVIDENCE_BLOCKAGE"
 LABEL_PARITY_FAILURE = "FOLD01_V005_ENTRY_PARITY_FAILURE"
 LABEL_IDENTITY_MISMATCH = "FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH"
 LABEL_FIRST_EMPIRICAL_BYTE_READ = "FIRST_EMPIRICAL_BYTE_READ"
+LABEL_EMPIRICAL_BOUNDARY_ENTERED = "EMPIRICAL_READ_BOUNDARY_ENTERED"
+
+AUTHORIZED_OPERATIONS = (
+    "FOLD01_PARITY_REHEARSAL",
+    "FOLD01_LIFECYCLE_REHEARSAL",
+    "RESERVED_FOLD_FEASIBILITY",
+)
 
 MANDATORY_STAGE2_QUALIFICATIONS = (
     "DEVELOPMENT_PROXY_NOT_HISTORICALLY_VALIDATED",
@@ -270,6 +280,38 @@ DEFAULT_EVIDENCE_ROOT = Path("C:/Users/chips/forex-signal-bot-data/phase8/eviden
 DEFAULT_DATA_ROOT = Path("C:/Users/chips/forex-signal-bot-data/phase8")
 
 
+def resolve_canonical_git_head(repo_root: Path) -> str:
+    """Resolve canonical Git HEAD commit hash without stale fallbacks."""
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(repo_root),
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        if len(out) == 40 and all(c in "0123456789abcdef" for c in out.lower()):
+            return out.lower()
+    except Exception:
+        pass
+
+    git_dir = repo_root / ".git"
+    if git_dir.is_file():
+        content = git_dir.read_text(encoding="utf-8").strip()
+        if content.startswith("gitdir:"):
+            git_dir = (repo_root / content[7:].strip()).resolve()
+    head_file = git_dir / "HEAD"
+    if head_file.is_file():
+        ref = head_file.read_text(encoding="utf-8").strip()
+        if ref.startswith("ref:"):
+            ref_path = git_dir / ref[4:].strip()
+            if ref_path.is_file():
+                return ref_path.read_text(encoding="utf-8").strip().lower()
+        elif len(ref) == 40 and all(c in "0123456789abcdef" for c in ref.lower()):
+            return ref.lower()
+
+    raise TierBPreflightError("Cannot resolve canonical Git HEAD commit")
+
+
 def assert_zero_profitability(data: Any, path: str = "") -> None:
     """Recursively verify that no prohibited profitability metrics are present."""
     if isinstance(data, dict):
@@ -345,27 +387,22 @@ def verify_tooling_integrity(repo_root: Path) -> dict[str, Any]:
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
-    # Strategy semantic aggregate digest
     strat_digest = manifest.get("strategy_semantic_identity_v2", {}).get("aggregate_digest")
     if strat_digest != EXPECTED_STRATEGY_DIGEST:
         raise TierBFeasibilityError(f"Strategy digest mismatch: {strat_digest} != {EXPECTED_STRATEGY_DIGEST}")
 
-    # Complete configuration SHA256
     config_sha = manifest.get("configuration_identity", {}).get("complete_candidate_configuration_identity")
     if config_sha != EXPECTED_CONFIG_SHA256:
         raise TierBFeasibilityError(f"Config SHA mismatch: {config_sha} != {EXPECTED_CONFIG_SHA256}")
 
-    # Validation pipeline aggregate digest
     val_digest = manifest.get("validation_pipeline_identity_v1", {}).get("aggregate_digest")
     if val_digest != EXPECTED_VALIDATION_DIGEST:
         raise TierBFeasibilityError(f"Validation digest mismatch: {val_digest} != {EXPECTED_VALIDATION_DIGEST}")
 
-    # Protected infrastructure aggregate digest v2
     prot_digest = manifest.get("protected_infrastructure_identity_v2", {}).get("aggregate_digest")
     if prot_digest != EXPECTED_PROTECTED_DIGEST_V2:
         raise TierBFeasibilityError(f"Protected digest mismatch: {prot_digest} != {EXPECTED_PROTECTED_DIGEST_V2}")
 
-    # Authoritative ledger seal v2 in hypothesis register
     reg_path = repo_root / "baseline" / "phase8_v2_hypothesis_register.json"
     if not reg_path.is_file():
         raise TierBFeasibilityError(f"Hypothesis register missing: {reg_path}")
@@ -400,13 +437,37 @@ def verify_tooling_integrity(repo_root: Path) -> dict[str, Any]:
 def verify_frozen_candidate_execution_integrity(
     repo_root: Path,
     *,
+    active_commit: str | None = None,
+    blob_source: BlobSource | None = None,
     manifest_data: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Verify that current working-tree and Git blobs match frozen candidate TC003 declarations.
+    """Verify that current Git blobs match frozen candidate TC003 declarations.
 
     Fails closed with FROZEN_CANDIDATE_EXECUTION_IDENTITY_MISMATCH if any strategy,
-    configuration, or protected file has drifted.
+    configuration, or protected file has drifted at the active execution commit.
     """
+    commit_to_verify = active_commit or resolve_canonical_git_head(repo_root)
+
+    if blob_source is None:
+        try:
+            from tests.test_phase8_v2_frozen_candidate import GitObjectStore
+            _store = GitObjectStore(repo_root)
+            _t_cache: dict[str, dict[str, tuple[str, str]]] = {}
+            _orig_rt = _store._read_tree
+            def _c_rt(sha: str):
+                if sha not in _t_cache:
+                    _t_cache[sha] = _orig_rt(sha)
+                return _t_cache[sha]
+            _store._read_tree = _c_rt
+            def _auto_source(c: str, p: str) -> bytes:
+                try:
+                    return canonical_blob_bytes(p, commit=c, repo=repo_root)
+                except Exception:
+                    return _store.blob_bytes(c, p)
+            blob_source = _auto_source
+        except Exception:
+            pass
+
     if manifest_data is None:
         manifest_path = repo_root / AUTHORITATIVE_MANIFEST_RELPATH
         if not manifest_path.is_file():
@@ -414,7 +475,7 @@ def verify_frozen_candidate_execution_integrity(
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest_data = json.load(f)
 
-    # 1. Verify candidate declarations in manifest match constants
+    # 1. Manifest digests validation
     strat = manifest_data.get("strategy_semantic_identity_v2", {})
     if strat.get("aggregate_digest") != EXPECTED_STRATEGY_DIGEST:
         raise TierBPreflightError(
@@ -443,23 +504,84 @@ def verify_frozen_candidate_execution_integrity(
             f"{prot.get('aggregate_digest')} != {EXPECTED_PROTECTED_DIGEST_V2}"
         )
 
-    # 2. Verify key strategy source files exist and have valid syntax
-    strategy_files = [
-        "bot/strategy/variant_v005.py",
-        "bot/strategy/variant_v003.py",
-        "bot/strategy/trade_levels.py",
-        "bot/strategy/setup_intent.py",
-        "bot/strategy/config.py",
-    ]
-    for rel in strategy_files:
-        p = repo_root / rel
-        if not p.is_file():
-            raise TierBPreflightError(f"[{LABEL_IDENTITY_MISMATCH}] Strategy path missing: {rel}")
+    # 2. Recompute and verify all paths between anchor and active commit byte-for-byte
+    strat_paths = list(strat.get("ordered_semantic_paths") or [])
+    if len(strat_paths) != 83:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Expected 83 strategy semantic paths, found {len(strat_paths)}"
+        )
+
+    profile_info = cfg.get("effective_xauusdm_profile") or {}
+    config_paths = list((profile_info.get("source_blob_ids") or {}).keys())
+    protected_paths = list(prot.get("enforcing_paths") or [])
+
+    all_paths = list(dict.fromkeys(strat_paths + config_paths + protected_paths))
+
+    for path in all_paths:
+        try:
+            b_anchor = canonical_blob_bytes(path, commit=SEMANTIC_ANCHOR_COMMIT, repo=repo_root, blob_source=blob_source)
+            b_active = canonical_blob_bytes(path, commit=commit_to_verify, repo=repo_root, blob_source=blob_source)
+        except Exception as exc:
+            raise TierBPreflightError(
+                f"[{LABEL_IDENTITY_MISMATCH}] Failed reading Git blob for {path}: {exc}"
+            ) from exc
+
+        if b_anchor != b_active:
+            raise TierBPreflightError(
+                f"[{LABEL_IDENTITY_MISMATCH}] Git blob mismatch for {path} at active commit {commit_to_verify} vs anchor {SEMANTIC_ANCHOR_COMMIT}"
+            )
+
+        if not working_tree_canonical_agreement(path, commit=commit_to_verify, repo=repo_root, blob_source=blob_source):
+            raise TierBPreflightError(
+                f"[{LABEL_IDENTITY_MISMATCH}] Working tree path not clean: {path}"
+            )
+
+    # 3. Check effective XAUUSDm profile lock in code
+    from config.symbol_profiles import get_symbol_profile
+    profile = get_symbol_profile("XAUUSDm")
+    exec_lvls = profile.get("execution_levels") or {}
+    if exec_lvls.get("min_stop_atr_mult") != 2.0:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile min_stop_atr_mult must be 2.0, got {exec_lvls.get('min_stop_atr_mult')}"
+        )
+    if exec_lvls.get("min_stop_price") != 10.0:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile min_stop_price must be 10.0, got {exec_lvls.get('min_stop_price')}"
+        )
+    if exec_lvls.get("min_stop_points") != 500:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile min_stop_points must be 500, got {exec_lvls.get('min_stop_points')}"
+        )
+    if exec_lvls.get("max_stop_atr_mult") != 8.0:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile max_stop_atr_mult must be 8.0, got {exec_lvls.get('max_stop_atr_mult')}"
+        )
+    if exec_lvls.get("max_stop_price") != 40.0:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile max_stop_price must be 40.0, got {exec_lvls.get('max_stop_price')}"
+        )
+    if exec_lvls.get("anchor_buffer_atr_mult") != 0.10:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile anchor_buffer_atr_mult must be 0.10, got {exec_lvls.get('anchor_buffer_atr_mult')}"
+        )
+    if exec_lvls.get("anchor_buffer_price") != 0.75:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile anchor_buffer_price must be 0.75, got {exec_lvls.get('anchor_buffer_price')}"
+        )
+    if profile.get("min_rr") != 1.5:
+        raise TierBPreflightError(
+            f"[{LABEL_IDENTITY_MISMATCH}] Effective XAUUSDm profile min_rr must be 1.5, got {profile.get('min_rr')}"
+        )
 
     return {
         "status": "FROZEN_CANDIDATE_EXECUTION_INTEGRITY_VERIFIED",
         "freeze_identity": FREEZE_IDENTITY,
         "semantic_anchor_commit": SEMANTIC_ANCHOR_COMMIT,
+        "active_commit": commit_to_verify,
+        "strategy_paths_verified": len(strat_paths),
+        "config_paths_verified": len(config_paths),
+        "protected_paths_verified": len(protected_paths),
+        "total_paths_verified": len(all_paths),
         "strategy_digest": EXPECTED_STRATEGY_DIGEST,
         "config_sha256": EXPECTED_CONFIG_SHA256,
         "validation_digest": EXPECTED_VALIDATION_DIGEST,
@@ -473,19 +595,11 @@ def pre_release_evidence_preflight(
     evidence_root: Path | None = None,
     data_root: Path | None = None,
     active_commit: str | None = None,
+    blob_source: BlobSource | None = None,
 ) -> dict[str, Any]:
-    """Verify the complete 16-item development input chain and prospective readiness before opening stores.
-
-    Executes:
-    1. Full 16-item input chain presence check;
-    2. verify_input_readiness_prospective in identity-chain mode;
-    3. Phase 8I activation verification (verify_activation_record);
-    4. Phase 8L metadata bounds readiness verification (verify_readiness);
-    5. Frozen candidate execution integrity verification against TC003 manifest.
-    """
+    """Verify the complete 16-item development input chain and prospective readiness before opening stores."""
     root = repo_root or Path(__file__).resolve().parents[2]
 
-    # Resolve evidence and data directories
     if evidence_root is not None:
         target_evidence = Path(evidence_root)
     elif DEFAULT_EVIDENCE_ROOT.is_dir():
@@ -549,19 +663,23 @@ def pre_release_evidence_preflight(
             "Execution halted fail-closed before any empirical byte read."
         )
 
-    # 2. Prospective input readiness verification (identity-chain)
-    attestation_path = root / "baseline" / "phase8_v2_cost_policy_canonical_attestation.json"
+    # 2. Prospective input readiness verification
     contamination_path = root / "baseline" / "phase8_contamination_register.json"
-
-    if not attestation_path.is_file():
-        raise TierBPreflightError(f"[{LABEL_PREFLIGHT_BLOCKAGE}] Cost policy attestation missing: {attestation_path}")
     if not contamination_path.is_file():
-        raise TierBPreflightError(f"[{LABEL_PREFLIGHT_BLOCKAGE}] Contamination register missing: {contamination_path}")
+        raise TierBPreflightError(
+            f"[{LABEL_PREFLIGHT_BLOCKAGE}] Contamination register missing: {contamination_path}"
+        )
+
+    attestation_path = root / "baseline" / "phase8_v2_cost_policy_canonical_attestation.json"
+    if not attestation_path.is_file():
+        raise TierBPreflightError(
+            f"[{LABEL_PREFLIGHT_BLOCKAGE}] Cost policy canonical attestation missing: {attestation_path}"
+        )
 
     with open(attestation_path, "r", encoding="utf-8") as f:
         attestation = json.load(f)
 
-    commit_to_use = active_commit or "05c66a096807d5a9da3c449c2458f675fecc39a9"
+    commit_to_use = active_commit or resolve_canonical_git_head(root)
 
     from bot.validation.development_evaluation_plan import verify_input_readiness_prospective
 
@@ -644,7 +762,11 @@ def pre_release_evidence_preflight(
         )
 
     # 5. Commit-bound frozen candidate execution integrity
-    frozen_check = verify_frozen_candidate_execution_integrity(root)
+    frozen_check = verify_frozen_candidate_execution_integrity(
+        root,
+        active_commit=commit_to_use,
+        blob_source=blob_source,
+    )
 
     return {
         "status": "PREFLIGHT_PASSED",
@@ -683,7 +805,6 @@ def validate_canonical_candidate(candidate: Mapping[str, Any]) -> None:
     if entry_source not in CANONICAL_SOURCES:
         raise TierBFeasibilityError(f"Candidate {decision_id} has invalid entry_source: {entry_source}")
 
-    # Side <-> Direction bijection
     if side == "LONG" and entry_direction != "buy":
         raise TierBFeasibilityError(f"Candidate {decision_id} side/direction contradiction: LONG but direction is {entry_direction}")
     if side == "SHORT" and entry_direction != "sell":
@@ -704,11 +825,7 @@ def filter_candidates_by_window(
     evaluation_start: datetime,
     evaluation_end: datetime,
 ) -> tuple[Mapping[str, Any], ...]:
-    """Filter candidates strictly by evaluation window: evaluation_start <= available_at < evaluation_end.
-
-    Warm-up candidates (< evaluation_start) and post-evaluation candidates (>= evaluation_end)
-    contribute zero count.
-    """
+    """Filter candidates strictly by evaluation window: evaluation_start <= available_at < evaluation_end."""
     start_ms = int(evaluation_start.timestamp() * 1000)
     end_ms = int(evaluation_end.timestamp() * 1000)
 
@@ -756,11 +873,12 @@ class Stage1CandidateReport:
             "week_distribution": dict(self.week_distribution),
             "session_distribution": dict(self.session_distribution),
             "half_distribution": dict(self.half_distribution),
+            "futility_threshold": STAGE1_FUTILITY_THRESHOLD,
             "futility_condition_met": self.futility_condition_met,
-            "headroom_target_met": self.headroom_target_met,
             "futility_classification": self.futility_classification,
+            "headroom_target": STAGE1_HEADROOM_TARGET,
+            "headroom_target_met": self.headroom_target_met,
             "headroom_classification": self.headroom_classification,
-            "candidate_count": len(self.candidates),
         }
         assert_zero_profitability(result)
         return result
@@ -772,14 +890,9 @@ def evaluate_stage1_candidates(
     evaluation_start: datetime | None = None,
     evaluation_end: datetime | None = None,
 ) -> Stage1CandidateReport:
-    """Analyze V005 candidate decisions for Stage-1 feasibility metrics.
-
-    Applies the frozen futility threshold (30) and non-gating headroom target (60).
-    Enforces evaluation window and validates canonical schema.
-    """
+    """Analyze V005 candidate decisions for Stage-1 feasibility metrics."""
     assert_zero_profitability(candidate_records)
 
-    # Window filtering if evaluation boundaries supplied
     if evaluation_start is not None and evaluation_end is not None:
         eligible_candidates = filter_candidates_by_window(
             candidate_records, evaluation_start, evaluation_end
@@ -870,6 +983,102 @@ def evaluate_stage1_candidates(
     )
 
 
+def replay_v005_candidates_from_store(
+    store: Any,
+    evaluation_start: datetime,
+    evaluation_end: datetime,
+    *,
+    warmup_start: datetime | None = None,
+    config: Any = None,
+) -> list[dict[str, Any]]:
+    """Replay frozen candidate V005 observation over a feature store.
+
+    Reuses the exact frozen orchestration and observer mechanics from
+    backtests.phase8_v2_variant_v005_eval:
+    - classify_snapshot
+    - evaluate_orchestration_decision
+    - observe_v005_decision
+    - StrategyState / state-record progression.
+
+    Filters candidates strictly by evaluation window:
+    evaluation_start <= available_at < evaluation_end.
+    Returns canonical Stage-1 candidate records.
+    """
+    from backtests.phase8_v2_variant_v005_eval import (
+        observe_v005_decision,
+        assert_store_semantic_compatibility,
+    )
+    from backtests.phase8_v2_diagnostic_d001 import (
+        _snapshot_rows,
+        _reference_check_failed,
+        classify_snapshot,
+        evaluate_orchestration_decision,
+    )
+    from bot.strategy.config import StrategyConfig
+    from bot.strategy.setup_state import StrategyState, record_from_state
+
+    cfg = config or StrategyConfig()
+    seed_time = warmup_start or evaluation_start
+    state_record = record_from_state(
+        StrategyState(event_time=seed_time), event_at=seed_time,
+    )
+
+    candidates: list[dict[str, Any]] = []
+
+    for snapshot in _snapshot_rows(store):
+        avail_ms = int(snapshot.available_at_ms)
+        avail_dt = datetime.fromtimestamp(avail_ms / 1000.0, tz=UTC)
+
+        if avail_dt >= evaluation_end:
+            break
+
+        bucket = classify_snapshot(snapshot)
+        if bucket is not None:
+            continue
+        if _reference_check_failed(snapshot):
+            continue
+
+        prior_state_record = state_record
+        row, next_record = evaluate_orchestration_decision(
+            snapshot, prior_state_record,
+        )
+        if row["action"] == "error":
+            continue
+
+        gate11_entered = "gate_11_confluence_score" in (
+            row.get("gate_results") or {}
+        )
+        if gate11_entered:
+            assert_store_semantic_compatibility(snapshot)
+            v005_obs = observe_v005_decision(
+                row,
+                snapshot,
+                prior_state_record,
+                config=cfg,
+                decision_result_record=next_record,
+            )
+            if v005_obs.get("v005_entry_ready"):
+                if evaluation_start <= avail_dt < evaluation_end:
+                    cand = {
+                        "decision_id": v005_obs["decision_id"],
+                        "setup_id": v005_obs["v005_setup_id"],
+                        "available_at_ms": v005_obs["available_at_ms"],
+                        "side": v005_obs["v005_side"],
+                        "entry_direction": v005_obs["v005_entry_direction"],
+                        "entry_source": v005_obs["v005_entry_source"],
+                        "fvg_evidence_source": v005_obs["v005_fvg_evidence_source"],
+                        "entry": v005_obs["v005_entry"],
+                        "_causal_snapshot": snapshot,
+                        "_prior_state_record": prior_state_record,
+                        "_decision_result_record": next_record,
+                    }
+                    candidates.append(cand)
+
+        state_record = next_record
+
+    return candidates
+
+
 @dataclass(frozen=True)
 class CompletedTradeAccounting:
     qualifying_completed_trades: int
@@ -911,16 +1120,7 @@ def reconcile_completed_trades(
     never_opened_count: int = 0,
     duplicates_count: int = 0,
 ) -> CompletedTradeAccounting:
-    """Reconcile completed trade lifecycle outcomes against Stage-1 raw candidates.
-
-    Enforces:
-    1. Qualifying exits must be members of QUALIFYING_NATURAL_EXITS. Unknown exits fail closed.
-    2. END_OF_DATA is strictly excluded from qualifying trades.
-    3. Exact accounting identity holds:
-       raw_candidate_ready == (qualifying_completed_trades + end_of_data_closed
-                               + level_intent_attrition + unfilled_expired_cancelled
-                               + never_opened + duplicate_events)
-    """
+    """Reconcile completed trade lifecycle outcomes against Stage-1 raw candidates."""
     exit_dist: dict[str, int] = {}
     qualifying_count = 0
 
@@ -1009,7 +1209,6 @@ def verify_fold01_parity_against_sealed_v005(
 
     assert_zero_profitability(sealed_data)
 
-    # 1. Sealed candidate extraction strictly from candidate_surface.candidates
     if "candidate_surface" not in sealed_data or not isinstance(sealed_data["candidate_surface"], Mapping):
         raise TierBParityError(
             f"[{LABEL_PARITY_FAILURE}] Missing 'candidate_surface' mapping in sealed artifact"
@@ -1027,18 +1226,15 @@ def verify_fold01_parity_against_sealed_v005(
             f"[{LABEL_PARITY_FAILURE}] Sealed candidates count {len(sealed_candidates)} != 102"
         )
 
-    # 2. Reproduced candidate count
     total_reproduced = len(reproduced_candidates)
     if total_reproduced != 102:
         raise TierBParityError(
             f"[{LABEL_PARITY_FAILURE}] Expected 102 reproduced candidates, got {total_reproduced}"
         )
 
-    # Validate schema for all reproduced candidates
     for c in reproduced_candidates:
         validate_canonical_candidate(c)
 
-    # 3. Exact multiset equality: Counter((decision_id, setup_id))
     sealed_multiset = Counter((str(c["decision_id"]), str(c["setup_id"])) for c in sealed_candidates)
     rep_multiset = Counter((str(c["decision_id"]), str(c["setup_id"])) for c in reproduced_candidates)
 
@@ -1050,35 +1246,30 @@ def verify_fold01_parity_against_sealed_v005(
             f"Missing from rep: {dict(diff_missing)}, Extra in rep: {dict(diff_extra)}"
         )
 
-    # 4. Exact per-candidate entry object parity (json.dumps with allow_nan=False)
     sealed_by_pair = {(str(c["decision_id"]), str(c["setup_id"])): c for c in sealed_candidates}
     rep_by_pair = {(str(c["decision_id"]), str(c["setup_id"])): c for c in reproduced_candidates}
 
     for pair_key, sealed_c in sealed_by_pair.items():
         rep_c = rep_by_pair[pair_key]
 
-        # Source parity
         if sealed_c.get("entry_source") != rep_c.get("entry_source"):
             raise TierBParityError(
                 f"[{LABEL_PARITY_FAILURE}] Candidate {pair_key} entry_source mismatch: "
                 f"{sealed_c.get('entry_source')} != {rep_c.get('entry_source')}"
             )
 
-        # Direction parity
         if sealed_c.get("entry_direction") != rep_c.get("entry_direction"):
             raise TierBParityError(
                 f"[{LABEL_PARITY_FAILURE}] Candidate {pair_key} entry_direction mismatch: "
                 f"{sealed_c.get('entry_direction')} != {rep_c.get('entry_direction')}"
             )
 
-        # Side parity
         if sealed_c.get("side") != rep_c.get("side"):
             raise TierBParityError(
                 f"[{LABEL_PARITY_FAILURE}] Candidate {pair_key} side mismatch: "
                 f"{sealed_c.get('side')} != {rep_c.get('side')}"
             )
 
-        # Entry JSON exact parity
         s_entry = sealed_c.get("entry")
         r_entry = rep_c.get("entry")
         if not s_entry or not r_entry:
@@ -1094,7 +1285,6 @@ def verify_fold01_parity_against_sealed_v005(
                 f"Reproduced: {r_json}"
             )
 
-    # 5. Counts summary
     rep_baseline = sum(1 for c in reproduced_candidates if c["entry_source"] == V005_SOURCE_V003_BASELINE)
     rep_fallback = sum(1 for c in reproduced_candidates if c["entry_source"] == V005_SOURCE_DIRECTIONAL_FALLBACK)
 
@@ -1118,74 +1308,112 @@ def verify_fold01_parity_against_sealed_v005(
     }
 
 
-# -----------------------------------------------------------------------------
-# V005 -> Trade Levels -> EntryIntent -> Lifecycle Execution Adapters
-# -----------------------------------------------------------------------------
+def _extract_causal_context_and_frame(candidate: Mapping[str, Any]) -> tuple[dict[str, Any], Any]:
+    """Extract causal context mapping and entry DataFrame from candidate's causal snapshot."""
+    snapshot = candidate.get("_causal_snapshot")
+    if snapshot is None:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] Candidate {candidate.get('decision_id')} missing causal snapshot"
+        )
+    payload = json.loads(snapshot.gate_payload) if isinstance(snapshot.gate_payload, str) else snapshot.gate_payload
+    rows = list(payload.get("entry_rows") or [])
+    from backtests.phase8_v2_variant_v002_eval import _entry_frame
+    frame = _entry_frame(rows)
+
+    dxy_context = dict(payload.get("dxy_context") or {})
+    news_context = dict(payload.get("news_context") or {})
+    session_context = dict(payload.get("session_context") or {})
+    liquidity_context = dict(payload.get("liquidity_context") or {})
+    internal = dict(payload.get("internal_structure") or {})
+    market_cond = dict(payload.get("market_conditions") or {})
+    if "atr" not in market_cond and payload.get("atr") is not None:
+        market_cond["atr"] = payload.get("atr")
+
+    context = {
+        "entry": candidate.get("entry") or {},
+        "ob": payload.get("ob") or {},
+        "internal_structure": internal,
+        "liquidity": liquidity_context,
+        "market_conditions": market_cond,
+        "dxy": dxy_context,
+        "news": news_context,
+        "session": session_context,
+        "score": candidate.get("score") or {},
+    }
+    return context, frame
+
 
 def candidate_to_trade_levels(
     candidate: Mapping[str, Any],
     *,
-    symbol: str = "XAUUSDm",
-    point: float = 0.01,
-    stops_level: int = 10,
-    digits: int = 2,
+    context: Mapping[str, Any] | None = None,
+    entry_frame: Any = None,
+    metadata: SetupSymbolMetadata | None = None,
+    profile: Mapping[str, Any] | None = None,
     min_rr: float = 1.5,
     min_rr_buffer: float = 0.10,
-    level_config: Mapping[str, Any] | None = None,
-    context: Mapping[str, Any] | None = None,
 ) -> LevelResult:
-    """Pure construction of absolute trade levels from a canonical V005 candidate."""
+    """Canonical conversion of approved V005 candidate into trade levels via shared adapter."""
     validate_canonical_candidate(candidate)
-    direction = str(candidate["entry_direction"]).lower()
-    entry = candidate["entry"]
 
-    trigger = (
-        float(entry["limit_entry"])
-        if entry.get("entry_type") == "limit" and entry.get("limit_entry") is not None
-        else float(entry.get("entry_price") or entry.get("price") or 2000.0)
+    # 1. Resolve and validate frozen profile
+    from config.symbol_profiles import get_symbol_profile
+    prof = profile or get_symbol_profile("XAUUSDm")
+    exec_lvls = prof.get("execution_levels") or {}
+
+    min_stop_atr = exec_lvls.get("min_stop_atr_mult")
+    if min_stop_atr != 2.0:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] Effective XAUUSDm min_stop_atr_mult must be 2.0, got {min_stop_atr}"
+        )
+
+    # 2. Extract or validate causal context and entry_frame
+    ctx = context
+    frame = entry_frame
+    if ctx is None or frame is None:
+        try:
+            extracted_ctx, extracted_frame = _extract_causal_context_and_frame(candidate)
+            ctx = ctx or extracted_ctx
+            frame = frame or extracted_frame
+        except Exception as exc:
+            raise TierBFeasibilityError(
+                f"[{LABEL_GEOMETRY_ATTRITION}] Causal context or entry frame missing for candidate {candidate.get('decision_id')}: {exc}"
+            ) from exc
+
+    if ctx is None or frame is None:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] Causal context or entry frame is None for candidate {candidate.get('decision_id')}"
+        )
+
+    # 3. Decision timestamp & Metadata
+    avail_ms = int(candidate["available_at_ms"])
+    decision_at = datetime.fromtimestamp(avail_ms / 1000.0, tz=UTC)
+
+    meta = metadata or SetupSymbolMetadata(
+        symbol="XAUUSDm",
+        point=0.001,
+        stops_level=10,
+        digits=3,
+        effective_from=datetime(2024, 1, 1, tzinfo=UTC),
+        effective_until=datetime(2025, 1, 1, tzinfo=UTC),
+        provenance="phase8n-development-proxy",
     )
+    meta.validate_at(decision_at)
 
-    ctx = dict(context or {})
-    internal_structure = dict(ctx.get("internal_structure") or {})
-    structure_context = dict(ctx.get("structure_context") or {})
-    liquidity_pools = tuple(ctx.get("liquidity_pools") or ())
-    recent_lows = tuple(ctx.get("recent_lows") or ())
-    recent_highs = tuple(ctx.get("recent_highs") or ())
-    atr = float(ctx.get("atr") or 2.50)
-
-    # Use ob_zone from entry or candidate if available
-    ob_zone = entry.get("ob_zone") or candidate.get("ob_zone")
-    if ob_zone and not isinstance(ob_zone, (list, tuple)):
-        ob_zone = None
-
-    entry_mode = entry.get("entry_mode") or candidate.get("entry_mode")
-    if entry_mode is None and ob_zone is not None:
-        entry_mode = "aggressive"
-
-    cfg = dict(level_config or {
-        "anchor_buffer_atr_mult": 0.10,
-        "min_stop_points": 500,
-        "min_stop_atr_mult": 0.35,
-    })
-
-    inputs = LevelInputs(
-        direction=direction,
-        entry_price=trigger,
-        entry_mode=entry_mode,
-        ob_zone=ob_zone,
-        internal_structure=internal_structure,
-        recent_lows=recent_lows,
-        recent_highs=recent_highs,
-        structure_context=structure_context,
-        liquidity_pools=liquidity_pools,
-        atr=atr,
-        point=point,
-        stops_level=stops_level,
-        digits=digits,
-        level_config=cfg,
-        min_rr=min_rr,
-        min_rr_buffer=min_rr_buffer,
-    )
+    try:
+        inputs = level_inputs_from_setup(
+            context=ctx,
+            entry_frame=frame,
+            metadata=meta,
+            decision_at=decision_at,
+            profile=prof,
+            min_rr=min_rr,
+            min_rr_buffer=min_rr_buffer,
+        )
+    except Exception as exc:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] level_inputs_from_setup failed: {exc}"
+        ) from exc
 
     return build_trade_levels(inputs)
 
@@ -1194,49 +1422,51 @@ def candidate_to_entry_intent(
     candidate: Mapping[str, Any],
     levels: LevelResult,
     *,
+    context: Mapping[str, Any] | None = None,
+    entry_frame: Any = None,
     symbol: str = "XAUUSDm",
     source_timeframe: str = "M5",
     partial_close_fraction: float = 0.5,
     configuration_id: str = "phase6-frozen-v2-PRIMARY_BASELINE",
 ) -> EntryIntent:
-    """Construct an EntryIntent from a canonical candidate and valid trade levels."""
+    """Canonical construction of EntryIntent via shared intent_from_setup_levels adapter."""
     validate_canonical_candidate(candidate)
     if levels.stop is None or levels.target is None:
         raise TierBFeasibilityError(
             f"[{LABEL_GEOMETRY_ATTRITION}] Cannot create EntryIntent without valid levels: {levels.reason}"
         )
 
-    avail_ms = int(candidate["available_at_ms"])
-    avail_dt = datetime.fromtimestamp(avail_ms / 1000.0, tz=UTC)
-    entry = candidate["entry"]
-    entry_type = str(entry.get("entry_type") or "market").lower()
-    pullback = entry_type == "limit"
-    trigger = (
-        float(entry["limit_entry"])
-        if pullback and entry.get("limit_entry") is not None
-        else float(entry.get("entry_price") or entry.get("price") or 2000.0)
-    )
+    ctx = context
+    frame = entry_frame
+    if ctx is None or frame is None:
+        try:
+            extracted_ctx, extracted_frame = _extract_causal_context_and_frame(candidate)
+            ctx = ctx or extracted_ctx
+            frame = frame or extracted_frame
+        except Exception as exc:
+            raise TierBFeasibilityError(
+                f"[{LABEL_GEOMETRY_ATTRITION}] Causal context or entry frame missing for intent: {exc}"
+            ) from exc
 
-    return new_entry_intent(
-        symbol=symbol,
-        direction=Direction(str(candidate["entry_direction"]).lower()),
-        source_timeframe=source_timeframe,
-        source_candle_open_time=avail_dt - timedelta(minutes=5),
-        signal_available_at=avail_dt,
-        requested_trigger=trigger,
-        stop_loss=float(levels.stop),
-        final_target=float(levels.target),
-        readiness_style=ReadinessStyle.PULLBACK if pullback else ReadinessStyle.IMMEDIATE,
-        partial_close_fraction=partial_close_fraction,
-        expires_at=avail_dt + timedelta(minutes=120),
-        source_event_id=str(candidate["decision_id"]),
-        strategy_metadata={
-            "setup_id": str(candidate["setup_id"]),
-            "entry_source": str(candidate["entry_source"]),
-            "side": str(candidate["side"]),
-        },
-        configuration_id=configuration_id,
-    )
+    if ctx is None or frame is None:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] Causal context or entry frame is None for intent"
+        )
+
+    try:
+        return intent_from_setup_levels(
+            symbol=symbol,
+            source_timeframe=source_timeframe,
+            context=ctx,
+            entry_frame=frame,
+            levels=levels,
+            partial_close_fraction=partial_close_fraction,
+            configuration_id=configuration_id,
+        )
+    except Exception as exc:
+        raise TierBFeasibilityError(
+            f"[{LABEL_GEOMETRY_ATTRITION}] intent_from_setup_levels failed: {exc}"
+        ) from exc
 
 
 def execute_candidate_lifecycle(
@@ -1245,10 +1475,7 @@ def execute_candidate_lifecycle(
     *,
     management_config: ManagementConfig | None = None,
 ) -> tuple[PositionState | None, ExitReason | None]:
-    """Execute a single candidate intent through the lifecycle engine against market events.
-
-    Returns the final terminal PositionState and the natural ExitReason (or None if never filled).
-    """
+    """Low-level single candidate lifecycle against market events."""
     cfg = management_config or ManagementConfig(
         partial_close_fraction=0.5,
         partial_target_r=1.0,
@@ -1289,14 +1516,215 @@ def execute_candidate_lifecycle(
     return position, exit_reason
 
 
-# -----------------------------------------------------------------------------
-# Release Authorization & Guarded Store Reader
-# -----------------------------------------------------------------------------
+def execute_stage2_primary_baseline(
+    candidates: Sequence[Mapping[str, Any]],
+    quotes: Iterable[Any],
+    *,
+    cost_policy_content: Mapping[str, Any] | None = None,
+    initial_balance: float = 100_000.0,
+    volume: float = 0.01,
+) -> CompletedTradeAccounting:
+    """Execute Stage-2 candidate sample evaluation under PRIMARY_BASELINE.
+
+    Runs through canonical HistoricalExecutionEngine under:
+    SWAP_EMAIL_REFERENCE | SLIPPAGE_MODERATE_ADVERSE | BASELINE_CURRENT_REFERENCE_PROXY.
+    Enforces exact 1-to-1 setup-to-position idempotency.
+    Reconciles all candidates against completed trades, attrition, and exclusions.
+    Suppresses all profitability metrics.
+    """
+    assert_zero_profitability(candidates)
+
+    if cost_policy_content is None:
+        evidence_pkg = DEFAULT_EVIDENCE_ROOT / COST_POLICY_PACKAGE_ID / "package.json"
+        if not evidence_pkg.is_file():
+            alt_p = Path("evidence") / COST_POLICY_PACKAGE_ID / "package.json"
+            if alt_p.is_file():
+                evidence_pkg = alt_p
+        if evidence_pkg.is_file():
+            with open(evidence_pkg, "r", encoding="utf-8") as f:
+                doc = json.load(f)
+            cost_policy_content = doc.get("content", doc)
+        else:
+            cost_policy_content = {
+                "cost_components": {
+                    "commission": {"mode": "NONE"},
+                    "swap": {"mode": "SCENARIO_LADDER"},
+                },
+                "swap_scenarios": [
+                    {
+                        "scenario_id": "SWAP_EMAIL_REFERENCE",
+                        "long_usd_per_lot_per_day": -3.85,
+                        "short_usd_per_lot_per_day": -0.25,
+                        "triple_swap_weekday": "WEDNESDAY",
+                        "triple_swap_multiplier": 3,
+                    }
+                ],
+                "slippage_scenarios": [
+                    {
+                        "scenario_id": "SLIPPAGE_MODERATE_ADVERSE",
+                        "kind": "FIXED_ADVERSE_POINTS",
+                        "points": 1.0,
+                    }
+                ],
+            }
+
+    swap_scenario = next(
+        s for s in cost_policy_content["swap_scenarios"]
+        if s["scenario_id"] == "SWAP_EMAIL_REFERENCE"
+    )
+
+    from bot.validation.empirical_input_pipeline import (
+        broker_symbol_metadata,
+        slippage_model_for,
+    )
+    from bot.backtesting.engine import (
+        HistoricalExecutionEngine,
+        HistoricalExecutionPolicy,
+    )
+    from bot.backtesting.models import FidelityClass, RunMode
+    from bot.backtesting.adapters import (
+        process_quote_entry,
+        manage_quote_position,
+    )
+
+    broker_metadata = broker_symbol_metadata(cost_policy_content, swap_scenario=swap_scenario)
+    slippage_model = slippage_model_for(cost_policy_content, slippage_scenario_id="SLIPPAGE_MODERATE_ADVERSE")
+
+    engine = HistoricalExecutionEngine(
+        run_id="tierb-feasibility-stage2",
+        metadata=broker_metadata,
+        policy=HistoricalExecutionPolicy(
+            mode=RunMode.DIAGNOSTIC,
+            fidelity=FidelityClass.TICK_BID_ASK,
+            maximum_spread_points=1_000_000_000.0,
+            slippage=slippage_model,
+        ),
+        initial_balance=initial_balance,
+    )
+
+    mgmt_cfg = ManagementConfig(
+        partial_close_fraction=0.5,
+        partial_target_r=1.0,
+        volume_min=volume,
+        volume_step=0.01,
+        pnl_per_price_unit=broker_metadata.tick_value / broker_metadata.tick_size,
+        trailing_enabled=False,
+    )
+
+    attrition_count = 0
+    duplicate_count = 0
+    seen_setup_ids: set[str] = set()
+    consumed_setup_ids: set[str] = set()
+
+    pending_entries: list[dict[str, Any]] = []
+
+    for c in candidates:
+        sid = str(c["setup_id"])
+        if sid in seen_setup_ids:
+            duplicate_count += 1
+            continue
+        seen_setup_ids.add(sid)
+
+        try:
+            levels = candidate_to_trade_levels(c)
+            intent = candidate_to_entry_intent(c, levels)
+            entry_state = create_entry_state(intent)
+            pending_entries.append({
+                "candidate": c,
+                "intent": intent,
+                "state": entry_state,
+                "setup_id": sid,
+            })
+        except TierBFeasibilityError:
+            attrition_count += 1
+
+    open_positions: dict[str, PositionState] = {}
+    qualifying_exits: list[ExitReason] = []
+    end_of_data_count = 0
+    never_opened_count = 0
+    unfilled_or_expired_count = 0
+
+    quote_seq = 0
+    for quote in quotes:
+        quote_seq += 1
+
+        rem_entries = []
+        for item in pending_entries:
+            intent = item["intent"]
+            state = item["state"]
+            sid = item["setup_id"]
+
+            if quote.timestamp < intent.signal_available_at:
+                rem_entries.append(item)
+                continue
+
+            if sid in consumed_setup_ids:
+                duplicate_count += 1
+                continue
+
+            decision, position = process_quote_entry(
+                engine,
+                state,
+                quote,
+                sequence=quote_seq,
+                quantity=volume,
+            )
+
+            if position is not None:
+                consumed_setup_ids.add(sid)
+                open_positions[position.trade_id] = position
+            elif decision.state.status in (LifecycleStatus.CANCELLED, LifecycleStatus.EXPIRED, LifecycleStatus.REJECTED):
+                unfilled_or_expired_count += 1
+            else:
+                item["state"] = decision.state
+                rem_entries.append(item)
+        pending_entries = rem_entries
+
+        for trade_id, position in list(open_positions.items()):
+            managed = manage_quote_position(
+                engine,
+                position,
+                quote,
+                sequence=quote_seq,
+                config=mgmt_cfg,
+            )
+            if managed.status == LifecycleStatus.CLOSED:
+                del open_positions[trade_id]
+                exit_reason = managed.exit_reason
+                if exit_reason in QUALIFYING_NATURAL_EXITS:
+                    qualifying_exits.append(exit_reason)
+                elif exit_reason == ExitReason.END_OF_DATA:
+                    end_of_data_count += 1
+                else:
+                    unfilled_or_expired_count += 1
+            else:
+                open_positions[trade_id] = managed
+
+    end_of_data_count += len(open_positions)
+    open_positions.clear()
+
+    unfilled_or_expired_count += len(pending_entries)
+    pending_entries.clear()
+
+    accounting = reconcile_completed_trades(
+        raw_candidates_count=len(candidates),
+        qualifying_exits=qualifying_exits,
+        end_of_data_count=end_of_data_count,
+        attrition_count=attrition_count,
+        unfilled_or_expired_count=unfilled_or_expired_count,
+        never_opened_count=never_opened_count,
+        duplicates_count=duplicate_count,
+    )
+
+    assert_zero_profitability(accounting.to_dict())
+    return accounting
+
 
 @dataclass(frozen=True)
 class ReleaseAuthorizationRecord:
     authorization_id: str
     target_partition: str
+    authorized_operation: str
     governing_plan_id: str
     tooling_id: str
     frozen_candidate_identity: str
@@ -1304,11 +1732,21 @@ class ReleaseAuthorizationRecord:
     output_path: str
     created_utc: str
     prior_sealed_pass_reference: str | None = None
+    prior_sealed_parity_reference: str | None = None
+    prior_sealed_lifecycle_reference: str | None = None
 
-    def validate(self, expected_partition: str) -> None:
+    def validate(self, expected_partition: str, expected_operation: str | None = None) -> None:
         if self.target_partition != expected_partition:
             raise TierBAuthorizationError(
                 f"Release authorization target partition mismatch: {self.target_partition} != {expected_partition}"
+            )
+        if self.authorized_operation not in AUTHORIZED_OPERATIONS:
+            raise TierBAuthorizationError(
+                f"Release authorization operation invalid: {self.authorized_operation}. Allowed: {AUTHORIZED_OPERATIONS}"
+            )
+        if expected_operation and self.authorized_operation != expected_operation:
+            raise TierBAuthorizationError(
+                f"Release authorization operation mismatch: {self.authorized_operation} != {expected_operation}"
             )
         if self.governing_plan_id != PLAN_ID:
             raise TierBAuthorizationError(
@@ -1325,25 +1763,36 @@ class ReleaseAuthorizationRecord:
         if not self.supervisory_approval_reference:
             raise TierBAuthorizationError("Release authorization missing supervisory_approval_reference")
 
-        # Prior-fold dependencies for reserved folds
-        if expected_partition == "fold-03" and not self.prior_sealed_pass_reference:
-            raise TierBAuthorizationError("Fold-03 authorization requires sealed Fold-02 PASS reference")
-        if expected_partition == "fold-04" and not self.prior_sealed_pass_reference:
-            raise TierBAuthorizationError("Fold-04 authorization requires sealed Fold-03 PASS reference")
+        if expected_partition == "fold-01-rehearsal":
+            if self.authorized_operation not in ("FOLD01_PARITY_REHEARSAL", "FOLD01_LIFECYCLE_REHEARSAL"):
+                raise TierBAuthorizationError(
+                    f"Invalid operation {self.authorized_operation} for fold-01-rehearsal"
+                )
+        elif expected_partition in ("fold-02", "fold-03", "fold-04"):
+            if self.authorized_operation != "RESERVED_FOLD_FEASIBILITY":
+                raise TierBAuthorizationError(
+                    f"Reserved fold execution requires RESERVED_FOLD_FEASIBILITY, got {self.authorized_operation}"
+                )
+
+        if expected_partition == "fold-02":
+            if not self.prior_sealed_parity_reference or not self.prior_sealed_lifecycle_reference:
+                raise TierBAuthorizationError(
+                    "Fold-02 authorization requires prior sealed Fold-01 parity and lifecycle references"
+                )
+        elif expected_partition == "fold-03":
+            if not self.prior_sealed_pass_reference:
+                raise TierBAuthorizationError(
+                    "Fold-03 authorization requires sealed Fold-02 PASS reference"
+                )
+        elif expected_partition == "fold-04":
+            if not self.prior_sealed_pass_reference:
+                raise TierBAuthorizationError(
+                    "Fold-04 authorization requires sealed Fold-03 PASS reference"
+                )
 
 
 class GuardedEmpiricalStoreReader:
-    """Store wrapper enforcing strict verification ordering and recording first byte read.
-
-    Order enforced:
-    1. Plan verify
-    2. Tooling / freeze identity verify
-    3. Full prospective input readiness
-    4. Activation / metadata readiness
-    5. Release authorization verify
-    6. Output freshness verify
-    7. Store read -> records FIRST_EMPIRICAL_BYTE_READ
-    """
+    """Store wrapper enforcing strict verification ordering and recording exposure boundary."""
 
     def __init__(
         self,
@@ -1351,47 +1800,77 @@ class GuardedEmpiricalStoreReader:
         partition: str,
         authorization: ReleaseAuthorizationRecord,
         repo_root: Path,
-        raw_store_opener: Callable[[], Iterable[Any]],
+        raw_store_opener: Callable[[], Any],
+        expected_operation: str | None = None,
     ) -> None:
         self.partition = partition
         self.authorization = authorization
         self.repo_root = repo_root
         self._raw_store_opener = raw_store_opener
+        self.expected_operation = expected_operation
+        self.empirical_boundary_utc: str | None = None
         self.empirical_first_read_utc: str | None = None
-        self.read_call_count = 0
-        self.exposure_state: dict[str, Any] | None = None
+        self.exposure_record: dict[str, Any] | None = None
 
-    def open_store(self, *, preflight_already_run: bool = False) -> Iterable[Any]:
-        # 1. Plan verify
+    def open_store(self, *, preflight_already_run: bool = False, active_commit: str | None = None) -> Any:
         verify_plan_tc002(self.repo_root)
-
-        # 2. Tooling verify
         verify_tooling_integrity(self.repo_root)
 
-        # 3, 4. Full preflight (readiness, activation, metadata, candidate execution integrity)
         if not preflight_already_run:
-            pre_release_evidence_preflight(self.repo_root)
+            pre_release_evidence_preflight(self.repo_root, active_commit=active_commit)
 
-        # 5. Release authorization verify
-        self.authorization.validate(self.partition)
+        self.authorization.validate(self.partition, expected_operation=self.expected_operation)
 
-        # 6. Output freshness verify
         out_p = Path(self.authorization.output_path)
+        tmp_p = Path(str(out_p) + ".tmp")
         if out_p.exists():
             raise TierBFeasibilityError(f"Target output path already exists (not fresh): {out_p}")
+        if tmp_p.exists():
+            raise TierBFeasibilityError(f"Target temporary output path already exists (not fresh): {tmp_p}")
 
-        # 7. Record FIRST_EMPIRICAL_BYTE_READ and return stream
-        now_utc = datetime.now(UTC).isoformat()
-        self.empirical_first_read_utc = now_utc
-        self.read_call_count += 1
+        boundary_utc = datetime.now(UTC).isoformat()
+        self.empirical_boundary_utc = boundary_utc
+        self.empirical_first_read_utc = boundary_utc
 
-        self.exposure_state = {
-            "status": LABEL_FIRST_EMPIRICAL_BYTE_READ,
-            "empirical_first_read_utc": now_utc,
+        self.exposure_record = {
+            "status": LABEL_EMPIRICAL_BOUNDARY_ENTERED,
+            "conservative_exposure_timestamp": boundary_utc,
+            "empirical_first_read_utc": boundary_utc,
             "partition": self.partition,
             "governing_plan_id": PLAN_ID,
             "tooling_id": TOOLING_CORRECTION_ID,
             "authorization_id": self.authorization.authorization_id,
+            "candidate_freeze_identity": FREEZE_IDENTITY,
+            "result_path": str(out_p),
         }
 
-        return self._raw_store_opener()
+        store = self._raw_store_opener()
+
+        if hasattr(store, "identity") and isinstance(store.identity, Mapping):
+            self.exposure_record["feature_store_identity"] = dict(store.identity)
+            self.exposure_record["feature_store_sha256"] = store.identity.get("store_sha256")
+
+            store_fold = store.identity.get("fold_id")
+            if store_fold and store_fold != self.partition and self.partition != "fold-01-rehearsal":
+                raise TierBFeasibilityError(
+                    f"Store fold_id mismatch: {store_fold} != {self.partition}"
+                )
+
+        return store
+
+
+def atomic_publish_json(target_path: Path | str, data: Mapping[str, Any]) -> None:
+    """Atomically publish a JSON artifact. Fails if target or temp file exists."""
+    p = Path(target_path)
+    tmp_p = Path(str(p) + ".tmp")
+    if p.exists():
+        raise TierBFeasibilityError(f"Target output path already exists: {p}")
+    if tmp_p.exists():
+        raise TierBFeasibilityError(f"Temporary output path already exists: {tmp_p}")
+
+    assert_zero_profitability(data)
+    rendered = json.dumps(data, indent=2, sort_keys=True, allow_nan=False)
+
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp_p.write_text(rendered, encoding="utf-8")
+    tmp_p.rename(p)

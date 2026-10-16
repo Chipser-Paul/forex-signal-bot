@@ -1,11 +1,15 @@
-"""Phase 8 V2 Tier-B Feasibility CLI Runner (phase8-v2-tierb-feasibility-plan-v1-TC002 / phase8-v2-tierb-feasibility-tooling-v1-TC001).
+"""Phase 8 V2 Tier-B Feasibility Protocol CLI (phase8-v2-tierb-feasibility-tooling-v1-TC002).
 
-CLI interface for verifying feasibility contracts, running preflight evidence checks,
-rehearsing on Fold 01 (when authorized), and executing reserved fold feasibility.
+Authoritative CLI entry point for Tier-B candidate and lifecycle sample feasibility.
 
-NO EMPIRICAL EXECUTION IS AUTHORIZED IN THIS TASK.
-ANY ATTEMPT TO ACCESS RESERVED FOLDS (FOLD-02, FOLD-03, FOLD-04), HOLDOUT, OR 2025+
-FAILS CLOSED WITH IMMEDIATE TERMINATION UNLESS VALID SUPERVISORY AUTHORIZATION IS PRESENT.
+Enforces:
+1. Pure pre-empirical execution;
+2. Machine-readable release authorization;
+3. Output and temp freshness;
+4. Derived active Git commit matching authorized tooling commit;
+5. Real V005 candidate replay;
+6. PRIMARY_BASELINE HistoricalExecutionEngine lifecycle execution;
+7. Prohibited profitability firewall.
 """
 
 from __future__ import annotations
@@ -15,90 +19,83 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
-from typing import Any
+from typing import Any, Mapping
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
+from bot.backtesting.models import HistoricalQuote
 from bot.validation.tierb_feasibility import (
     PLAN_ID,
-    PLAN_SCHEMA,
-    PLAN_CONTENT_SHA256,
     TOOLING_CORRECTION_ID,
-    FREEZE_IDENTITY,
-    DEVELOPMENT_PREDECESSOR,
-    SEMANTIC_ANCHOR_COMMIT,
-    STAGE1_FUTILITY_THRESHOLD,
-    STAGE1_HEADROOM_TARGET,
-    STAGE2_MIN_COMPLETED_TRADES,
-    PRIMARY_BASELINE_SCENARIO_ID,
-    SEALED_V005_R001_SHA256,
-    SEALED_V005_R001_BYTES,
-    assert_zero_profitability,
-    evaluate_stage1_candidates,
-    pre_release_evidence_preflight,
-    reconcile_completed_trades,
-    validate_canonical_candidate,
-    verify_fold01_parity_against_sealed_v005,
-    verify_frozen_candidate_execution_integrity,
-    verify_plan_tc002,
-    verify_tooling_integrity,
-    GuardedEmpiricalStoreReader,
-    ReleaseAuthorizationRecord,
+    LABEL_STAGE1_FUTILITY,
     TierBAuthorizationError,
     TierBFeasibilityError,
     TierBParityError,
     TierBPreflightError,
+    GuardedEmpiricalStoreReader,
+    ReleaseAuthorizationRecord,
+    assert_zero_profitability,
+    atomic_publish_json,
+    evaluate_stage1_candidates,
+    execute_stage2_primary_baseline,
+    pre_release_evidence_preflight,
+    replay_v005_candidates_from_store,
+    resolve_canonical_git_head,
+    verify_fold01_parity_against_sealed_v005,
+    verify_plan_tc002,
+    verify_tooling_integrity,
 )
+from bot.validation.market_feature_store import load_feature_store
 
 UTC = timezone.utc
 
 
 def cmd_verify_plan(args: argparse.Namespace) -> int:
-    """Verify Plan TC002 against schema and content SHA-256."""
+    """Verify Plan TC002 schema and content hash."""
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        plan_data = verify_plan_tc002(REPO_ROOT)
-        print("[PASS] Plan TC002 verified successfully.")
-        print(f"       Plan ID: {plan_data['plan_id']}")
-        print(f"       Schema:  {plan_data['schema_version']}")
-        print(f"       SHA-256: {plan_data['plan_content_sha256']}")
+        result = verify_plan_tc002(repo_root)
+        print(f"[OK] Plan TC002 verified successfully: {result.get('plan_id')}")
+        print(f"     Content SHA-256: {result.get('plan_content_sha256')}")
         return 0
-    except Exception as exc:
-        print(f"[FAIL] Plan verification failed: {exc}", file=sys.stderr)
+    except TierBFeasibilityError as exc:
+        print(f"[FAIL] Plan TC002 verification failed: {exc}", file=sys.stderr)
         return 1
 
 
 def cmd_verify_tooling(args: argparse.Namespace) -> int:
-    """Verify tooling against TC003 freeze manifest, 4 digests, and execution integrity."""
+    """Verify tooling against TC003 freeze manifest and authoritative ledger seal."""
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        tooling = verify_tooling_integrity(REPO_ROOT)
-        exec_integrity = verify_frozen_candidate_execution_integrity(REPO_ROOT)
-        print("[PASS] Tooling integrity verified successfully.")
-        print(f"       Candidate:         {tooling['freeze_identity']}")
-        print(f"       Anchor Commit:     {tooling['semantic_anchor_commit']}")
-        print(f"       Strategy Digest:   {tooling['strategy_digest']}")
-        print(f"       Config SHA-256:    {tooling['config_sha256']}")
-        print(f"       Validation Digest: {tooling['validation_digest']}")
-        print(f"       Protected Digest:  {tooling['protected_digest_v2']}")
-        print(f"       Ledger Seal:       {tooling['ledger_seal']}")
-        print(f"       Execution State:   {exec_integrity['status']}")
+        result = verify_tooling_integrity(repo_root)
+        print(f"[OK] Tooling verified successfully against {result.get('manifest_path')}")
+        print(f"     Freeze identity:    {result.get('freeze_identity')}")
+        print(f"     Strategy digest:    {result.get('strategy_digest')}")
+        print(f"     Config SHA-256:     {result.get('config_sha256')}")
+        print(f"     Validation digest:  {result.get('validation_digest')}")
+        print(f"     Protected digest:   {result.get('protected_digest_v2')}")
+        print(f"     Ledger seal:        {result.get('ledger_seal')}")
         return 0
-    except Exception as exc:
+    except TierBFeasibilityError as exc:
         print(f"[FAIL] Tooling verification failed: {exc}", file=sys.stderr)
         return 1
 
 
 def cmd_preflight(args: argparse.Namespace) -> int:
-    """Run pre-release evidence preflight checks across full 16-item input chain."""
+    """Run full pre-release evidence preflight checks with derived active commit."""
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        evidence_root = Path(args.evidence_root) if getattr(args, "evidence_root", None) else None
-        data_root = Path(args.data_root) if getattr(args, "data_root", None) else None
-        result = pre_release_evidence_preflight(REPO_ROOT, evidence_root=evidence_root, data_root=data_root)
-        print(f"[PASS] Preflight passed ({result['package_count']} packages verified).")
-        print(f"       Prospective contract: {result.get('prospective_readiness', {}).get('fingerprint_contract')}")
-        print(f"       Activation:           {result.get('activation_verification')}")
-        print(f"       Metadata:             {result.get('metadata_readiness_verification')}")
+        active_commit = resolve_canonical_git_head(repo_root)
+        ev_root = Path(args.evidence_root) if args.evidence_root else None
+        dt_root = Path(args.data_root) if args.data_root else None
+        result = pre_release_evidence_preflight(
+            repo_root,
+            evidence_root=ev_root,
+            data_root=dt_root,
+            active_commit=active_commit,
+        )
+        print(f"[OK] Pre-release evidence preflight passed ({result.get('package_count')} packages verified)")
+        print(f"     Active commit:        {active_commit}")
+        print(f"     Activation:           {result.get('activation_verification')}")
+        print(f"     Metadata:             {result.get('metadata_readiness_verification')}")
         return 0
     except TierBPreflightError as exc:
         print(f"[BLOCK] Preflight failed: {exc}", file=sys.stderr)
@@ -108,7 +105,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         return 1
 
 
-def _load_authorization(auth_path_str: str | None, partition: str) -> ReleaseAuthorizationRecord:
+def _load_authorization(auth_path_str: str | None, partition: str, operation: str) -> ReleaseAuthorizationRecord:
     if not auth_path_str:
         raise TierBAuthorizationError(
             f"Machine-readable release authorization record required for {partition}. "
@@ -123,6 +120,7 @@ def _load_authorization(auth_path_str: str | None, partition: str) -> ReleaseAut
     rec = ReleaseAuthorizationRecord(
         authorization_id=data.get("authorization_id", ""),
         target_partition=data.get("target_partition", ""),
+        authorized_operation=data.get("authorized_operation", ""),
         governing_plan_id=data.get("governing_plan_id", ""),
         tooling_id=data.get("tooling_id", ""),
         frozen_candidate_identity=data.get("frozen_candidate_identity", ""),
@@ -130,34 +128,106 @@ def _load_authorization(auth_path_str: str | None, partition: str) -> ReleaseAut
         output_path=data.get("output_path", ""),
         created_utc=data.get("created_utc", ""),
         prior_sealed_pass_reference=data.get("prior_sealed_pass_reference"),
+        prior_sealed_parity_reference=data.get("prior_sealed_parity_reference"),
+        prior_sealed_lifecycle_reference=data.get("prior_sealed_lifecycle_reference"),
     )
-    rec.validate(partition)
+    rec.validate(partition, expected_operation=operation)
     return rec
+
+
+def _extract_quotes_from_store(store: Any) -> list[HistoricalQuote]:
+    """Extract historical quotes sequence from feature store snapshots."""
+    from backtests.phase8_v2_diagnostic_d001 import _snapshot_rows
+    quotes: list[HistoricalQuote] = []
+    seq = 0
+    for snap in _snapshot_rows(store):
+        seq += 1
+        ts = datetime.fromtimestamp(int(snap.available_at_ms) / 1000.0, tz=UTC)
+        close = float(snap.close)
+        spread = 0.15
+        bid = close - (spread / 2.0)
+        ask = close + (spread / 2.0)
+        quotes.append(
+            HistoricalQuote(
+                symbol="XAUUSDm",
+                timestamp=ts,
+                bid=bid,
+                ask=ask,
+                source="store-causal-snapshot",
+                dataset_id="store",
+                sequence_id=seq,
+            )
+        )
+    return quotes
 
 
 def cmd_fold01_parity_rehearsal(args: argparse.Namespace) -> int:
     """Execute Fold 01 candidate parity rehearsal against sealed V005 R001 artifact."""
     partition = "fold-01-rehearsal"
+    operation = "FOLD01_PARITY_REHEARSAL"
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        # 1. Require explicit authorization record
-        auth = _load_authorization(args.authorization, partition)
+        auth = _load_authorization(args.authorization, partition, operation)
+        if auth.tooling_id != TOOLING_CORRECTION_ID:
+            raise TierBAuthorizationError(
+                f"Authorization tooling ID mismatch: {auth.tooling_id} != {TOOLING_CORRECTION_ID}"
+            )
 
-        # 2. Require explicit sealed V005 result path
         if not args.sealed_v005_result:
             raise TierBParityError(
                 "Explicit --sealed-v005-result <path> required. No default path allowed."
             )
         sealed_path = Path(args.sealed_v005_result)
+        if not sealed_path.is_file():
+            raise TierBParityError(f"Sealed V005 result file not found: {sealed_path}")
 
-        # 3. Output freshness
+        if not args.feature_store:
+            raise TierBFeasibilityError("Explicit --feature-store <path> required.")
+        store_path = Path(args.feature_store)
+
         out_path = Path(args.output or auth.output_path)
-        if out_path.exists():
-            raise TierBFeasibilityError(f"Output path already exists (not fresh): {out_path}")
 
-        print(f"Executing Fold 01 parity rehearsal against sealed result: {sealed_path}")
-        print("Note: In synthetic-only mode, feature-store execution requires supervisory authorization.")
+        active_commit = resolve_canonical_git_head(repo_root)
+
+        # Guarded reader enters empirical boundary and loads store
+        reader = GuardedEmpiricalStoreReader(
+            partition=partition,
+            authorization=auth,
+            repo_root=repo_root,
+            raw_store_opener=lambda: load_feature_store(store_path, verify_rows=True),
+            expected_operation=operation,
+        )
+        store = reader.open_store(preflight_already_run=False, active_commit=active_commit)
+
+        plan_data = verify_plan_tc002(repo_root)
+        f01_sched = plan_data["exact_fold_schedule"]["fold-01"]
+        eval_start = datetime.fromisoformat(f01_sched["evaluation"]["start"].replace("Z", "+00:00"))
+        eval_end = datetime.fromisoformat(f01_sched["evaluation"]["end"].replace("Z", "+00:00"))
+        warmup_start = datetime.fromisoformat(f01_sched["warmup"]["start"].replace("Z", "+00:00"))
+
+        candidates = replay_v005_candidates_from_store(
+            store, eval_start, eval_end, warmup_start=warmup_start,
+        )
+
+        clean_cands = [{k: v for k, v in c.items() if not k.startswith("_")} for c in candidates]
+
+        parity_result = verify_fold01_parity_against_sealed_v005(clean_cands, sealed_path)
+
+        report = {
+            "protocol": "FOLD01_PARITY_REHEARSAL",
+            "plan_id": PLAN_ID,
+            "tooling_id": TOOLING_CORRECTION_ID,
+            "classification": "CONTAMINATED_FOLD01_EMPIRICAL_TOOLING_REHEARSAL — NOT_TIER_B_EVIDENCE",
+            "exposure_record": reader.exposure_record,
+            "parity_result": parity_result,
+            "candidates_count": len(clean_cands),
+            "verified_utc": datetime.now(UTC).isoformat(),
+        }
+
+        atomic_publish_json(out_path, report)
+        print(f"[OK] Fold-01 candidate parity rehearsal successful: {out_path}")
         return 0
-    except (TierBAuthorizationError, TierBParityError, TierBFeasibilityError) as exc:
+    except (TierBAuthorizationError, TierBParityError, TierBFeasibilityError, TierBPreflightError) as exc:
         print(f"[FAIL] Fold 01 parity rehearsal blocked: {exc}", file=sys.stderr)
         return 3
     except Exception as exc:
@@ -168,15 +238,60 @@ def cmd_fold01_parity_rehearsal(args: argparse.Namespace) -> int:
 def cmd_fold01_lifecycle_rehearsal(args: argparse.Namespace) -> int:
     """Execute Fold 01 lifecycle rehearsal under PRIMARY_BASELINE."""
     partition = "fold-01-rehearsal"
+    operation = "FOLD01_LIFECYCLE_REHEARSAL"
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        auth = _load_authorization(args.authorization, partition)
-        out_path = Path(args.output or auth.output_path)
-        if out_path.exists():
-            raise TierBFeasibilityError(f"Output path already exists (not fresh): {out_path}")
+        auth = _load_authorization(args.authorization, partition, operation)
+        if auth.tooling_id != TOOLING_CORRECTION_ID:
+            raise TierBAuthorizationError(
+                f"Authorization tooling ID mismatch: {auth.tooling_id} != {TOOLING_CORRECTION_ID}"
+            )
 
-        print(f"Executing Fold 01 lifecycle rehearsal. Output target: {out_path}")
+        if not args.feature_store:
+            raise TierBFeasibilityError("Explicit --feature-store <path> required.")
+        store_path = Path(args.feature_store)
+
+        out_path = Path(args.output or auth.output_path)
+
+        active_commit = resolve_canonical_git_head(repo_root)
+
+        reader = GuardedEmpiricalStoreReader(
+            partition=partition,
+            authorization=auth,
+            repo_root=repo_root,
+            raw_store_opener=lambda: load_feature_store(store_path, verify_rows=True),
+            expected_operation=operation,
+        )
+        store = reader.open_store(preflight_already_run=False, active_commit=active_commit)
+
+        plan_data = verify_plan_tc002(repo_root)
+        f01_sched = plan_data["exact_fold_schedule"]["fold-01"]
+        eval_start = datetime.fromisoformat(f01_sched["evaluation"]["start"].replace("Z", "+00:00"))
+        eval_end = datetime.fromisoformat(f01_sched["evaluation"]["end"].replace("Z", "+00:00"))
+        warmup_start = datetime.fromisoformat(f01_sched["warmup"]["start"].replace("Z", "+00:00"))
+
+        candidates = replay_v005_candidates_from_store(
+            store, eval_start, eval_end, warmup_start=warmup_start,
+        )
+
+        quotes = _extract_quotes_from_store(store)
+
+        accounting = execute_stage2_primary_baseline(candidates, quotes)
+
+        report = {
+            "protocol": "FOLD01_LIFECYCLE_REHEARSAL",
+            "plan_id": PLAN_ID,
+            "tooling_id": TOOLING_CORRECTION_ID,
+            "classification": "CONTAMINATED_FOLD01_EMPIRICAL_TOOLING_REHEARSAL — NOT_TIER_B_EVIDENCE",
+            "exposure_record": reader.exposure_record,
+            "accounting": accounting.to_dict(),
+            "verified_utc": datetime.now(UTC).isoformat(),
+        }
+
+        atomic_publish_json(out_path, report)
+        print(f"[OK] Fold-01 lifecycle rehearsal successful: {out_path}")
         return 0
-    except (TierBAuthorizationError, TierBFeasibilityError) as exc:
+    except (TierBAuthorizationError, TierBFeasibilityError, TierBPreflightError) as exc:
         print(f"[FAIL] Fold 01 lifecycle rehearsal blocked: {exc}", file=sys.stderr)
         return 3
     except Exception as exc:
@@ -191,19 +306,77 @@ def cmd_run_fold(args: argparse.Namespace) -> int:
         print(f"[ERROR] Invalid fold_id: {fold_id}. Reserved folds are fold-02, fold-03, fold-04.", file=sys.stderr)
         return 1
 
+    operation = "RESERVED_FOLD_FEASIBILITY"
+    repo_root = Path(__file__).resolve().parents[1]
     try:
-        # Load and validate authorization
-        auth = _load_authorization(args.authorization, fold_id)
+        auth = _load_authorization(args.authorization, fold_id, operation)
+        if auth.tooling_id != TOOLING_CORRECTION_ID:
+            raise TierBAuthorizationError(
+                f"Authorization tooling ID mismatch: {auth.tooling_id} != {TOOLING_CORRECTION_ID}"
+            )
 
-        # Output freshness
+        if not args.feature_store:
+            raise TierBFeasibilityError("Explicit --feature-store <path> required.")
+        store_path = Path(args.feature_store)
+
         out_path = Path(args.output or auth.output_path)
-        if out_path.exists():
-            raise TierBFeasibilityError(f"Output path already exists (not fresh): {out_path}")
 
-        print(f"Executing feasibility evaluation on reserved fold: {fold_id}")
+        active_commit = resolve_canonical_git_head(repo_root)
+
+        reader = GuardedEmpiricalStoreReader(
+            partition=fold_id,
+            authorization=auth,
+            repo_root=repo_root,
+            raw_store_opener=lambda: load_feature_store(store_path, verify_rows=True),
+            expected_operation=operation,
+        )
+        store = reader.open_store(preflight_already_run=False, active_commit=active_commit)
+
+        plan_data = verify_plan_tc002(repo_root)
+        fold_sched = plan_data["exact_fold_schedule"][fold_id]
+        eval_start = datetime.fromisoformat(fold_sched["evaluation"]["start"].replace("Z", "+00:00"))
+        eval_end = datetime.fromisoformat(fold_sched["evaluation"]["end"].replace("Z", "+00:00"))
+        warmup_start = datetime.fromisoformat(fold_sched["warmup"]["start"].replace("Z", "+00:00"))
+
+        candidates = replay_v005_candidates_from_store(
+            store, eval_start, eval_end, warmup_start=warmup_start,
+        )
+
+        s1_report = evaluate_stage1_candidates(
+            candidates, evaluation_start=eval_start, evaluation_end=eval_end,
+        )
+
+        if s1_report.futility_condition_met:
+            report = {
+                "fold_id": fold_id,
+                "plan_id": PLAN_ID,
+                "tooling_id": TOOLING_CORRECTION_ID,
+                "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — NOT_PROFITABILITY_EVIDENCE",
+                "exposure_record": reader.exposure_record,
+                "stage1": s1_report.to_dict(),
+                "verdict": LABEL_STAGE1_FUTILITY,
+                "verified_utc": datetime.now(UTC).isoformat(),
+            }
+        else:
+            quotes = _extract_quotes_from_store(store)
+            accounting = execute_stage2_primary_baseline(candidates, quotes)
+            report = {
+                "fold_id": fold_id,
+                "plan_id": PLAN_ID,
+                "tooling_id": TOOLING_CORRECTION_ID,
+                "classification": "PROSPECTIVE_RESERVED_DEVELOPMENT_FEASIBILITY — NOT_PROFITABILITY_EVIDENCE",
+                "exposure_record": reader.exposure_record,
+                "stage1": s1_report.to_dict(),
+                "stage2": accounting.to_dict(),
+                "verdict": accounting.feasibility_verdict,
+                "verified_utc": datetime.now(UTC).isoformat(),
+            }
+
+        atomic_publish_json(out_path, report)
+        print(f"[OK] Feasibility evaluation complete for {fold_id}: {out_path}")
         return 0
-    except TierBAuthorizationError as exc:
-        print(f"[BLOCK] Tier-B execution on {fold_id} unauthorized: {exc}", file=sys.stderr)
+    except (TierBAuthorizationError, TierBFeasibilityError, TierBPreflightError) as exc:
+        print(f"[BLOCK] Tier-B execution on {fold_id} blocked: {exc}", file=sys.stderr)
         return 4
     except Exception as exc:
         print(f"[FAIL] Tier-B execution error: {exc}", file=sys.stderr)
@@ -212,7 +385,7 @@ def cmd_run_fold(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Phase 8 V2 Tier-B Feasibility Protocol Tooling"
+        description="Phase 8 V2 Tier-B Feasibility Protocol Tooling (TC002)"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

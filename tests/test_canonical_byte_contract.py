@@ -171,9 +171,9 @@ class GitObjectStore:
             raise CanonicalByteError(
                 f"CANONICAL_COMMIT_IDENTITY_INVALID: {commit!r}"
             )
-        for line in content.decode("ascii").splitlines():
-            if line.startswith("tree "):
-                return line.split()[1]
+        for line in content.split(b"\n"):
+            if line.startswith(b"tree "):
+                return line.split()[1].decode("ascii")
         raise CanonicalByteError(f"CANONICAL_COMMIT_IDENTITY_INVALID: {commit!r}")
 
     def _read_tree(self, sha: str) -> dict[str, tuple[str, str]]:

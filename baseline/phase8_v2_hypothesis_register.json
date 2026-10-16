@@ -4291,7 +4291,7 @@
       "charter_reference": "phase8-v2-research-charter-v1-8527e3a5eec98f53",
       "created_utc": "2026-10-14T21:00:00Z",
       "disposition": "SUPPORTED_BY_V002_STRUCTURAL_EVIDENCE",
-      "qualification": "SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A \u2014 V002_OPPORTUNITY_INSUFFICIENT \u2014 NOT_SELECTED \u2014 NOT_PROFITABILITY_EVIDENCE",
+      "qualification": "SUPPORTED_STRUCTURALLY_ON_CONTAMINATED_TIER_A — V002_OPPORTUNITY_INSUFFICIENT — NOT_SELECTED — NOT_PROFITABILITY_EVIDENCE",
       "supporting_variant_id": "phase6-development-v2-V002",
       "supporting_result_id": "phase6-development-v2-V002-R001",
       "evidence": {
@@ -4441,7 +4441,7 @@
       "created_utc": "2026-10-14T21:00:00Z",
       "freeze_identity": "phase6-frozen-v2",
       "supersedes_record": "phase6-frozen-v2-F001",
-      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY \u2014 ZERO_STRATEGY_SEMANTIC_CHANGE \u2014 ZERO_EMPIRICAL_ACCESS",
+      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS",
       "defects_repaired": [
         "INCOMPLETE_STRATEGY_RUNTIME_DEPENDENCY_CLOSURE",
         "INCOMPLETE_EFFECTIVE_XAUUSDM_CONFIGURATION_LOCK",
@@ -4450,7 +4450,7 @@
         "H007_TERMINAL_DISPOSITION_MISSING"
       ],
       "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
-      "historical_f001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERVISORY_ACCEPTANCE_WITHHELD \u2014 INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
+      "historical_f001_status": "PUBLISHED_PRE_TIER_B — SUPERVISORY_ACCEPTANCE_WITHHELD — INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
       "tc001_manifest_path": "baseline/phase8_v2_frozen_candidate_manifest_tc001.json",
       "prospective_contract_id": "canonical_git_blob_v1",
       "strategy_semantic_aggregate_digest_v2": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
@@ -4590,7 +4590,7 @@
         "phase6-frozen-v2-F001",
         "phase6-frozen-v2-F001-TC001"
       ],
-      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY \u2014 ZERO_STRATEGY_SEMANTIC_CHANGE \u2014 ZERO_EMPIRICAL_ACCESS",
+      "classification": "GOVERNANCE_AND_PROVENANCE_ONLY — ZERO_STRATEGY_SEMANTIC_CHANGE — ZERO_EMPIRICAL_ACCESS",
       "defects_repaired": [
         "WORKTREE_BYTE_VERIFIER_VIOLATES_CANONICAL_GIT_BLOB_V1",
         "DEPENDENCY_CLOSURE_NOT_FAIL_CLOSED_ON_DYNAMIC_OR_PARSE_AMBIGUITY",
@@ -4598,8 +4598,8 @@
         "LEDGER_SEAL_V1_MISSTATES_H002_H004_H005"
       ],
       "semantic_anchor_commit": "2fd3460b9010d8cca548f4fd6980b6b34fe594e2",
-      "historical_f001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERVISORY_ACCEPTANCE_WITHHELD \u2014 INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
-      "historical_tc001_status": "PUBLISHED_PRE_TIER_B \u2014 SUPERSEDED_BY_TC002 \u2014 VERIFIER_AND_LEDGER_REPAIRED",
+      "historical_f001_status": "PUBLISHED_PRE_TIER_B — SUPERVISORY_ACCEPTANCE_WITHHELD — INCOMPLETE_FREEZE_DEPENDENCY_SURFACE",
+      "historical_tc001_status": "PUBLISHED_PRE_TIER_B — SUPERSEDED_BY_TC002 — VERIFIER_AND_LEDGER_REPAIRED",
       "tc002_manifest_path": "baseline/phase8_v2_frozen_candidate_manifest_tc002.json",
       "prospective_contract_id": "canonical_git_blob_v1",
       "strategy_semantic_aggregate_digest": "ec4b5e6e6ded4797fce2d4d841d1b746e15f7435ac50569c62d6daa38953064f",
@@ -4766,8 +4766,7 @@
       "budget_impact": 0,
       "zero_empirical_access": true,
       "tier_b_status": "TIER_B_PLAN_TC001_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
-    }
-,
+    },
     {
       "record_id": "phase8-v2-tierb-feasibility-tooling-v1-R001",
       "result_id": "phase8-v2-tierb-feasibility-tooling-v1-R001",
@@ -4834,6 +4833,52 @@
       "budget_impact": 0,
       "zero_empirical_access": true,
       "tier_b_status": "TIER_B_PLAN_TC002_PREREGISTERED — EMPIRICAL_RELEASE_NOT_AUTHORIZED"
+    },
+    {
+      "record_id": "phase8-v2-tierb-feasibility-tooling-v1-R002",
+      "result_id": "phase8-v2-tierb-feasibility-tooling-v1-R002",
+      "record_type": "TIER_B_FEASIBILITY_TOOLING_DISPOSITION",
+      "created_utc": "2026-10-15T11:00:00Z",
+      "disposition": "IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL",
+      "affected_commit": "132343a0b1de527f6ecdb1776b7a90132068dbea",
+      "governing_plan": "phase8-v2-tierb-feasibility-plan-v1-TC002",
+      "bound_defects": [
+        "empirical CLI commands return success without executing",
+        "Stage-1 summarizer does not perform V005 replay",
+        "frozen execution-integrity verifier does not recompute Git-bound identities",
+        "active preflight commit defaults to Plan commit rather than active tooling commit",
+        "level/intent adapter contains substitute/hardcoded execution semantics",
+        "Stage-2 helper does not execute PRIMARY_BASELINE historical execution model",
+        "synthetic full-pipeline tests begin from hand-built candidates rather than the V005 observer",
+        "exposure timestamp is conservatively recorded before store open and is mislabeled exact first-byte read"
+      ],
+      "budget_impact": 0,
+      "empirical_exposure": 0,
+      "candidate_identity": "phase6-frozen-v2",
+      "strategy_research_status": "PERMANENTLY_CLOSED",
+      "notes": "Commit 132343a0b1de527f6ecdb1776b7a90132068dbea failed supervisory acceptance PRE-EMPIRICAL; no empirical stores opened; zero empirical bytes read; research allowances remain permanently retired."
+    },
+    {
+      "record_id": "phase8-v2-tierb-feasibility-tooling-v1-TC002",
+      "result_id": "phase8-v2-tierb-feasibility-tooling-v1-TC002",
+      "record_type": "TIER_B_FEASIBILITY_TOOLING_CORRECTION",
+      "created_utc": "2026-10-15T11:30:00Z",
+      "parent_tooling_commit": "132343a0b1de527f6ecdb1776b7a90132068dbea",
+      "governing_plan": "phase8-v2-tierb-feasibility-plan-v1-TC002",
+      "zero_strategy_change": true,
+      "zero_empirical_access": true,
+      "budget_impact": 0,
+      "empirical_exposure": 0,
+      "status": "READY_FOR_CONTAMINATED_FOLD01_REHEARSAL_PENDING_SUPERVISORY_AUDIT",
+      "changed_files": [
+        "bot/validation/tierb_feasibility.py",
+        "backtests/phase8_v2_tierb_feasibility.py",
+        "tests/test_phase8_v2_tierb_feasibility_runner.py",
+        "baseline/phase8_v2_hypothesis_register.json",
+        "docs/PHASE8_PROGRESS.md",
+        "docs/PROJECT_CONTINUATION_HANDOFF.md"
+      ],
+      "notes": "Tooling correction complete; real empirical execution path wired; real V005 observer candidate replay; PRIMARY_BASELINE historical execution; zero empirical exposure."
     }
   ],
   "provenance_corrections": [

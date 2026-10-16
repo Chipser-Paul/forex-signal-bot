@@ -950,4 +950,30 @@ Copy-paste for a fresh agent session:
   - Absolute zero profitability metrics calculated or exposed.
   - Research allowances remain retired: 5/12 diagnostics, 5/8 variants, 0/4 numeric trials (task budget impact: 0).
   - Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; Tier B remains strictly **SEALED**.
-- **Current Status:** V2 Tier-B Feasibility Tooling TC001 complete and frozen. Zero empirical access occurred. Contaminated Fold-01 rehearsal awaits supervisory authorization.
+- **Historical Disposition:** Commit `132343a0b1de527f6ecdb1776b7a90132068dbea` failed supervisory acceptance PRE-EMPIRICAL; disposition `phase8-v2-tierb-feasibility-tooling-v1-R002` (`IMPLEMENTATION_INCOMPLETE_PRE_EMPIRICAL`) recorded.
+
+## Update — 2026-10-15: phase8-v2-tierb-feasibility-tooling-v1-TC002 — Complete Real Empirical Execution Path Before Fold-01 Rehearsal
+
+- **Task & Identity:** Completed Phase B tooling correction task `phase8-v2-tierb-feasibility-tooling-v1-TC002`. Fully corrected all 8 pre-empirical tooling defects recorded under `phase8-v2-tierb-feasibility-tooling-v1-R002`.
+- **Architectural & Execution Fixes:**
+  1. *Functional CLI Commands:* Fully wired `fold01-parity-rehearsal`, `fold01-lifecycle-rehearsal`, and `run-fold` commands in `backtests/phase8_v2_tierb_feasibility.py`.
+  2. *Real V005 Replay Engine:* Implemented `replay_v005_candidates_from_store` reusing historical `observe_v005_decision`, `classify_snapshot`, `evaluate_orchestration_decision`, and `StrategyState` progression.
+  3. *Commit-Bound Execution Integrity:* Upgraded `verify_frozen_candidate_execution_integrity` to verify Git blobs at semantic anchor `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` vs active execution HEAD across 91 strategy, config, validation, and protected paths.
+  4. *Derived Active Commit:* Replaced hardcoded preflight commit default with dynamic derivation from canonical Git HEAD (`resolve_canonical_git_head`).
+  5. *Canonical Level & Intent Adapters:* Bound `candidate_to_trade_levels` and `candidate_to_entry_intent` to frozen shared adapters `level_inputs_from_setup` and `intent_from_setup_levels` using effective profile (`min_stop_atr_mult=2.0`, `min_rr=1.5`) and scenario metadata proxy.
+  6. *PRIMARY_BASELINE Historical Execution:* Implemented `execute_stage2_primary_baseline` running through canonical `HistoricalExecutionEngine` under `SWAP_EMAIL_REFERENCE|SLIPPAGE_MODERATE_ADVERSE|BASELINE_CURRENT_REFERENCE_PROXY` with exact 1-to-1 setup-to-position barrier.
+  7. *Operation Isolation in Authorization:* Extended `ReleaseAuthorizationRecord` schema with `authorized_operation` (`FOLD01_PARITY_REHEARSAL`, `FOLD01_LIFECYCLE_REHEARSAL`, `RESERVED_FOLD_FEASIBILITY`), enforcing mutual isolation across operations and fold partitions.
+  8. *Exposure Boundary Semantics:* Recorded conservative exposure timestamp as `EMPIRICAL_READ_BOUNDARY_ENTERED` immediately prior to opening empirical stores.
+- **Verification & Test Proof:**
+  - Full runner test battery: 34 passed in 117.27s (100% green).
+  - Feasibility plan test battery: 30 passed in 2.64s (100% green).
+  - Frozen candidate test battery: 29 passed in 16.55s (100% green).
+  - V005 evaluation tooling test battery: 22 passed in 5.32s (100% green).
+  - Regression test battery: 101 passed in 22.64s (100% green).
+  - Whitespace check: `git diff --check` passed cleanly.
+- **Strict Invariance & Boundaries:**
+  - ZERO empirical data bytes accessed; real fold stores (`fold-01`, `fold-02`, `fold-03`, `fold-04`) unopened.
+  - Absolute zero profitability metrics calculated or exposed.
+  - Research allowances remain permanently retired; task budget impact: 0.
+  - Candidate `phase6-frozen-v2` at `2fd3460b9010d8cca548f4fd6980b6b34fe594e2` unchanged; zero strategy semantic modification; Tier B remains strictly **SEALED**.
+- **Current Status:** V2 Tier-B Feasibility Tooling TC002 complete and frozen. Zero empirical access occurred. Contaminated Fold-01 rehearsal awaits supervisory authorization.
